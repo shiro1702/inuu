@@ -1,0 +1,484 @@
+import { computed, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import type { LocationQueryValue } from 'vue-router'
+import { useTelegram } from '~/composables/useTelegram'
+
+type TenantTheme = Record<string, string>
+type TenantState = {
+  loaded: boolean
+  loading: boolean
+  shopId: string | null
+  tenantSlug: string | null
+  shopName: string | null
+  theme: TenantTheme
+  isCustomDomain: boolean
+  logoUrl: string | null
+  logoLargeUrl: string | null
+  description: string | null
+  legalName: string | null
+  inn: string | null
+  ogrn: string | null
+  organizationTimezone: string | null
+  organizationWorkingHours: Record<string, any> | null
+  organizationDineInStaffButtons: Record<string, any> | null
+  effectiveWorkingHours: Record<string, any> | null
+}
+
+function normalizeTheme(input: unknown): TenantTheme {
+  if (!input || typeof input !== 'object') return {}
+  const out: TenantTheme = {}
+  for (const [key, value] of Object.entries(input as Record<string, unknown>)) {
+    if (typeof value === 'string' && value.trim()) out[key] = value.trim()
+  }
+  return out
+}
+
+function getStringSetting(input: Record<string, unknown> | null | undefined, ...keys: string[]): string | null {
+  if (!input) return null
+  for (const key of keys) {
+    const value = input[key]
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim()
+    }
+  }
+  return null
+}
+
+function getObjectSetting(input: Record<string, unknown> | null | undefined, ...keys: string[]): Record<string, any> | null {
+  if (!input) return null
+  for (const key of keys) {
+    const value = input[key]
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      return value as Record<string, any>
+    }
+  }
+  return null
+}
+
+function buildCssVars(theme: TenantTheme): Record<string, string> {
+  const vars: Record<string, string> = {}
+  const mapping: Record<string, string> = {
+    primary: '--color-primary',
+    primary_50: '--color-primary-50',
+    primary_100: '--color-primary-100',
+    primary_600: '--color-primary-600',
+    primary_700: '--color-primary-700',
+    on_primary: '--color-on-primary',
+    secondary: '--color-secondary',
+    accent: '--color-accent',
+    surface_background: '--color-surface-bg',
+    surface_card: '--color-surface-card',
+    text_primary: '--color-text-primary',
+    text_muted: '--color-text-muted',
+    state_success: '--color-success',
+    state_warning: '--color-warning',
+    state_error: '--color-error',
+    radius_button: '--radius-button',
+    radius_modal: '--radius-modal',
+    radius_input: '--radius-input',
+    radius_card: '--radius-card',
+  }
+
+  for (const [key, value] of Object.entries(theme)) {
+    vars[`--tenant-${key}`] = value
+    const cssVar = mapping[key]
+    if (cssVar) {
+      vars[cssVar] = value
+    }
+  }
+
+  return vars
+}
+
+function normalizeRouteQueryParam(value: LocationQueryValue | LocationQueryValue[] | undefined): string | null {
+  if (typeof value === 'string' && value.trim()) return value.trim()
+  if (Array.isArray(value)) {
+    const found = value.find((x): x is string => typeof x === 'string' && !!x.trim())
+    if (found) return found.trim()
+  }
+  return null
+}
+
+const GLOBAL_THEME_VAR_KEYS = [
+  '--color-primary',
+  '--color-primary-50',
+  '--color-primary-100',
+  '--color-primary-600',
+  '--color-primary-700',
+  '--color-on-primary',
+  '--color-secondary',
+  '--color-accent',
+  '--color-surface-bg',
+  '--color-surface-card',
+  '--color-text-primary',
+  '--color-text-muted',
+  '--color-success',
+  '--color-warning',
+  '--color-error',
+  '--radius-button',
+  '--radius-modal',
+  '--radius-input',
+  '--radius-card',
+] as const
+
+export function useTenant() {
+  const route = useRoute()
+  const { buildMessengerAuthHeaders } = useTelegram()
+  const isDashboardRoute = computed(() => {
+    const routePath = typeof route.path === 'string' ? route.path : ''
+    if (routePath.startsWith('/dashboard')) return true
+    if (import.meta.client) {
+      return window.location.pathname.startsWith('/dashboard')
+    }
+    return false
+  })
+  const isNonTenantRoute = computed(() => {
+    const routePath = typeof route.path === 'string' ? route.path : ''
+    const nonTenantPrefixes = [
+      '/dashboard',
+      '/onboarding',
+      '/login',
+      '/register',
+      '/profile',
+      '/partners',
+      '/platform',
+      '/link-telegram',
+      '/link-max',
+      '/link-vk',
+    ]
+    return nonTenantPrefixes.some((prefix) => routePath.startsWith(prefix))
+  })
+
+  const event = import.meta.server ? useRequestEvent() : null
+  const state = useState<TenantState>('tenant-state', () => ({
+    loaded: false,
+    loading: false,
+    shopId: null,
+    tenantSlug: null,
+    shopName: null,
+    theme: {},
+    isCustomDomain: false,
+    logoUrl: null,
+    logoLargeUrl: null,
+    description: null,
+    legalName: null,
+    inn: null,
+    ogrn: null,
+    organizationTimezone: null,
+    organizationWorkingHours: null,
+    organizationDineInStaffButtons: null,
+    effectiveWorkingHours: null,
+  }))
+
+  function applyTenant(payload: {
+    shopId?: string | null
+    tenantSlug?: string | null
+    shop?: { name?: string | null; slug?: string | null; legalName?: string | null; inn?: string | null; ogrn?: string | null } | null
+    uiSettings?: Record<string, unknown> | null
+    isCustomDomain?: boolean
+  }) {
+    state.value.shopId = payload.shopId ?? null
+    state.value.tenantSlug = payload.tenantSlug ?? payload.shop?.slug ?? state.value.tenantSlug ?? null
+    state.value.shopName = payload.shop?.name ?? state.value.shopName ?? null
+    const normalizedTheme = normalizeTheme(payload.uiSettings)
+    state.value.theme = normalizedTheme
+    state.value.isCustomDomain = !!payload.isCustomDomain
+    state.value.logoUrl = getStringSetting(payload.uiSettings ?? null, 'logo_url', 'logoUrl')
+    state.value.logoLargeUrl = getStringSetting(payload.uiSettings ?? null, 'logo_large_url', 'logoLargeUrl')
+    state.value.description = getStringSetting(payload.uiSettings ?? null, 'description', 'shop_description', 'shopDescription')
+    state.value.legalName = typeof payload.shop?.legalName === 'string' ? payload.shop.legalName : null
+    state.value.inn = typeof payload.shop?.inn === 'string' ? payload.shop.inn : null
+    state.value.ogrn = typeof payload.shop?.ogrn === 'string' ? payload.shop.ogrn : null
+    state.value.organizationTimezone = getStringSetting(payload.uiSettings ?? null, 'organization_timezone')
+    state.value.organizationWorkingHours = getObjectSetting(payload.uiSettings ?? null, 'organization_working_hours')
+    state.value.organizationDineInStaffButtons = getObjectSetting(payload.uiSettings ?? null, 'organization_dine_in_staff_buttons')
+    state.value.effectiveWorkingHours = getObjectSetting(payload.uiSettings ?? null, 'effective_working_hours')
+    state.value.loaded = true
+    state.value.loading = false
+  }
+
+  if (import.meta.server && event?.context?.tenant && !state.value.loaded) {
+    applyTenant({
+      shopId: event.context.tenant.shopId,
+      tenantSlug: event.context.tenant.shop.slug,
+      shop: {
+        name: event.context.tenant.shop.name,
+        slug: event.context.tenant.shop.slug,
+        legalName: event.context.tenant.shop.legal_name ?? null,
+        inn: event.context.tenant.shop.inn ?? null,
+        ogrn: event.context.tenant.shop.ogrn ?? null,
+      },
+      uiSettings: event.context.tenant.uiSettings,
+      isCustomDomain: !!event.context.tenant.isCustomDomain,
+    })
+    // MVP: серверный tenant-контекст может не содержать все derived-настройки
+    // (например, primary/описание/лого, подмешанные из organization_style_settings).
+    // Поэтому форсим повторную загрузку через `/api/tenant`.
+    state.value.loaded = false
+    state.value.loading = false
+  }
+
+  const routeTenantSlug = computed(() =>
+    typeof route.params.tenant_slug === 'string' ? route.params.tenant_slug : null,
+  )
+
+  const routeCitySlug = computed(() =>
+    typeof route.params.city_slug === 'string' ? route.params.city_slug : null,
+  )
+  const routeFestivalSlug = computed(() => {
+    if (typeof route.params.festival_slug === 'string' && route.params.festival_slug.trim()) {
+      return route.params.festival_slug.trim()
+    }
+    const queryFestival = normalizeRouteQueryParam(route.query.festival_slug)
+    return queryFestival || null
+  })
+
+  const tenantKey = computed(() =>
+    // Витрина ресторана SPA-навигация: приоритет должен быть у URL.
+    // Иначе tenantKey может не измениться (из-за tenantSlug в state),
+    // и тогда мы не перезагрузим theme/настройки нового ресторана.
+    state.value.isCustomDomain
+      ? (state.value.shopId
+          || state.value.tenantSlug
+          || normalizeRouteQueryParam(route.query.shop_id))
+      : (routeTenantSlug.value
+          || state.value.shopId
+          || state.value.tenantSlug
+          || normalizeRouteQueryParam(route.query.shop_id)),
+  )
+
+  /** На `/link-telegram|max|vk` в пути нет `/:city/:shop` — берём город из `redirect`, иначе лого ведёт на `/{shop}`. */
+  const authLinkRestaurantHint = computed(() => {
+    const routePath = typeof route.path === 'string' ? route.path : ''
+    if (!/^\/link-(telegram|max|vk)(\/|$)/.test(routePath)) return null
+    const raw = normalizeRouteQueryParam(route.query.redirect)
+    if (!raw || !raw.startsWith('/')) return null
+    const pathOnly = raw.split('?')[0].replace(/\/+$/, '') || '/'
+    const segments = pathOnly.split('/').filter(Boolean)
+    const shopFromQuery = normalizeRouteQueryParam(route.query.shop_id)
+
+    const RESERVED_SECOND = new Set([
+      'orders',
+      'checkout',
+      'cart',
+      'profile',
+      'partners',
+      'platform',
+      'login',
+      'register',
+      'festival',
+      'bonuses',
+      'achievements',
+    ])
+
+    if (segments.length >= 2 && segments[1] === 'festival') {
+      if (segments.length < 4) return null
+      const tenantSeg = segments[3]
+      if (shopFromQuery && tenantSeg !== shopFromQuery) return null
+      return {
+        citySlug: segments[0],
+        festivalSlug: segments[2],
+        tenantSlug: tenantSeg,
+      }
+    }
+
+    if (segments.length >= 2) {
+      const tenantSeg = segments[1]
+      if (RESERVED_SECOND.has(tenantSeg)) return null
+      if (shopFromQuery && tenantSeg !== shopFromQuery) return null
+      if (!shopFromQuery && state.value.tenantSlug && tenantSeg !== state.value.tenantSlug) return null
+      return {
+        citySlug: segments[0],
+        festivalSlug: null as string | null,
+        tenantSlug: tenantSeg,
+      }
+    }
+
+    return null
+  })
+
+  const routePrefix = computed(() => {
+    const slug = routeTenantSlug.value || state.value.tenantSlug
+    if (!slug || state.value.isCustomDomain) return ''
+
+    const hint = authLinkRestaurantHint.value
+    const citySlug = routeCitySlug.value || hint?.citySlug || null
+    const festivalSlug = routeFestivalSlug.value || hint?.festivalSlug || null
+
+    // Публичная restaurant-схема агрегатора: /{city_slug}/{tenant_slug}
+    if (citySlug && festivalSlug) {
+      return `/${citySlug}/festival/${festivalSlug}/${slug}`
+    }
+    if (citySlug) return `/${citySlug}/${slug}`
+    return `/${slug}`
+  })
+
+  /** Стабильный примитив для watch: без нового массива на каждый запуск геттера */
+  const branchScopeSignature = computed(() =>
+    JSON.stringify([
+      normalizeRouteQueryParam(route.query.branch_id),
+      normalizeRouteQueryParam(route.query.restaurant_id),
+    ]),
+  )
+
+  const cssVars = computed<Record<string, string>>(() => {
+    return buildCssVars(state.value.theme)
+  })
+
+  // Для элементов, которые рендерятся вне `.app-root` (например через `Teleport` в `body`),
+  // CSS-переменные не наследуются. Синхронизируем их на `document.documentElement`,
+  // чтобы `Tailwind colors` через `var(--color-primary*)` работали везде.
+  if (typeof window !== 'undefined') {
+    watch(
+      cssVars,
+      (vars) => {
+        for (const key of GLOBAL_THEME_VAR_KEYS) {
+          document.documentElement.style.removeProperty(key)
+        }
+        for (const [key, value] of Object.entries(vars)) {
+          document.documentElement.style.setProperty(key, value)
+        }
+      },
+      { immediate: true },
+    )
+  }
+
+  function tenantPath(path = '/') {
+    const normalized = path.startsWith('/') ? path : `/${path}`
+    if (normalized === '/') {
+      return routePrefix.value || '/'
+    }
+    return `${routePrefix.value}${normalized}`
+  }
+
+  async function loadTenantSettings() {
+    if (state.value.loading || state.value.loaded) return
+    const explicitTenantFromQuery = normalizeRouteQueryParam(route.query.shop_id)
+    if ((isDashboardRoute.value || isNonTenantRoute.value) && !explicitTenantFromQuery) {
+      state.value.loaded = true
+      state.value.loading = false
+      return
+    }
+    const tenantRef = tenantKey.value || undefined
+    // Клиентский $fetch на /api/tenant без shop_id / x-shop-id не резолвит витрину по пути страницы
+    // (middleware не парсит tenant из document URL для /api). Тогда middleware отвечает 404.
+    if (!tenantRef && !state.value.isCustomDomain) {
+      state.value.loaded = true
+      state.value.loading = false
+      return
+    }
+    state.value.loading = true
+    try {
+      const branchFromQuery = normalizeRouteQueryParam(route.query.branch_id)
+      const restaurantFromQuery = normalizeRouteQueryParam(route.query.restaurant_id)
+      const query: Record<string, string> = {}
+      if (tenantRef) query.shop_id = tenantRef
+      if (branchFromQuery) query.branch_id = branchFromQuery
+      else if (restaurantFromQuery) query.restaurant_id = restaurantFromQuery
+      try {
+        const res = await $fetch<{
+          ok: boolean
+          shopId: string
+          tenantSlug?: string
+          isCustomDomain?: boolean
+          shop?: { name?: string; legalName?: string | null; inn?: string | null; ogrn?: string | null }
+          uiSettings?: Record<string, unknown>
+        }>('/api/tenant', {
+          query: Object.keys(query).length ? query : undefined,
+          headers: buildMessengerAuthHeaders(tenantRef ? { 'x-shop-id': tenantRef } : undefined),
+        })
+        if (res?.ok) {
+          applyTenant(res)
+        }
+      } catch {
+        // Нет контекста магазина, 404 из middleware и т.п. — не рвём навигацию.
+      }
+    } finally {
+      if (!state.value.loaded) {
+        state.value.loaded = true
+        state.value.loading = false
+      }
+    }
+  }
+
+  // При клиентском переходе между ресторанами (NuxtLink) нужно перезагружать tenant-данные.
+  watch(
+    tenantKey,
+    async (key, prev) => {
+      if (!key || key === prev) return
+      state.value.loaded = false
+      // Сбрасываем старый контекст, чтобы UI и запросы к API не использовали
+      // tenantSlug/shopId предыдущего ресторана до загрузки новых данных.
+      state.value.tenantSlug = null
+      state.value.shopId = null
+      state.value.shopName = null
+      state.value.logoUrl = null
+      state.value.logoLargeUrl = null
+      state.value.description = null
+      state.value.legalName = null
+      state.value.inn = null
+      state.value.ogrn = null
+      state.value.organizationTimezone = null
+      state.value.organizationWorkingHours = null
+      state.value.organizationDineInStaffButtons = null
+      state.value.effectiveWorkingHours = null
+      state.value.theme = {}
+      try {
+        await loadTenantSettings()
+      } finally {
+        // Если загрузка не удалась — оставим default theme, но сбросим loading флаг.
+        state.value.loading = false
+      }
+    },
+    { immediate: false },
+  )
+  watch(
+    branchScopeSignature,
+    async (next, prev) => {
+      if (next === prev) return
+      if (isDashboardRoute.value || isNonTenantRoute.value) return
+      state.value.loaded = false
+      await loadTenantSettings()
+    },
+    { immediate: false },
+  )
+
+  /** После `/link-telegram|max|vk` slug тенанта не меняется → watch(tenantKey) не трогает стейт,
+   * а `loadTenantSettings` уже отработал с `loaded: true` и не вызывается снова — тема и CSS vars пропадают. */
+  if (import.meta.client) {
+    watch(
+      () => route.fullPath,
+      async (_next, prev) => {
+        if (typeof prev !== 'string' || !prev.length) return
+        const prevPath = prev.split('?')[0] || ''
+        const wasAuthLink = /^\/link-(telegram|max|vk)(\/|$)/.test(prevPath)
+        if (!wasAuthLink) return
+        const city = route.params.city_slug
+        const tenant = route.params.tenant_slug
+        const hasCityTenant =
+          typeof city === 'string' &&
+          city.trim() !== '' &&
+          typeof tenant === 'string' &&
+          tenant.trim() !== ''
+        if (!hasCityTenant) return
+        const routePath = typeof route.path === 'string' ? route.path : ''
+        if (routePath.startsWith('/dashboard')) return
+        state.value.loaded = false
+        try {
+          await loadTenantSettings()
+        } finally {
+          state.value.loading = false
+        }
+      },
+    )
+  }
+
+  return {
+    tenant: state,
+    tenantKey,
+    routePrefix,
+    tenantPath,
+    cssVars,
+    loadTenantSettings,
+  }
+}
