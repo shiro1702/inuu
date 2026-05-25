@@ -1,1 +1,0 @@
-import{p as a,af as s,y as u,a3 as o}from"./Cshmre4w.js";const r=a({__name:"index",async setup(l){let e,i;const t=o(),n=typeof t.public.defaultCitySlug=="string"&&t.public.defaultCitySlug.trim()?t.public.defaultCitySlug.trim():"ulan-ude";return[e,i]=s(()=>u(`/${n}`,{})),await e,i(),()=>{}}});export{r as _};

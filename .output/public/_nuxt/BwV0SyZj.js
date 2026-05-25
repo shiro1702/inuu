@@ -1,1 +1,0 @@
-import{p as s,k as a,h as t,I as n}from"./Cshmre4w.js";const m=s({__name:"restaurants",setup(o){return(r,e)=>(n(),a("section",null,[...e[0]||(e[0]=[t("h1",{class:"text-2xl font-semibold"},"Рестораны платформы",-1),t("p",{class:"mt-2 text-sm text-gray-600"},"TODO: модерация организаций, брендов и филиалов.",-1)])]))}});export{m as default};

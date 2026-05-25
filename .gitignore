@@ -1,0 +1,31 @@
+# Dependencies & build output
+node_modules/
+.nuxt/
+.output/
+dist/
+
+# Environment (never commit real secrets)
+.env
+.env.*
+!.env.example
+
+# Logs & caches
+*.log
+npm-debug.log*
+.npm
+.cache/
+.vite/
+.nitro/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Test / coverage
+coverage/
+
+# Supabase local
+.branches/
+.temp/

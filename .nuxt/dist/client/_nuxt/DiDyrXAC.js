@@ -1,1 +1,0 @@
-function s(t){return`/${t.trim()||"ulan-ude"}`}function u(t,e){const n=s(e);return typeof t!="string"||!t.startsWith("/")||t.startsWith("//")||t.includes("/cart")||t.includes("/checkout")||t.includes("/bonuses")?n:t}export{u as s};

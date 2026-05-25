@@ -1,1 +1,0 @@
-import{p as s,k as a,h as t,I as n}from"./Cshmre4w.js";const c=s({__name:"analytics",setup(o){return(l,e)=>(n(),a("section",null,[...e[0]||(e[0]=[t("h1",{class:"text-2xl font-semibold"},"Аналитика",-1),t("p",{class:"mt-2 text-sm text-gray-600"},"TODO: отчеты по заказам, выручке и среднему чеку.",-1)])]))}});export{c as default};
