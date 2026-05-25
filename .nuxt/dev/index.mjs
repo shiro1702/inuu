@@ -2275,9 +2275,9 @@ _wH6JrtIxmaSoA8lCPWFnE9z4lQeXW6H5z3l5aymEQw
 const assets = {
   "/index.mjs": {
     "type": "text/javascript; charset=utf-8",
-    "etag": "\"aed64-VfcOPRmT2dklfskqhY600+IAByA\"",
-    "mtime": "2026-05-25T11:01:13.612Z",
-    "size": 716132,
+    "etag": "\"afccb-AJQ/ZPmJiLYDw3cz6WscnmhzEig\"",
+    "mtime": "2026-05-25T11:05:13.195Z",
+    "size": 720075,
     "path": "index.mjs"
   }
 };
@@ -7561,6 +7561,7 @@ const _lazy_cZSPXT = () => Promise.resolve().then(function () { return cities_ge
 const _lazy_s7B7a4 = () => Promise.resolve().then(function () { return _eventSlug__get$1; });
 const _lazy_Prd3G_ = () => Promise.resolve().then(function () { return index_get$9; });
 const _lazy_5mTFh_ = () => Promise.resolve().then(function () { return home_get$1; });
+const _lazy_32gqwJ = () => Promise.resolve().then(function () { return _listSlug__get$1; });
 const _lazy_xc5jGi = () => Promise.resolve().then(function () { return stories_get$3; });
 const _lazy_jlpLqZ = () => Promise.resolve().then(function () { return _venueSlug__get$1; });
 const _lazy_gY1Bvy = () => Promise.resolve().then(function () { return index_get$7; });
@@ -7650,6 +7651,7 @@ const handlers = [
   { route: '/api/cities/:slug/events/:eventSlug', handler: _lazy_s7B7a4, lazy: true, middleware: false, method: "get" },
   { route: '/api/cities/:slug/events', handler: _lazy_Prd3G_, lazy: true, middleware: false, method: "get" },
   { route: '/api/cities/:slug/home', handler: _lazy_5mTFh_, lazy: true, middleware: false, method: "get" },
+  { route: '/api/cities/:slug/lists/:listSlug', handler: _lazy_32gqwJ, lazy: true, middleware: false, method: "get" },
   { route: '/api/cities/:slug/stories', handler: _lazy_xc5jGi, lazy: true, middleware: false, method: "get" },
   { route: '/api/cities/:slug/venues/:venueSlug', handler: _lazy_jlpLqZ, lazy: true, middleware: false, method: "get" },
   { route: '/api/cities/:slug/venues', handler: _lazy_gY1Bvy, lazy: true, middleware: false, method: "get" },
@@ -9362,6 +9364,58 @@ const home_get = defineEventHandler(async (event) => {
 const home_get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
   __proto__: null,
   default: home_get
+}, Symbol.toStringTag, { value: 'Module' }));
+
+const _listSlug__get = defineEventHandler(async (event) => {
+  var _a, _b, _c, _d;
+  setResponseHeader(event, "Cache-Control", "public, max-age=60, s-maxage=120");
+  const slug = typeof ((_a = event.context.params) == null ? void 0 : _a.slug) === "string" ? event.context.params.slug : "";
+  const listSlug = typeof ((_b = event.context.params) == null ? void 0 : _b.listSlug) === "string" ? event.context.params.listSlug : "";
+  const city = await resolveCityBySlug(event, slug);
+  const client = await serverSupabaseClient(event);
+  const { data: list, error: listError } = await client.from("curated_lists").select("id,slug,title,description").eq("city_id", city.id).eq("slug", listSlug).eq("is_published", true).maybeSingle();
+  if (listError) {
+    console.error("[lists/detail] list load failed:", listError);
+    throw createError({ statusCode: 500, statusMessage: "Failed to load list" });
+  }
+  if (!list) {
+    throw createError({ statusCode: 404, statusMessage: "List not found" });
+  }
+  const { data: rawItems, error: itemsError } = await client.from("curated_list_items").select("id,entity_type,entity_id,sort_order,note").eq("list_id", list.id).order("sort_order", { ascending: true });
+  if (itemsError) {
+    console.error("[lists/detail] items load failed:", itemsError);
+    throw createError({ statusCode: 500, statusMessage: "Failed to load list items" });
+  }
+  const rows = rawItems != null ? rawItems : [];
+  const venueIds = rows.filter((r) => r.entity_type === "venue").map((r) => r.entity_id);
+  const eventIds = rows.filter((r) => r.entity_type === "event").map((r) => r.entity_id);
+  const [venuesRes, eventsRes] = await Promise.all([
+    venueIds.length ? client.from("venues").select("id,slug,title,description,address,cover_media_url,vibe_tags,editorial_quote").eq("city_id", city.id).eq("is_published", true).eq("is_active", true).in("id", venueIds) : Promise.resolve({ data: [] }),
+    eventIds.length ? client.from("events").select("id,slug,title,description,starts_at,price,currency,cover_media_url").eq("city_id", city.id).eq("is_published", true).in("id", eventIds) : Promise.resolve({ data: [] })
+  ]);
+  const venueById = new Map(
+    ((_c = venuesRes.data) != null ? _c : []).map((v) => [String(v.id), v])
+  );
+  const eventById = new Map(
+    ((_d = eventsRes.data) != null ? _d : []).map((e) => [String(e.id), e])
+  );
+  const items = rows.map((row) => {
+    if (row.entity_type === "venue") {
+      const venue = venueById.get(row.entity_id);
+      return venue ? { entityType: "venue", note: row.note, venue } : null;
+    }
+    if (row.entity_type === "event") {
+      const evt = eventById.get(row.entity_id);
+      return evt ? { entityType: "event", note: row.note, event: evt } : null;
+    }
+    return null;
+  }).filter((item) => item !== null);
+  return { ok: true, list, items };
+});
+
+const _listSlug__get$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
+  __proto__: null,
+  default: _listSlug__get
 }, Symbol.toStringTag, { value: 'Module' }));
 
 const CITY_PLACEMENTS = ["top_bar", "home_hero"];

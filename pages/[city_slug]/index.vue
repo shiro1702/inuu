@@ -23,7 +23,7 @@
       />
     </section>
 
-    <StoryViewer
+    <StoriesStoryViewer
       v-model="storyViewerOpen"
       :campaign="activeStory"
       :campaigns="storiesTopBar"
@@ -35,14 +35,15 @@
     <section v-if="home?.curatedLists?.length">
       <h2 class="mb-3 text-lg font-semibold text-gray-900">Подборки</h2>
       <div class="grid gap-3 sm:grid-cols-2">
-        <article
+        <NuxtLink
           v-for="list in home.curatedLists"
           :key="list.id"
-          class="rounded-xl border border-gray-200 bg-white p-4"
+          :to="`${cityBasePath}/lists/${list.slug}`"
+          class="group block rounded-xl border border-gray-200 bg-white p-4 transition hover:border-primary/30 hover:shadow-sm"
         >
-          <h3 class="font-semibold text-gray-900">{{ list.title }}</h3>
+          <h3 class="font-semibold text-gray-900 group-hover:text-primary">{{ list.title }}</h3>
           <p v-if="list.description" class="mt-1 text-sm text-gray-600">{{ list.description }}</p>
-        </article>
+        </NuxtLink>
       </div>
     </section>
 
@@ -121,7 +122,7 @@ function onStoryAction(payload: { slide: StorySlideDto; actionType: string }) {
 type HomePayload = {
   events: Array<Record<string, unknown>>
   venues: Array<Record<string, unknown>>
-  curatedLists: Array<{ id: string; title: string; description?: string | null }>
+  curatedLists: Array<{ id: string; slug: string; title: string; description?: string | null }>
 }
 
 const pending = ref(true)

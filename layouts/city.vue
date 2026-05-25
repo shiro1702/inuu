@@ -28,20 +28,152 @@
             Карта
           </NuxtLink>
           <NuxtLink
-            to="/login"
+            v-if="user"
+            to="/profile"
             class="rounded-lg border border-gray-200 px-2 py-1.5 text-gray-700 hover:bg-gray-50"
           >
-            Войти
+            Профиль
           </NuxtLink>
+          <button
+            v-else-if="hasBotAuth"
+            type="button"
+            class="rounded-lg border border-primary px-2 py-1.5 text-sm font-medium text-primary hover:bg-primary/5"
+            @click="showAuthModal = true"
+          >
+            Войти
+          </button>
         </nav>
       </div>
     </header>
     <main class="mx-auto max-w-6xl px-4 py-6 sm:px-6">
       <slot />
     </main>
+
+    <AuthChannelModal
+      v-model="showAuthModal"
+      title="Выберите способ входа"
+      description="Войдите через Telegram или MAX, чтобы сохранять избранное и записи."
+      :channels="cityAuthChannels"
+      intent="login"
+      variant="light"
+      :consent-href="consentPath"
+      @submit="onAuthChannelSubmit"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-const { cityBasePath, displayName } = useCity()
+import { computed, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import type { AuthChannel } from '~/types/authChannel'
+
+const { cityBasePath, displayName, slug } = useCity()
+const { consentPath } = useLegalPaths()
+const user = useSupabaseUser()
+const config = useRuntimeConfig()
+const route = useRoute()
+const router = useRouter()
+
+const showAuthModal = ref(false)
+
+const telegramBotName = (config.public.telegramBotName as string | undefined) || ''
+const telegramBotUrl = computed(() =>
+  telegramBotName ? `https://t.me/${telegramBotName}` : null,
+)
+const maxBotUrl = computed(() => {
+  const raw = (config.public.maxBotUrl as string | undefined) || ''
+  const trimmed = raw.trim()
+  return trimmed || null
+})
+
+const cityAuthChannels = computed((): AuthChannel[] => {
+  const opts: AuthChannel[] = []
+  if (telegramBotUrl.value) opts.push('telegram')
+  if (maxBotUrl.value) opts.push('max')
+  return opts
+})
+
+const hasBotAuth = computed(() => cityAuthChannels.value.length > 0)
+
+function resolvePostLoginRedirectPath(): string {
+  const raw = typeof route.fullPath === 'string' ? route.fullPath.trim() : ''
+  const fallback = cityBasePath.value
+  if (!raw || !raw.startsWith('/') || raw.startsWith('//')) return fallback
+  return raw
+}
+
+function onAuthChannelSubmit(channel: AuthChannel) {
+  if (channel === 'telegram') {
+    void openTelegramAuth()
+    return
+  }
+  if (channel === 'max') {
+    void openMaxAuth()
+  }
+}
+
+async function openTelegramAuth() {
+  showAuthModal.value = false
+  if (!telegramBotUrl.value || typeof window === 'undefined') return
+  const redirectPath = resolvePostLoginRedirectPath()
+  try {
+    const res = await $fetch<{ ok: boolean; token: string; botStartParam: string }>(
+      '/api/auth/request-telegram-link',
+      {
+        method: 'POST',
+        body: {
+          citySlug: slug.value,
+          redirectPath,
+        },
+      },
+    )
+    if (!res?.ok || !res.token || !res.botStartParam) {
+      throw new Error('bad_response')
+    }
+    const tgUrl = `${telegramBotUrl.value}?start=${encodeURIComponent(res.botStartParam)}`
+    window.open(tgUrl, '_blank', 'noopener')
+    await router.push({
+      path: '/link-telegram',
+      query: {
+        token: res.token,
+        redirect: redirectPath,
+      },
+    })
+  } catch {
+    window.alert('Не удалось начать вход через Telegram. Попробуйте ещё раз.')
+  }
+}
+
+async function openMaxAuth() {
+  showAuthModal.value = false
+  if (!maxBotUrl.value || typeof window === 'undefined') return
+  const redirectPath = resolvePostLoginRedirectPath()
+  try {
+    const res = await $fetch<{ ok: boolean; token: string; botStartParam: string }>(
+      '/api/auth/request-max-link',
+      {
+        method: 'POST',
+        body: {
+          citySlug: slug.value,
+          redirectPath,
+        },
+      },
+    )
+    if (!res?.ok || !res.token || !res.botStartParam) {
+      throw new Error('bad_response')
+    }
+    const hasQuery = maxBotUrl.value.includes('?')
+    const maxUrl = `${maxBotUrl.value}${hasQuery ? '&' : '?'}start=${encodeURIComponent(res.botStartParam)}`
+    window.open(maxUrl, '_blank', 'noopener')
+    await router.push({
+      path: '/link-max',
+      query: {
+        token: res.token,
+        redirect: redirectPath,
+      },
+    })
+  } catch {
+    window.alert('Не удалось начать вход через MAX. Попробуйте ещё раз.')
+  }
+}
 </script>
