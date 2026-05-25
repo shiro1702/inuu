@@ -3,8 +3,8 @@ type DashboardRole = 'owner' | 'manager'
 type DashboardAccessResponse = {
   ok: boolean
   userId: string
-  shopId: string
-  role: DashboardRole
+  shopId: string | null
+  role: DashboardRole | null
 }
 
 type DashboardPermission =
@@ -48,9 +48,12 @@ export function useDashboardAccess() {
   const loading = useState<boolean>('dashboard-access-loading', () => false)
   const error = useState<string | null>('dashboard-access-error', () => null)
 
+  const hasOrganization = computed(() => Boolean(state.value?.ok && state.value.shopId))
+
   const role = computed<DashboardRole>(() => state.value?.role ?? 'manager')
 
   const permissions = computed<Set<DashboardPermission>>(() => {
+    if (!hasOrganization.value) return new Set<DashboardPermission>()
     const list = role.value === 'owner' ? ownerPermissions : managerPermissions
     return new Set<DashboardPermission>(list)
   })
@@ -74,6 +77,7 @@ export function useDashboardAccess() {
 
   return {
     access: state,
+    hasOrganization,
     role,
     loading,
     error,
