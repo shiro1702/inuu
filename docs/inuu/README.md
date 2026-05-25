@@ -1,0 +1,78 @@
+# INUU — документация городского агрегатора
+
+Структурированная спецификация **INUU** — гиперлокальный лайфстайл-агрегатор: услуги, события, места, контент и монетизация.
+
+Первый город: **Улан-Удэ**. Архитектура с первого дня — **несколько городов** (мультитенант).
+
+**Репозиторий:** `incity-new` — **Nuxt 3 + Supabase + Telegram/MAX Mini App**.
+
+Исходный brainstorm (October CMS) — исторический: [fix/brainstorm/chat](../fix/brainstorm/chat). Реализация только в этом monorepo.
+
+---
+
+## Навигация
+
+| Документ | Содержание |
+|----------|------------|
+| [11-tech-stack.md](./11-tech-stack.md) | Стек, структура репо, env |
+| [00-product-vision.md](./00-product-vision.md) | Позиционирование, ЦА, отличие от 2GIS/Яндекс |
+| [01-multitenant-architecture.md](./01-multitenant-architecture.md) | Мульти-город: `cities`, URL, RLS |
+| [02-roles-and-access.md](./02-roles-and-access.md) | Роли и личные кабинеты |
+| [03-core-platform.md](./03-core-platform.md) | Главная, поиск, избранное, booking, платежи |
+| [04-features-priority.md](./04-features-priority.md) | Приоритизация фич |
+| [05-roadmap-and-hypotheses.md](./05-roadmap-and-hypotheses.md) | Этапы, метрики, развилки |
+| [06-monetization.md](./06-monetization.md) | Реклама, подписки, лиды |
+| [07-notifications-channels.md](./07-notifications-channels.md) | TG/MAX, email, рассылки |
+| [08-marketing-launch.md](./08-marketing-launch.md) | Запуск и маркетинг |
+| [marketing/SMM_PARTNER_MESSAGES.md](./marketing/SMM_PARTNER_MESSAGES.md) | Сообщения для SMM-партнёра |
+| [marketing/OUTREACH_B2B_PARTNERS.md](./marketing/OUTREACH_B2B_PARTNERS.md) | Первое касание B2B |
+| [09-data-model-overview.md](./09-data-model-overview.md) | Схема БД Supabase |
+| [10-existing-codebase.md](./10-existing-codebase.md) | Что оставить / вычистить в коде |
+
+### Реализация в репозитории
+
+| Документ | Содержание |
+|----------|------------|
+| [implementation/README.md](./implementation/README.md) | План вычистки legacy и рефакторинга |
+| [implementation/01-cleanup-unused.md](./implementation/01-cleanup-unused.md) | Удаление ресторанного функционала |
+| [implementation/02-refactor-existing.md](./implementation/02-refactor-existing.md) | Переделка модулей под INUU |
+
+### Вертикали
+
+| Документ | Содержание |
+|----------|------------|
+| [verticals/beauty.md](./verticals/beauty.md) | Красота, запись, лист ожидания |
+| [verticals/confectioners.md](./verticals/confectioners.md) | Кондитеры |
+| [verticals/events-and-venues.md](./verticals/events-and-venues.md) | События, заведения, карта |
+| [verticals/tourism-baikal.md](./verticals/tourism-baikal.md) | Туризм, Байкал |
+| [verticals/news-and-editorial.md](./verticals/news-and-editorial.md) | Редакция, подборки |
+| [verticals/advertising.md](./verticals/advertising.md) | Реклама |
+| [verticals/local-brands.md](./verticals/local-brands.md) | Локальные бренды |
+| [verticals/photo-creative.md](./verticals/photo-creative.md) | Фото, студии |
+
+---
+
+## Сквозные документы (вне `inuu/`)
+
+| Тема | Документ |
+|------|----------|
+| Омниканал TG/MAX | [OMNICHANNEL_MULTITENANT_PLAN_RU.md](../platform/OMNICHANNEL_MULTITENANT_PLAN_RU.md) |
+| Платежи | [PAYMENTS_RU_YOOKASSA_TBANK.md](../payments/PAYMENTS_RU_YOOKASSA_TBANK.md) |
+| UX агрегатора | [AGGREGATOR_UX_FEATURES_RU.md](../features/AGGREGATOR_UX_FEATURES_RU.md) |
+| Термины UI | [TERMS.md](../reference/TERMS.md) |
+| Legacy PocketMenu | [archive/README.md](../archive/README.md) |
+
+---
+
+## Стек (кратко)
+
+| Слой | Технология |
+|------|------------|
+| Frontend | Nuxt 3, Vue 3, Pinia, Tailwind |
+| Backend | Nitro (`server/api`) |
+| БД | Supabase (PostgreSQL + RLS + Storage) |
+| Auth | Supabase + Telegram Login + initData (TG/MAX) |
+| Mini App | Telegram / MAX WebApp |
+| Уведомления | `server/utils/notifications.ts`, webhooks |
+
+Подробно: **[11-tech-stack.md](./11-tech-stack.md)**.

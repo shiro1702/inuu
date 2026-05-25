@@ -41,7 +41,7 @@ URL вида: `/{city_slug}/legal/privacy`, `/{city_slug}/legal/consent` и т.�
 2. **`pages/checkout.vue`** — отдельная модалка с тем же смыслом (оформление заказа, режимы `auth` / `service` / `continue`), Telegram и MAX; оформление в светлых тонах (`bg-white`, серые тексты).
 3. **`pages/profile.vue`** — модалка «Выберите бота» (упрощённый сценарий), также без чекбокса.
 
-Документация по OAuth/ботам (для контекста, не про ПДн): `TELEGRAM_AUTH_VIA_BOT.md`, `docs/integrations/vk-auth-via-bot.md`.
+Документация по OAuth/ботам (для контекста, не про ПДн): [TELEGRAM_AUTH_VIA_BOT_RU.md](./TELEGRAM_AUTH_VIA_BOT_RU.md), `docs/integrations/vk-auth-via-bot.md`.
 
 ### 1.4. Упоминания в продуктовой документации
 

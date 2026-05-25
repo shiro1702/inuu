@@ -1,6 +1,6 @@
 # Агрегатор: избранное, повтор заказа, фильтры «настроение», отзывы
 
-Документ фиксирует **продуктовую логику** и **черновик технической реализации** для функций на главной города (`/:city_slug`) и связанных сценариев. Опирается на текущий стек: Nuxt, Pinia `cart`, Supabase (`orders`, `orders.items` как JSONB с ценами и модификаторами), `GET /api/client-orders`, `POST /api/order` с пересчётом по `loadTenantProductsForOrder` / `CartItemPayload` (см. `ORDER_SYSTEM.md`, `server/utils/orderLinePricing.ts`).
+Документ фиксирует **продуктовую логику** и **черновик технической реализации** для функций на главной города (`/:city_slug`) и связанных сценариев. Опирается на стек INUU: Nuxt, Supabase, `user_favorites`, `bookings`, `GET /api/client-bookings` (целевое). Legacy food-order: [ORDER_SYSTEM.md](../archive/ORDER_SYSTEM.md).
 
 ---
 
@@ -172,7 +172,8 @@
 
 ## 6. Связанные документы
 
-- `ORDER_SYSTEM.md` — создание заказа и состав `items`.
+- [../inuu/03-core-platform.md](../inuu/03-core-platform.md) — booking, избранное.
+- [ORDER_SYSTEM.md](../archive/ORDER_SYSTEM.md) — legacy заказы еды.
 - `pages/[city_slug]/index.md` — целевые блоки главной агрегатора.
 - `server/api/client-orders.get.ts` — текущий список заказов клиента.
 

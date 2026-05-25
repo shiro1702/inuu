@@ -124,7 +124,7 @@
 3. После этого все апдейты Telegram и открытие Web App будут попадать в staging.
 
 Подсказка:
-- общий чек-лист по этому процессу есть в `TELEGRAM_TESTING.md`;
+- общий чек-лист: [TELEGRAM_TESTING_RU.md](../runbooks/TELEGRAM_TESTING_RU.md);
 - webhook endpoint в проекте — это `server/api/webhook.post.ts` (т.е. HTTP путь вида `/api/webhook`).
 
 ## Пошагово: production
@@ -170,6 +170,6 @@
 4. Деплой production по вашему обычному workflow (merge в `main`, релиз и т.п.).
 
 ## Ссылки на внутренние документы
-- `TELEGRAM_TESTING.md` (Web App и webhook на Vercel)
-- `ORDER_SYSTEM.md` (эндпоинты `/api/order` и `/api/webhook`)
+- [TELEGRAM_TESTING_RU.md](../runbooks/TELEGRAM_TESTING_RU.md) (Web App и webhook)
+- [ORDER_SYSTEM.md](../archive/ORDER_SYSTEM.md) (legacy `/api/order`)
 - `README.md` (перечень env переменных и общий деплой-опис)
