@@ -1,0 +1,7 @@
+const linkMax_vue_vue_type_style_index_0_scoped_3c0c78e8_lang = ".link-max-page[data-v-3c0c78e8]{margin:0 auto;max-width:480px;padding:2rem 1.5rem}.btn[data-v-3c0c78e8]{border:none;border-radius:.4rem;cursor:pointer;margin-top:.6rem;padding:.6rem 1.2rem;width:100%}.btn-secondary[data-v-3c0c78e8]{background:#eef2ff;color:#1f2937}.manual-box[data-v-3c0c78e8]{background:#f9fafb;border:1px solid #e5e7eb;border-radius:.5rem;margin-top:.75rem;padding:.75rem}.manual-title[data-v-3c0c78e8]{color:#111827;font-size:.9rem;font-weight:600}.manual-help[data-v-3c0c78e8]{color:#4b5563;font-size:.85rem;margin-top:.35rem}.manual-code[data-v-3c0c78e8]{background:#fff;border:1px dashed #d1d5db;border-radius:.4rem;color:#111827;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,Liberation Mono,Courier New,monospace;font-size:.82rem;margin-top:.45rem;overflow-wrap:anywhere;padding:.5rem .6rem}.btn-primary[data-v-3c0c78e8]{background:#e25e2d;color:#fff}.btn-primary[data-v-3c0c78e8]:disabled{cursor:not-allowed;opacity:.6}.status[data-v-3c0c78e8]{color:#4b5563;font-size:.95rem;line-height:1.45;margin-bottom:1rem}.error[data-v-3c0c78e8]{color:#dc2626;margin-top:1rem}.success[data-v-3c0c78e8]{color:#16a34a;margin-top:1rem}";
+
+const linkMaxStyles_DDViXfFA = [
+  linkMax_vue_vue_type_style_index_0_scoped_3c0c78e8_lang
+];
+
+export { linkMaxStyles_DDViXfFA as default };

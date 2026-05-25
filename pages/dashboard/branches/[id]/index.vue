@@ -6,20 +6,6 @@
         <p class="mt-1 text-sm text-gray-600">{{ branch.name }}</p>
         <div class="mt-2 flex flex-wrap items-center gap-3">
           <NuxtLink
-            v-if="branch"
-            :to="`/dashboard/branches/${branch.id}/kitchen`"
-            class="text-sm text-primary hover:underline"
-          >
-            Экран кухни (KDS)
-          </NuxtLink>
-          <NuxtLink
-            v-if="branch"
-            :to="`/dashboard/branches/${branch.id}/zones`"
-            class="text-sm text-primary hover:underline"
-          >
-            Зоны доставки
-          </NuxtLink>
-          <NuxtLink
             v-if="branch && storefrontPath"
             :to="{ path: storefrontPath, query: { branch_id: branch.id } }"
             target="_blank"

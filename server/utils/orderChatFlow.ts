@@ -109,5 +109,3 @@ export async function assignOrderBranchFromChat(
     previousBranchId,
   }
 }
-
-export { syncTelegramChatsAfterBranchTransfer } from '~/server/utils/orderManagerTelegram'

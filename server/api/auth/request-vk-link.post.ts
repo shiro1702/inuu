@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import { getShopById } from '~/server/utils/tenant'
 import { buildVkAuthorizeUrl, generateVkPkcePair } from '~/server/utils/vkOAuth'
+import { sanitizeAuthRedirectPath } from '~/utils/authRedirect'
 
 type Body = {
   shopId?: string
@@ -11,10 +12,8 @@ type Body = {
   bridgeKey?: string
 }
 
-function sanitizeInternalPath(path: unknown): string {
-  if (typeof path !== 'string' || !path.startsWith('/')) return '/checkout?step=1'
-  if (path.startsWith('//')) return '/checkout?step=1'
-  return path
+function sanitizeInternalPath(path: unknown, defaultCitySlug: string): string {
+  return sanitizeAuthRedirectPath(path, defaultCitySlug)
 }
 
 export default defineEventHandler(async (event) => {
@@ -43,7 +42,7 @@ export default defineEventHandler(async (event) => {
   const citySlug =
     typeof body?.citySlug === 'string' && body.citySlug.trim() ? body.citySlug.trim() : defaultCitySlug
 
-  const redirectPath = sanitizeInternalPath(body?.redirectPath)
+  const redirectPath = sanitizeInternalPath(body?.redirectPath, defaultCitySlug)
   const serviceClient = await serverSupabaseServiceRole(event)
   let bridgePayload: Record<string, unknown> = {}
 

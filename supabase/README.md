@@ -4,7 +4,7 @@
 
 | Папка | Назначение |
 |-------|------------|
-| [migrations/](migrations/) | **Актуальная** схема INUU (`001_inuu_*` … `019_inuu_seed_ulan_ude`) |
+| [migrations/](migrations/) | **Актуальная** схема INUU (`001_inuu_*` … `020_inuu_seed_city_stories_slides`) |
 | [migrations_legacy/](migrations_legacy/) | Архив PocketMenu (001–051), не для нового `db reset` |
 
 ### Применить с нуля (локально)
@@ -36,6 +36,7 @@ supabase migration up
 17. `feature_catalog` (модули INUU)  
 18. RLS  
 19. Seed Улан-Удэ  
+20. Seed слайды городских сторис (Улан-Удэ)  
 
 Спека: [../docs/inuu/09-data-model-overview.md](../docs/inuu/09-data-model-overview.md).
 

@@ -289,5 +289,3 @@ export async function enrichManagerKeyboardFromOrder(
     branchPickerEnabled: base.branchPickerEnabled,
   }
 }
-
-export { formatManagerCustomerLine, buildOrderContactCallback }

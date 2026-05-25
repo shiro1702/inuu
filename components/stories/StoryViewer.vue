@@ -206,6 +206,9 @@ const actionLabel = computed(() => {
   if (t === 'add_to_cart') return 'В корзину'
   if (t === 'apply_promo') return 'Применить промокод'
   if (t === 'open_category') return 'К категории'
+  if (t === 'open_url') return 'Открыть'
+  if (t === 'open_event') return 'К событию'
+  if (t === 'open_venue') return 'К месту'
   return 'Далее'
 })
 

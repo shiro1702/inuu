@@ -1,0 +1,1 @@
+import{p as s,k as a,h as t,I as o}from"./Cshmre4w.js";const r=s({__name:"applications",setup(n){return(l,e)=>(o(),a("section",null,[...e[0]||(e[0]=[t("h1",{class:"text-2xl font-semibold"},"Заявки на подключение",-1),t("p",{class:"mt-2 text-sm text-gray-600"},"TODO: обработка заявок из страницы партнеров.",-1)])]))}});export{r as default};

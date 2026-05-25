@@ -40,15 +40,16 @@ export default defineNuxtConfig({
     /** OAuth host: id.vk.com or id.vk.ru per VK ID docs */
     vkIdBaseUrl: process.env.NUXT_VK_ID_BASE_URL ?? 'https://id.vk.com',
     supabaseUrl: process.env.SUPABASE_URL ?? '',
-    supabaseServiceKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? '',
+    supabaseServiceKey:
+      process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY ?? '',
     public: {
+      brandName: 'INUU',
       platformBaseDomain: process.env.NUXT_PLATFORM_BASE_DOMAIN ?? '',
       defaultCitySlug: process.env.NUXT_DEFAULT_CITY_SLUG ?? 'ulan-ude',
       yandexMapsApiKey: process.env.YANDEX_MAPS_API_KEY ?? '',
       telegramBotName: process.env.NUXT_PUBLIC_TELEGRAM_BOT_NAME ?? process.env.NUXT_TELEGRAM_BOT_NAME ?? '',
       maxBotUrl: process.env.NUXT_PUBLIC_MAX_BOT_URL ?? process.env.NUXT_MAX_BOT_URL ?? '',
       pickupPointsJson: process.env.NUXT_PICKUP_POINTS_JSON ?? '',
-      fulfillmentTypes: process.env.NUXT_FULFILLMENT_TYPES ?? 'delivery,pickup,qr-menu',
       dadataToken: process.env.DADATA_TOKEN ?? '',
       supabaseUrl: process.env.SUPABASE_URL ?? '',
       supabaseKey: process.env.SUPABASE_KEY ?? '',
@@ -58,7 +59,8 @@ export default defineNuxtConfig({
   },
   supabase: {
     redirect: false,
-    // serviceKey используется только на сервере через serverSupabaseServiceRole
+    // serverSupabaseServiceRole: secretKey (sb_secret_…) приоритетнее legacy service_role JWT
+    secretKey: process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY,
     serviceKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
   },
   app: {

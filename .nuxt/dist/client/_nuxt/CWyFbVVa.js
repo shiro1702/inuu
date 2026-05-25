@@ -1,0 +1,1 @@
+import{p as o,a1 as s,Z as a,E as r,k as n,I as c}from"./Cshmre4w.js";const u={class:"p-4 text-sm text-gray-600"},m=o({__name:"index",setup(p){const e=s(),t=a();return r(()=>{e.replace({path:"/dashboard/orders/kanban",query:t.query})}),(d,_)=>(c(),n("div",u,"Переадресация на канбан…"))}});export{m as default};

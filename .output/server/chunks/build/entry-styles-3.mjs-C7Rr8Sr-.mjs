@@ -1,0 +1,3 @@
+const AuthChannelModal_vue_vue_type_style_index_0_scoped_d5aefbf8_lang = ".auth-channel-modal-fade-enter-active[data-v-d5aefbf8],.auth-channel-modal-fade-leave-active[data-v-d5aefbf8]{transition:opacity .2s ease}.auth-channel-modal-fade-enter-from[data-v-d5aefbf8],.auth-channel-modal-fade-leave-to[data-v-d5aefbf8]{opacity:0}.auth-channel-modal-fade-enter-active .modal-panel[data-v-d5aefbf8],.auth-channel-modal-fade-leave-active .modal-panel[data-v-d5aefbf8]{transition:opacity .2s ease,transform .2s ease}.auth-channel-modal-fade-enter-from .modal-panel[data-v-d5aefbf8],.auth-channel-modal-fade-leave-to .modal-panel[data-v-d5aefbf8]{opacity:0;transform:translateY(6px) scale(.98)}";
+
+export { AuthChannelModal_vue_vue_type_style_index_0_scoped_d5aefbf8_lang as A };

@@ -5,27 +5,17 @@ import {
   getShopByBotId,
   getShopByCustomDomain,
   getShopById,
-  resolveCanonicalTenantCartPath,
   resolveShopIdFromEvent,
 } from '~/server/utils/tenant'
 import { getStyleRecord } from '~/server/utils/organizationStyle'
 import { getMessengerInitDataFromEvent } from '~/server/utils/messengerInitData'
 
 const REQUIRED_PATHS = [
-  '/api/order',
-  '/api/checkout/create',
-  '/api/client-order-status',
-  '/api/customer/addresses',
   '/api/tenant',
-  '/api/products',
-  '/api/restaurants',
-  '/api/restaurant-zones',
-  '/api/delivery-resolve',
-  '/api/cart-bridge',
   '/api/stories',
 ]
 
-const CUSTOM_DOMAIN_REWRITE_PATHS = new Set(['/', '/cart', '/checkout'])
+const CUSTOM_DOMAIN_REWRITE_PATHS = new Set(['/'])
 
 function normalizeHost(host: string | null | undefined): string | null {
   if (!host) return null
@@ -72,13 +62,19 @@ function extractTenantSlugFromPath(path: string, defaultCitySlug: string | null)
     'link-telegram',
     'link-max',
     'link-vk',
+    'events',
+    'venues',
+    'map',
+    'favorites',
+    'bookings',
+    'legal',
   ].includes(firstSegment)) return null
   if (/\.[a-z0-9]+$/i.test(firstSegment)) return null
 
-  // Поддержка URL-схемы агрегатора: /{city_slug}/{tenant_slug}/...
-  // Для restaurant-страниц tenant_slug должен браться из второго сегмента.
   if (defaultCitySlug && firstSegment === defaultCitySlug) {
-    if (secondSegment === 'festival') return null
+    if (secondSegment === 'festival' || secondSegment === 'events' || secondSegment === 'venues' || secondSegment === 'map') {
+      return null
+    }
     return secondSegment ?? null
   }
 
@@ -109,17 +105,20 @@ function extractCityAndTenantFromPath(path: string): { citySlug: string; tenantS
     'link-telegram',
     'link-max',
     'link-vk',
+    'events',
+    'venues',
+    'map',
+    'favorites',
+    'bookings',
+    'legal',
   ].includes(citySlug)) return null
-  if (tenantSlug === 'festival') return null
+  if (tenantSlug === 'festival' || tenantSlug === 'events' || tenantSlug === 'venues') return null
   if (/\.[a-z0-9]+$/i.test(citySlug) || /\.[a-z0-9]+$/i.test(tenantSlug)) return null
   return { citySlug, tenantSlug }
 }
 
 export default defineEventHandler(async (event) => {
   const path = event.path || ''
-  const normalizedPath = (path.split('?')[0] || '/').replace(/\/+$/, '') || '/'
-  const isLegacyFlatCheckout = normalizedPath === '/checkout'
-  const isCartBridgeGet = path.startsWith('/api/cart-bridge') && event.method === 'GET'
   const config = useRuntimeConfig()
   const defaultCitySlug = typeof config.public?.defaultCitySlug === 'string' ? config.public.defaultCitySlug : null
   const requestHost = normalizeHost(getHeader(event, 'x-forwarded-host') || getHeader(event, 'host'))
@@ -151,10 +150,6 @@ export default defineEventHandler(async (event) => {
       if (botId) {
         shop = await getShopByBotId(event, botId)
       }
-      /**
-       * Telegram Mini App initData часто не содержит bot_id, но может содержать start_param
-       * (shop slug/ID). Используем его как fallback, чтобы required API не падали с 404.
-       */
       if (!shop) {
         const shopRef = extractShopIdFromInitData(initData)
         if (shopRef) {
@@ -172,41 +167,19 @@ export default defineEventHandler(async (event) => {
       }
       return
     }
-    if (isCartBridgeGet) {
-      return
-    }
     if (isRequired) {
       throw createError({ statusCode: 404, message: 'Shop not found' })
     }
     return
   }
+
   if (!shop.is_active) {
     throw createError({ statusCode: 403, message: 'Shop is inactive' })
-  }
-
-  // Старый URL корзины /{city}/{tenant}/cart → канонический /checkout?step=1
-  if (!path.startsWith('/api/')) {
-    const pathnameOnly = (path.split('?')[0] || '').replace(/\/+$/, '') || '/'
-    const segments = pathnameOnly.split('/').filter(Boolean)
-    if (segments.length >= 3 && segments[segments.length - 1] === 'cart') {
-      const url = new URL(path, 'http://internal.local')
-      url.pathname = pathnameOnly.replace(/\/cart$/, '/checkout')
-      if (!url.searchParams.has('step')) url.searchParams.set('step', '1')
-      return sendRedirect(event, `${url.pathname}${url.search}`, 302)
-    }
-  }
-
-  if (!path.startsWith('/api/') && isLegacyFlatCheckout) {
-    const canonical = await resolveCanonicalTenantCartPath(event, shop)
-    return sendRedirect(event, canonical.checkoutPath, 302)
   }
 
   let uiSettings = shop.ui_settings ?? {}
   let shopName = shop.name
 
-  // MVP: подмешиваем organization_style_settings в context для SSR-рендера витрины.
-  // Это гарантирует, что цвета/логотип/описание применятся даже когда frontend не успел
-  // сделать запрос на `/api/tenant`.
   if (!path.startsWith('/api/')) {
     try {
       const record = await getStyleRecord(event, shop.id)
@@ -232,7 +205,7 @@ export default defineEventHandler(async (event) => {
       shopName = cfg.identity.name || shopName
       ;(shop as any).name = shopName
     } catch {
-      // best-effort: витрина не должна ломаться из-за проблем со схемой/таблицей
+      // best-effort
     }
   }
 
@@ -248,12 +221,7 @@ export default defineEventHandler(async (event) => {
   if (!path.startsWith('/api/') && isCustomDomain && shouldRewriteCustomDomainPath(path)) {
     const url = new URL(event.node.req.url || path, 'http://internal.local')
     const normalizedPath = (url.pathname.replace(/\/+$/, '') || '/') === '/' ? '' : url.pathname.replace(/\/+$/, '')
-    let suffix = normalizedPath
-    if (suffix === '/cart' || suffix.endsWith('/cart')) {
-      suffix = suffix.replace(/\/cart$/, '/checkout')
-      if (!url.searchParams.has('step')) url.searchParams.set('step', '1')
-    }
-    url.pathname = `/${shop.slug}${suffix}`
+    url.pathname = `/${shop.slug}${normalizedPath}`
     event.node.req.url = `${url.pathname}${url.search}`
   }
 })
@@ -278,43 +246,18 @@ function mixHex(a: string, b: string, amount: number): string {
   return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${bl.toString(16).padStart(2, '0')}`
 }
 
-function derivePrimaryVariants(brandPrimary: string) {
-  const primary = brandPrimary
+function deriveTenantThemeFromStyle(cfg: any): Record<string, string> {
+  const primary = typeof cfg?.colors?.primary === 'string' ? cfg.colors.primary : '#111827'
+  const secondary = typeof cfg?.colors?.secondary === 'string' ? cfg.colors.secondary : '#6b7280'
+  const textPrimary = typeof cfg?.colors?.textPrimary === 'string' ? cfg.colors.textPrimary : '#111827'
+  const surfaceCard = typeof cfg?.colors?.surfaceCard === 'string' ? cfg.colors.surfaceCard : '#ffffff'
   return {
     primary,
-    primary_50: mixHex(primary, '#ffffff', 0.85),
-    primary_100: mixHex(primary, '#ffffff', 0.7),
-    primary_600: mixHex(primary, '#000000', 0.25),
-    primary_700: mixHex(primary, '#000000', 0.35),
-  }
-}
-
-function deriveTenantThemeFromStyle(cfg: {
-  tokens: {
-    brandPrimary: string
-    textOnPrimary: string
-    brandSecondary: string
-    brandAccent: string
-    surfaceBackground: string
-    surfaceCard: string
-    textPrimary: string
-    textMuted: string
-    stateSuccess: string
-    stateWarning: string
-    stateError: string
-  }
-}) {
-  return {
-    ...derivePrimaryVariants(cfg.tokens.brandPrimary),
-    on_primary: cfg.tokens.textOnPrimary,
-    secondary: cfg.tokens.brandSecondary,
-    accent: cfg.tokens.brandAccent,
-    surface_background: cfg.tokens.surfaceBackground,
-    surface_card: cfg.tokens.surfaceCard,
-    text_primary: cfg.tokens.textPrimary,
-    text_muted: cfg.tokens.textMuted,
-    state_success: cfg.tokens.stateSuccess,
-    state_warning: cfg.tokens.stateWarning,
-    state_error: cfg.tokens.stateError,
+    primary_50: mixHex(primary, '#ffffff', 0.92),
+    primary_100: mixHex(primary, '#ffffff', 0.85),
+    secondary,
+    text_primary: textPrimary,
+    surface_card: surfaceCard,
+    on_primary: '#ffffff',
   }
 }

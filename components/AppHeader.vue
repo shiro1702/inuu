@@ -59,7 +59,7 @@
           aria-label="Меню заказов"
           @click="showMiniappMenu = !showMiniappMenu"
         >
-          <span class="hidden sm:inline">Заказы и бонусы</span>
+          <span class="hidden sm:inline">Меню INUU</span>
           <span class="sm:hidden">Меню</span>
           <svg class="h-3 w-3 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
@@ -72,21 +72,12 @@
             :style="menuStyle"
           >
             <NuxtLink
-              :to="ordersLink"
+              :to="profileLink"
               class="block px-3 py-2"
               :style="{ color: mainTextColor }"
               @click="showMiniappMenu = false"
             >
-              История заказов
-            </NuxtLink>
-            <NuxtLink
-              v-if="bonusesMenuVisible"
-              :to="bonusesLink"
-              class="block px-3 py-2"
-              :style="{ color: mainTextColor }"
-              @click="showMiniappMenu = false"
-            >
-              Бонусы
+              Профиль
             </NuxtLink>
             <NuxtLink
               v-if="achievementsMenuVisible"
@@ -343,7 +334,11 @@ const showMiniappCustomerLinks = computed(() => {
   const routeTenantSlug = typeof route.params.tenant_slug === 'string' ? route.params.tenant_slug.trim() : ''
   return !!(routeCitySlug || routeTenantSlug || tenant.value.tenantSlug)
 })
-const tenantName = computed(() => tenant.value.shopName || 'PocketMenu')
+const brandName = computed(() => {
+  const raw = config.public.brandName
+  return typeof raw === 'string' && raw.trim() ? raw.trim() : 'INUU'
+})
+const tenantName = computed(() => tenant.value.shopName || brandName.value)
 const tenantLogoUrl = computed(() => tenant.value.logoUrl || tenant.value.logoLargeUrl || '/logo.webp')
 const tenantDescription = computed(() => tenant.value.description || '')
 const defaultCitySlug = computed(() =>
@@ -432,10 +427,17 @@ function onDocumentClickCapture(e: MouseEvent) {
   }
 }
 
+const profileLink = computed(() => '/profile')
+
 function resolvePostLoginRedirectPath(): string {
   const raw = typeof route.fullPath === 'string' ? route.fullPath.trim() : ''
+  const citySlug = typeof route.params.city_slug === 'string' ? route.params.city_slug.trim() : ''
+  const fallback = citySlug ? `/${citySlug}` : `/${defaultCitySlug.value}`
   if (!raw || !raw.startsWith('/') || raw.startsWith('//')) {
-    return tenantPath('/checkout') + '?step=1'
+    return fallback
+  }
+  if (raw.includes('/cart') || raw.includes('/checkout') || raw.includes('/bonuses')) {
+    return fallback
   }
   return raw
 }

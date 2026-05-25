@@ -12,8 +12,8 @@ import {
   mapChatCallbackToOrderStatus,
   parseBranchCallback,
   parseOrderContactCallback,
-  syncTelegramChatsAfterBranchTransfer,
 } from '~/server/utils/orderChatFlow'
+import { syncTelegramChatsAfterBranchTransfer } from '~/server/utils/orderManagerTelegram'
 import type { ChatFlowOrderStatus } from '~/server/utils/orderChatFlowPure'
 import { isDeliveryFulfillment } from '~/utils/dashboardOrderStatus'
 import { getProfilePhone, normalizePhone, setProfilePhone } from '~/server/utils/accountPhoneLink'

@@ -1,0 +1,1 @@
+import{a4 as u,W as s,U as r,t as o,v as c,u as i}from"./Cshmre4w.js";function a(e){const t=e||r();return t?.ssrContext?.head||t?.runWithContext(()=>{if(o())return c(i)})}function d(e,t={}){const n=a(t.nuxt);if(n)return s(e,{head:n,...t})}function f(e,t={}){const n=a(t.nuxt);if(n)return u(e,{head:n,...t})}export{f as a,d as u};

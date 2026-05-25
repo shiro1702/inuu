@@ -1,6 +1,6 @@
 <template>
   <div class="link-max-page">
-    <h1>Вход через MAX</h1>
+    <h1>Вход в INUU через MAX</h1>
 
     <p v-if="!token">Некорректная ссылка: отсутствует токен.</p>
 
@@ -46,6 +46,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter, useRuntimeConfig, useSupabaseClient } from '#imports'
+import { sanitizeAuthRedirectPath } from '~/utils/authRedirect'
 
 const route = useRoute()
 const router = useRouter()
@@ -81,9 +82,12 @@ const isLoading = ref(false)
 const isSuccess = ref(false)
 const errorMessage = ref<string | null>(null)
 const statusLine = ref<string | null>(null)
-const cartStore = useCartStore()
-
 let pollAborted = false
+
+const defaultCitySlug = computed(() => {
+  const raw = config.public.defaultCitySlug as string | undefined
+  return raw?.trim() || 'ulan-ude'
+})
 
 onBeforeUnmount(() => {
   pollAborted = true
@@ -107,69 +111,8 @@ async function copyManualAuthText(): Promise<void> {
   }, 1500)
 }
 
-function resolveTenantCartTarget(): string {
-  const fallbackFull = shopId.value ? `/${shopId.value}/checkout?step=1` : '/checkout?step=1'
-  const raw = redirectPath.value || fallbackFull
-  if (!raw.startsWith('/')) return fallbackFull
-
-  const [pathPart, queryPart = ''] = raw.split('?')
-  const query = new URLSearchParams(queryPart)
-
-  let pathOnly = pathPart
-  if (pathOnly.endsWith('/cart')) {
-    pathOnly = pathOnly.replace(/\/cart$/, '/checkout')
-  }
-  if (!pathOnly.endsWith('/checkout')) {
-    return fallbackFull
-  }
-
-  if (!query.get('shop_id') && shopId.value) {
-    query.set('shop_id', shopId.value)
-  }
-  if (!query.has('step')) {
-    query.set('step', '1')
-  }
-
-  const serialized = query.toString()
-  return serialized ? `${pathOnly}?${serialized}` : `${pathOnly}?step=1`
-}
-
-async function resolveCanonicalCartTarget(): Promise<string> {
-  if (!shopId.value) return resolveTenantCartTarget()
-  try {
-    const canonical = await $fetch<{ ok: boolean; checkoutPath?: string }>(
-      '/api/tenant/resolve-canonical',
-      {
-        query: { shop_id: shopId.value },
-      },
-    )
-    if (
-      canonical?.ok
-      && typeof canonical.checkoutPath === 'string'
-      && canonical.checkoutPath.startsWith('/')
-    ) {
-      return `${canonical.checkoutPath}?step=1`
-    }
-  } catch {
-    // fall back to local target resolution
-  }
-  return resolveTenantCartTarget()
-}
-
-async function resolveAfterLogin() {
-  const raw = redirectPath.value || ''
-  if (raw.includes('/cart')) {
-    return resolveCanonicalCartTarget()
-  }
-  const fallbackPath = shopId.value ? `/${shopId.value}/checkout?step=1` : '/checkout?step=1'
-  const pathToUse = raw.startsWith('/') ? raw : fallbackPath
-  const [pathPart, queryPart = ''] = pathToUse.split('?')
-  const query = new URLSearchParams(queryPart)
-  if (!query.get('shop_id') && shopId.value) {
-    query.set('shop_id', shopId.value)
-  }
-  const serialized = query.toString()
-  return serialized ? `${pathPart}?${serialized}` : pathPart
+function resolveAfterLogin(): string {
+  return sanitizeAuthRedirectPath(redirectPath.value, defaultCitySlug.value)
 }
 
 async function pollUntilReady(): Promise<void> {
@@ -241,13 +184,8 @@ const linkMax = async () => {
         }
       }
 
-      if (res.bridge_payload) {
-        const fallbackScopeKey = shopId.value || null
-        cartStore.mergeBridgePayload(res.bridge_payload as any, fallbackScopeKey)
-      }
-
       isSuccess.value = true
-      await router.replace(await resolveAfterLogin())
+      await router.replace(resolveAfterLogin())
     } else {
       throw new Error('Не удалось создать сессию Supabase.')
     }

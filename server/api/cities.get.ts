@@ -1,10 +1,12 @@
 import { createError, defineEventHandler, getQuery, setResponseHeader } from 'h3'
-import { serverSupabaseServiceRole } from '#supabase/server'
+import { serverSupabaseClient } from '#supabase/server'
 
 type CityRow = {
   id: string
   name: string
   slug: string
+  timezone?: string
+  editorial_name?: string | null
   is_active?: boolean
 }
 
@@ -39,12 +41,12 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'City slug is required' })
   }
 
-  const client = await serverSupabaseServiceRole(event)
+  const client = await serverSupabaseClient(event)
   let data: any = null
   let error: any = null
   const primary = await client
     .from('cities')
-    .select('id,name,slug,is_active')
+    .select('id,name,slug,timezone,editorial_name,is_active')
     .eq('slug', slug)
     .eq('is_active', true)
     .maybeSingle()
@@ -107,6 +109,8 @@ export default defineEventHandler(async (event) => {
       id: city.id,
       name: city.name,
       slug: city.slug,
+      timezone: city.timezone || 'Asia/Irkutsk',
+      editorialName: city.editorial_name ?? null,
       isActive: city.is_active !== false,
     },
     festival: festival
