@@ -4,7 +4,7 @@
 
 | Папка | Назначение |
 |-------|------------|
-| [migrations/](migrations/) | **Актуальная** схема INUU (`001_inuu_*` … `020_inuu_seed_city_stories_slides`) |
+| [migrations/](migrations/) | **Актуальная** схема INUU (`001_inuu_*` … `022_inuu_telegram_content`) |
 | [migrations_legacy/](migrations_legacy/) | Архив PocketMenu (001–051), не для нового `db reset` |
 
 ### Применить с нуля (локально)
@@ -37,6 +37,10 @@ supabase migration up
 18. RLS  
 19. Seed Улан-Удэ  
 20. Seed слайды городских сторис (Улан-Удэ)  
+21. Seed items подборки weekend  
+22. Telegram-афиша: `editorial_post_media`, поля `source_*`, bucket `city-editorial-media`  
+
+Импорт из `docs/data/`: [../docs/data/README.md](../docs/data/README.md).
 
 Спека: [../docs/inuu/09-data-model-overview.md](../docs/inuu/09-data-model-overview.md).
 

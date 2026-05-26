@@ -35,6 +35,8 @@
 
 ## Workflow редакции
 
+Варианты инструментов (SQL, dashboard, CMS, бот): **[features/content/01-news-editorial-options.md](../features/content/01-news-editorial-options.md)**.
+
 1. Создание в dashboard редакции или `platform/` (`editorial_posts`, `curated_lists` в Supabase).
 2. Модерация (при user-generated — позже).
 3. Публикация → главная + TG-канал + опционально IG.

@@ -6,6 +6,8 @@
 
 ## События
 
+Варианты добавления мастер-классов и афиши: **[features/content/02-masterclasses-events-options.md](../features/content/02-masterclasses-events-options.md)**. Сводка MVP: **[03-recommended-mvp.md](../features/content/03-recommended-mvp.md)**.
+
 ### Каталог
 
 - Сетка / masonry (Pinterest-стиль).

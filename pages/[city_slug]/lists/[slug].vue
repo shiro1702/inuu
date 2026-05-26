@@ -26,32 +26,23 @@ const route = useRoute()
 const { slug: citySlug, cityBasePath, displayName } = useCity()
 const listSlug = computed(() => String(route.params.slug || ''))
 
-const pending = ref(true)
-const list = ref<{ title: string; description?: string | null } | null>(null)
-const items = ref<
-  Array<
-    | { entityType: 'venue'; note: string | null; venue: Record<string, unknown> }
-    | { entityType: 'event'; note: string | null; event: Record<string, unknown> }
-  >
->([])
+type ListItem =
+  | { entityType: 'venue'; note: string | null; venue: Record<string, unknown> }
+  | { entityType: 'event'; note: string | null; event: Record<string, unknown> }
 
-watch([citySlug, listSlug], async () => {
-  pending.value = true
-  try {
-    const res = await $fetch<{
-      ok: boolean
-      list?: { title: string; description?: string | null }
-      items?: typeof items.value
-    }>(`/api/cities/${citySlug.value}/lists/${listSlug.value}`)
-    list.value = res?.list ?? null
-    items.value = res?.items ?? []
-  } catch {
-    list.value = null
-    items.value = []
-  } finally {
-    pending.value = false
-  }
-}, { immediate: true })
+type ListResponse = {
+  ok: boolean
+  list?: { title: string; description?: string | null }
+  items?: ListItem[]
+}
+
+const { data, pending } = await useFetch<ListResponse>(
+  () => `/api/cities/${citySlug.value}/lists/${listSlug.value}`,
+  { watch: [citySlug, listSlug] },
+)
+
+const list = computed(() => data.value?.list ?? null)
+const items = computed(() => data.value?.items ?? [])
 
 useHead({
   title: () => (list.value?.title ? `${list.value.title} — ${displayName.value}` : `Подборка — ${displayName.value}`),

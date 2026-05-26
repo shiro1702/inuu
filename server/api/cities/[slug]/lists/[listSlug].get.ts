@@ -1,6 +1,5 @@
 import { createError, defineEventHandler, setResponseHeader } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
-import { resolveCityBySlug } from '~/server/utils/inuuCity'
 
 type CuratedListItemRow = {
   id: string
@@ -10,19 +9,48 @@ type CuratedListItemRow = {
   note: string | null
 }
 
+type ListWithItemsRow = {
+  id: string
+  slug: string
+  title: string
+  description: string | null
+  curated_list_items: CuratedListItemRow[] | null
+  cities: { id: string; slug: string }
+}
+
 export default defineEventHandler(async (event) => {
-  setResponseHeader(event, 'Cache-Control', 'public, max-age=60, s-maxage=120')
+  setResponseHeader(event, 'Cache-Control', 'public, max-age=60, s-maxage=120, stale-while-revalidate=300')
+
   const slug = typeof event.context.params?.slug === 'string' ? event.context.params.slug : ''
   const listSlug = typeof event.context.params?.listSlug === 'string' ? event.context.params.listSlug : ''
-  const city = await resolveCityBySlug(event, slug)
+  if (!slug || !listSlug) {
+    throw createError({ statusCode: 400, statusMessage: 'City slug and list slug are required' })
+  }
 
   const client = await serverSupabaseServiceRole(event)
-  const { data: list, error: listError } = await client
+
+  const { data: listRow, error: listError } = await client
     .from('curated_lists')
-    .select('id,slug,title,description')
-    .eq('city_id', city.id)
+    .select(`
+      id,
+      slug,
+      title,
+      description,
+      curated_list_items (
+        id,
+        entity_type,
+        entity_id,
+        sort_order,
+        note
+      ),
+      cities!inner (
+        id,
+        slug
+      )
+    `)
     .eq('slug', listSlug)
     .eq('is_published', true)
+    .eq('cities.slug', slug)
     .maybeSingle()
 
   if (listError) {
@@ -30,22 +58,20 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, statusMessage: 'Failed to load list' })
   }
 
-  if (!list) {
+  if (!listRow) {
     throw createError({ statusCode: 404, statusMessage: 'List not found' })
   }
 
-  const { data: rawItems, error: itemsError } = await client
-    .from('curated_list_items')
-    .select('id,entity_type,entity_id,sort_order,note')
-    .eq('list_id', list.id)
-    .order('sort_order', { ascending: true })
-
-  if (itemsError) {
-    console.error('[lists/detail] items load failed:', itemsError)
-    throw createError({ statusCode: 500, statusMessage: 'Failed to load list items' })
+  const row = listRow as ListWithItemsRow
+  const cityId = row.cities.id
+  const list = {
+    id: row.id,
+    slug: row.slug,
+    title: row.title,
+    description: row.description,
   }
 
-  const rows = (rawItems ?? []) as CuratedListItemRow[]
+  const rows = [...(row.curated_list_items ?? [])].sort((a, b) => a.sort_order - b.sort_order)
   const venueIds = rows.filter((r) => r.entity_type === 'venue').map((r) => r.entity_id)
   const eventIds = rows.filter((r) => r.entity_type === 'event').map((r) => r.entity_id)
 
@@ -54,7 +80,7 @@ export default defineEventHandler(async (event) => {
       ? client
           .from('venues')
           .select('id,slug,title,description,address,cover_media_url,vibe_tags,editorial_quote')
-          .eq('city_id', city.id)
+          .eq('city_id', cityId)
           .eq('is_published', true)
           .eq('is_active', true)
           .in('id', venueIds)
@@ -63,7 +89,7 @@ export default defineEventHandler(async (event) => {
       ? client
           .from('events')
           .select('id,slug,title,description,starts_at,price,currency,cover_media_url')
-          .eq('city_id', city.id)
+          .eq('city_id', cityId)
           .eq('is_published', true)
           .in('id', eventIds)
       : Promise.resolve({ data: [] as Record<string, unknown>[] }),
@@ -77,14 +103,14 @@ export default defineEventHandler(async (event) => {
   )
 
   const items = rows
-    .map((row) => {
-      if (row.entity_type === 'venue') {
-        const venue = venueById.get(row.entity_id)
-        return venue ? { entityType: 'venue' as const, note: row.note, venue } : null
+    .map((itemRow) => {
+      if (itemRow.entity_type === 'venue') {
+        const venue = venueById.get(itemRow.entity_id)
+        return venue ? { entityType: 'venue' as const, note: itemRow.note, venue } : null
       }
-      if (row.entity_type === 'event') {
-        const evt = eventById.get(row.entity_id)
-        return evt ? { entityType: 'event' as const, note: row.note, event: evt } : null
+      if (itemRow.entity_type === 'event') {
+        const evt = eventById.get(itemRow.entity_id)
+        return evt ? { entityType: 'event' as const, note: itemRow.note, event: evt } : null
       }
       return null
     })

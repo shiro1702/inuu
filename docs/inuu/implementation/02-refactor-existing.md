@@ -218,6 +218,12 @@ pages/[city_slug]/
 | R8 | notifications BOOKING_* | 3 д |
 | R9 | beauty + hot_slots | 2 нед |
 | R10 | tourism leads | 1 нед |
+| R11 | **TG-бот контент:** `content_submissions`, bind `cities.editorial_moderation_chat_id`, `/submit` + модерация в группе | ~1.5 нед |
+| R12 | TG-бот: `/news`, `/event` для редакции | 1–2 д |
+
+Спека: [features/content/04-telegram-bot-content-moderation.md](../features/content/04-telegram-bot-content-moderation.md).
+
+**R11 — принятые решения:** один `@inuu_bot`; модератор = любой участник группы (`getChatMember`); аудит `reviewed_by_telegram_id`; отклонение — preset-кнопки + reply-комментарий.
 
 ---
 

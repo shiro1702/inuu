@@ -37,6 +37,16 @@
 | [implementation/01-cleanup-unused.md](./implementation/01-cleanup-unused.md) | Удаление ресторанного функционала |
 | [implementation/02-refactor-existing.md](./implementation/02-refactor-existing.md) | Переделка модулей под INUU |
 
+### Контент: как добавлять новости и МК
+
+| Документ | Содержание |
+|----------|------------|
+| [features/content/README.md](./features/content/README.md) | Обзор вариантов |
+| [features/content/01-news-editorial-options.md](./features/content/01-news-editorial-options.md) | Новости, подборки, обзоры |
+| [features/content/02-masterclasses-events-options.md](./features/content/02-masterclasses-events-options.md) | Мастер-классы и афиша |
+| [features/content/03-recommended-mvp.md](./features/content/03-recommended-mvp.md) | Рекомендуемые фазы MVP |
+| [features/content/04-telegram-bot-content-moderation.md](./features/content/04-telegram-bot-content-moderation.md) | TG-бот: контент и модерация заявок |
+
 ### Вертикали
 
 | Документ | Содержание |

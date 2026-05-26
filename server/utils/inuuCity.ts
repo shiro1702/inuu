@@ -1,5 +1,6 @@
 import type { H3Event } from 'h3'
 import { createError } from 'h3'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { serverSupabaseServiceRole } from '#supabase/server'
 
 export type InuuCityRow = {
@@ -11,13 +12,25 @@ export type InuuCityRow = {
   is_active: boolean
 }
 
-export async function resolveCityBySlug(event: H3Event, slug: string): Promise<InuuCityRow> {
+const CITY_CACHE_TTL_MS = 5 * 60 * 1000
+const cityBySlugCache = new Map<string, { row: InuuCityRow; expiresAt: number }>()
+
+export async function resolveCityBySlug(
+  event: H3Event,
+  slug: string,
+  existingClient?: SupabaseClient,
+): Promise<InuuCityRow> {
   const normalized = slug.trim()
   if (!normalized) {
     throw createError({ statusCode: 400, statusMessage: 'City slug is required' })
   }
 
-  const client = await serverSupabaseServiceRole(event)
+  const cached = cityBySlugCache.get(normalized)
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.row
+  }
+
+  const client = existingClient ?? (await serverSupabaseServiceRole(event))
   const { data, error } = await client
     .from('cities')
     .select('id,name,slug,timezone,editorial_name,is_active')
@@ -34,5 +47,7 @@ export async function resolveCityBySlug(event: H3Event, slug: string): Promise<I
     throw createError({ statusCode: 404, statusMessage: 'City not found' })
   }
 
-  return data as InuuCityRow
+  const row = data as InuuCityRow
+  cityBySlugCache.set(normalized, { row, expiresAt: Date.now() + CITY_CACHE_TTL_MS })
+  return row
 }
