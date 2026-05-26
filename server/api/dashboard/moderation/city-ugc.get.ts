@@ -4,9 +4,6 @@ import { requireDashboardAccess } from '~/server/utils/dashboard'
 
 export default defineEventHandler(async (event) => {
   const access = await requireDashboardAccess(event)
-  if (access.role !== 'owner') {
-    throw createError({ statusCode: 403, statusMessage: 'Only owner can access city moderation panel' })
-  }
 
   const query = getQuery(event)
   const status = typeof query.status === 'string' ? query.status.trim() : 'pending'

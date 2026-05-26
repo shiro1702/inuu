@@ -9,9 +9,6 @@ type Body = {
 
 export default defineEventHandler(async (event) => {
   const access = await requireDashboardAccess(event)
-  if (access.role !== 'owner') {
-    throw createError({ statusCode: 403, statusMessage: 'Only owner can toggle modules' })
-  }
 
   const body = await readBody<Body>(event).catch(() => ({}))
   const featureCode = typeof body.featureCode === 'string' ? body.featureCode.trim() : ''

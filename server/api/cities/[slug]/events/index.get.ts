@@ -1,5 +1,5 @@
 import { defineEventHandler, getQuery, setResponseHeader } from 'h3'
-import { serverSupabaseClient } from '#supabase/server'
+import { serverSupabaseServiceRole } from '#supabase/server'
 import { resolveCityBySlug } from '~/server/utils/inuuCity'
 
 export default defineEventHandler(async (event) => {
@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
   const limit = Math.min(50, Math.max(1, Number(query.limit) || 24))
   const nowIso = new Date().toISOString()
 
-  const client = await serverSupabaseClient(event)
+  const client = await serverSupabaseServiceRole(event)
   const { data, error } = await client
     .from('events')
     .select('id,slug,title,description,starts_at,ends_at,price,currency,cover_media_url,is_promoted,venue_id')

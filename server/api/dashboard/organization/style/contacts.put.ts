@@ -15,9 +15,6 @@ type SaveContactsBody = {
 
 export default defineEventHandler(async (event) => {
   const access = await requireDashboardAccess(event)
-  if (access.role !== 'owner') {
-    throw createError({ statusCode: 403, statusMessage: 'Only owner can save organization contacts' })
-  }
 
   const body = await readBody<SaveContactsBody>(event)
   if (!body?.settings?.contacts) {
@@ -40,7 +37,6 @@ export default defineEventHandler(async (event) => {
   const settings = await getOrganizationSettings(event, access.shopId)
   return {
     ok: true,
-    role: access.role,
     settings,
     data: style.config,
     hasRollback: !!style.prevConfig,

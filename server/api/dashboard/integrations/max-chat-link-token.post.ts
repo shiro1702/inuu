@@ -9,9 +9,6 @@ type Body = {
 
 export default defineEventHandler(async (event) => {
   const access = await requireDashboardAccess(event)
-  if (access.role !== 'owner') {
-    throw createError({ statusCode: 403, statusMessage: 'Only owner can create chat link tokens' })
-  }
 
   const body = await readBody<Body>(event).catch(() => ({} as Body))
   const restaurantId = typeof body.restaurantId === 'string' ? body.restaurantId.trim() : ''

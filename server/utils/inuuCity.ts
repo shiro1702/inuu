@@ -1,6 +1,6 @@
 import type { H3Event } from 'h3'
 import { createError } from 'h3'
-import { serverSupabaseClient } from '#supabase/server'
+import { serverSupabaseServiceRole } from '#supabase/server'
 
 export type InuuCityRow = {
   id: string
@@ -17,7 +17,7 @@ export async function resolveCityBySlug(event: H3Event, slug: string): Promise<I
     throw createError({ statusCode: 400, statusMessage: 'City slug is required' })
   }
 
-  const client = await serverSupabaseClient(event)
+  const client = await serverSupabaseServiceRole(event)
   const { data, error } = await client
     .from('cities')
     .select('id,name,slug,timezone,editorial_name,is_active')

@@ -125,7 +125,6 @@ export type OrganizationStyleAuditEntry = {
 
 export type OrganizationStyleResponse = {
   ok: true
-  role: 'owner' | 'manager'
   settings: OrganizationSettings
   data: OrganizationStyleConfig
   hasRollback: boolean

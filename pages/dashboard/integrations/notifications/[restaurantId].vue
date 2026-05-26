@@ -22,7 +22,7 @@
         <span class="font-medium">Группа менеджеров</span> отправляет уведомления в общий Telegram/MAX-чат филиала.
         <span class="font-medium">Персональные менеджеры</span> отправляют уведомления по массиву получателей ниже.
       </p>
-      <select v-model="notificationMode" class="mt-3 w-full max-w-md rounded-lg border border-gray-300 px-3 py-2 text-sm" :disabled="role !== 'owner'">
+      <select v-model="notificationMode" class="mt-3 w-full max-w-md rounded-lg border border-gray-300 px-3 py-2 text-sm">
         <option value="group">Группа менеджеров</option>
         <option value="personal">Персональные менеджеры</option>
       </select>
@@ -46,13 +46,13 @@
       <p class="mt-1 text-xs text-gray-500">Telegram-группа привязывается через deep-link и команду <span class="font-mono">/bind</span>.</p>
       <label class="mt-3 block text-sm">
         <span class="mb-1 block text-gray-600">Telegram group chat id</span>
-        <input v-model="managerGroupChatId" type="text" placeholder="-100..." class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" :disabled="role !== 'owner'">
+        <input v-model="managerGroupChatId" type="text" placeholder="-100..." class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
       </label>
       <div class="mt-3 flex flex-wrap gap-2">
-        <button class="rounded border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50" :disabled="role !== 'owner'" @click="createTelegramChatBindLink">
+        <button class="rounded border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50" @click="createTelegramChatBindLink">
           Создать ссылку привязки Telegram
         </button>
-        <button class="rounded border border-red-300 px-3 py-1.5 text-sm text-red-700 hover:bg-red-50 disabled:opacity-50" :disabled="role !== 'owner' || !managerGroupChatId" @click="unlinkTelegramChat">
+        <button class="rounded border border-red-300 px-3 py-1.5 text-sm text-red-700 hover:bg-red-50 disabled:opacity-50" :disabled="!managerGroupChatId" @click="unlinkTelegramChat">
           Отвязать Telegram-чат
         </button>
       </div>
@@ -69,10 +69,10 @@
       <p class="mt-1 text-xs text-gray-500">MAX-группа привязывается через временную ссылку и slash-команду <span class="font-mono">/bindmax</span> в чате менеджеров.</p>
       <label class="mt-3 block text-sm">
         <span class="mb-1 block text-gray-600">MAX group chat id / conversation id</span>
-        <input v-model="managerMaxChatId" type="text" placeholder="conv_..." class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" :disabled="role !== 'owner'">
+        <input v-model="managerMaxChatId" type="text" placeholder="conv_..." class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
       </label>
       <div class="mt-3 flex flex-wrap gap-2">
-        <button class="rounded border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50" :disabled="role !== 'owner'" @click="createMaxChatBindLink">
+        <button class="rounded border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50" @click="createMaxChatBindLink">
           Создать ссылку привязки MAX
         </button>
       </div>
@@ -97,7 +97,7 @@
   {"channel":"telegram","targetId":"123456"},
   {"channel":"max","targetId":"conv_1"}
 ]</pre>
-      <textarea v-model="managerRecipientsRaw" class="mt-3 w-full rounded-lg border border-gray-300 px-3 py-2 text-xs" rows="5" placeholder='[{"channel":"telegram","targetId":"123456"},{"channel":"max","targetId":"conv_1"}]' :disabled="role !== 'owner'" />
+      <textarea v-model="managerRecipientsRaw" class="mt-3 w-full rounded-lg border border-gray-300 px-3 py-2 text-xs" rows="5" placeholder='[{"channel":"telegram","targetId":"123456"},{"channel":"max","targetId":"conv_1"}]' />
     </article>
 
     <article class="rounded-xl border border-gray-200 bg-white p-4">
@@ -107,7 +107,7 @@
       </p>
       <div class="mt-3 grid gap-3 sm:grid-cols-2">
         <label class="inline-flex items-center gap-2 text-sm">
-          <input v-model="etaButtonsEnabled" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" :disabled="role !== 'owner'">
+          <input v-model="etaButtonsEnabled" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
           <span>Кнопки ETA для клиента</span>
         </label>
       </div>
@@ -115,7 +115,7 @@
         <p class="mb-2 text-sm text-gray-600">Пресеты ETA (готовые варианты)</p>
         <div class="grid gap-2 sm:grid-cols-3">
           <label v-for="preset in etaPresetOptions" :key="preset" class="inline-flex items-center gap-2 text-sm">
-            <input v-model="etaPresetsSelected" :value="preset" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" :disabled="role !== 'owner'">
+            <input v-model="etaPresetsSelected" :value="preset" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
             <span>{{ preset }} мин</span>
           </label>
         </div>
@@ -123,7 +123,7 @@
       <div class="mt-3 grid gap-3 sm:grid-cols-2">
         <label class="block text-sm">
           <span class="mb-1 block text-gray-600">Ограничение обновлений ETA (сек)</span>
-          <input v-model.number="etaRateLimitSec" type="number" min="30" max="3600" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" :disabled="role !== 'owner'">
+          <input v-model.number="etaRateLimitSec" type="number" min="30" max="3600" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
         </label>
       </div>
     </article>
@@ -137,20 +137,20 @@
         Глобальные ограничения из настроек организации применяются автоматически и не могут быть переопределены в филиале.
       </p>
       <label class="mt-3 inline-flex items-center gap-2 text-sm">
-        <input v-model="serviceCallsEnabled" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" :disabled="role !== 'owner'">
+        <input v-model="serviceCallsEnabled" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
         <span>Включить сервисные вызовы в этом филиале</span>
       </label>
       <div class="mt-3 grid gap-2 sm:grid-cols-3">
         <label class="inline-flex items-center gap-2 text-sm">
-          <input v-model="serviceCallTypeWaiter" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" :disabled="role !== 'owner' || !serviceCallsEnabled || !orgAllowedWaiter">
+          <input v-model="serviceCallTypeWaiter" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" :disabled="!serviceCallsEnabled || !orgAllowedWaiter">
           <span>Позвать официанта</span>
         </label>
         <label class="inline-flex items-center gap-2 text-sm">
-          <input v-model="serviceCallTypeHookah" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" :disabled="role !== 'owner' || !serviceCallsEnabled || !orgAllowedHookah">
+          <input v-model="serviceCallTypeHookah" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" :disabled="!serviceCallsEnabled || !orgAllowedHookah">
           <span>Позвать кальянщика</span>
         </label>
         <label class="inline-flex items-center gap-2 text-sm">
-          <input v-model="serviceCallTypeBill" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" :disabled="role !== 'owner' || !serviceCallsEnabled || !orgAllowedBill">
+          <input v-model="serviceCallTypeBill" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" :disabled="!serviceCallsEnabled || !orgAllowedBill">
           <span>Выставить счет</span>
         </label>
       </div>
@@ -172,18 +172,18 @@
         Только привязанные сотрудники могут отправлять быстрые ответы по сервисным вызовам.
       </p>
       <div class="mt-3 grid gap-2 md:grid-cols-5">
-        <select v-model="newBindingChannel" class="rounded-lg border border-gray-300 px-3 py-2 text-sm" :disabled="role !== 'owner'">
+        <select v-model="newBindingChannel" class="rounded-lg border border-gray-300 px-3 py-2 text-sm">
           <option value="telegram">Telegram</option>
           <option value="max">MAX</option>
         </select>
-        <input v-model.trim="newBindingExternalUserId" class="rounded-lg border border-gray-300 px-3 py-2 text-sm md:col-span-2" placeholder="External user id" :disabled="role !== 'owner'">
-        <select v-model="newBindingStaffRole" class="rounded-lg border border-gray-300 px-3 py-2 text-sm" :disabled="role !== 'owner'">
+        <input v-model.trim="newBindingExternalUserId" class="rounded-lg border border-gray-300 px-3 py-2 text-sm md:col-span-2" placeholder="External user id">
+        <select v-model="newBindingStaffRole" class="rounded-lg border border-gray-300 px-3 py-2 text-sm">
           <option value="waiter">waiter</option>
           <option value="hookah">hookah</option>
           <option value="cashier">cashier</option>
           <option value="manager">manager</option>
         </select>
-        <button class="rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-50" :disabled="role !== 'owner'" @click="saveStaffBinding">
+        <button class="rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-50" @click="saveStaffBinding">
           Добавить/обновить
         </button>
       </div>
@@ -213,10 +213,10 @@
     </article>
 
     <div class="flex flex-wrap gap-2">
-      <button class="rounded border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50" :disabled="role !== 'owner' || saving" @click="saveSettings">
+      <button class="rounded border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50" :disabled="saving" @click="saveSettings">
         Сохранить настройки
       </button>
-      <button class="rounded border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50" :disabled="role !== 'owner' || saving" @click="sendTestNotification">
+      <button class="rounded border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50" :disabled="saving" @click="sendTestNotification">
         Проверить уведомление
       </button>
     </div>
@@ -225,12 +225,10 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { useDashboardAccess } from '../../../../composables/useDashboardAccess'
 
 definePageMeta({ layout: 'dashboard' })
 
 const route = useRoute()
-const { role, load } = useDashboardAccess()
 const restaurantId = typeof route.params.restaurantId === 'string' ? route.params.restaurantId : ''
 const tabs = [
   { id: 'telegram', label: 'Telegram' },
@@ -485,8 +483,7 @@ async function sendTestNotification() {
   pushToast('ok', 'Тестовое уведомление отправлено')
 }
 
-onMounted(async () => {
-  await load()
-  await loadSettings()
+onMounted(() => {
+  void loadSettings()
 })
 </script>

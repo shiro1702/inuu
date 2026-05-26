@@ -1,5 +1,5 @@
 import { createError, defineEventHandler, setResponseHeader } from 'h3'
-import { serverSupabaseClient } from '#supabase/server'
+import { serverSupabaseServiceRole } from '#supabase/server'
 import { resolveCityBySlug } from '~/server/utils/inuuCity'
 
 const CITY_PLACEMENTS = ['top_bar', 'home_hero'] as const
@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
 
   const slug = typeof event.context.params?.slug === 'string' ? event.context.params.slug : ''
   const city = await resolveCityBySlug(event, slug)
-  const client = await serverSupabaseClient(event)
+  const client = await serverSupabaseServiceRole(event)
   const nowIso = new Date().toISOString()
 
   const { data: campaigns, error: campErr } = await client

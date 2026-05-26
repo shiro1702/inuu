@@ -36,9 +36,6 @@ function validateIdentitySettings(settings: OrganizationSettings): string[] {
 
 export default defineEventHandler(async (event) => {
   const access = await requireDashboardAccess(event)
-  if (access.role !== 'owner') {
-    throw createError({ statusCode: 403, statusMessage: 'Only owner can save organization identity' })
-  }
 
   const body = await readBody<SaveIdentityBody>(event)
   if (!body?.data || !body?.settings) {
@@ -97,7 +94,6 @@ export default defineEventHandler(async (event) => {
   const settings = await getOrganizationSettings(event, access.shopId)
   return {
     ok: true,
-    role: access.role,
     settings,
     data: nextRecord.config,
     hasRollback: !!nextRecord.prevConfig,

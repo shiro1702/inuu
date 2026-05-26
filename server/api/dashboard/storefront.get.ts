@@ -1,18 +1,26 @@
 import { createError, defineEventHandler } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
-import { requireDashboardAccess } from '~/server/utils/dashboard'
+import { resolveDashboardAccess } from '~/server/utils/dashboard'
 
 export default defineEventHandler(async (event) => {
-  const access = await requireDashboardAccess(event)
-  const client = await serverSupabaseServiceRole(event)
   const config = useRuntimeConfig(event)
   const defaultCitySlug = typeof config.public?.defaultCitySlug === 'string' && config.public.defaultCitySlug.trim()
     ? config.public.defaultCitySlug.trim()
     : 'ulan-ude'
 
-  const { data, error } = await client
+  const access = await resolveDashboardAccess(event)
+  if (!access) {
+    return {
+      ok: true,
+      path: `/${defaultCitySlug}`,
+    }
+  }
+
+  const client = await serverSupabaseServiceRole(event)
+
+  const { data: shop, error } = await client
     .from('shops')
-    .select('slug')
+    .select('slug,city_id')
     .eq('id', access.shopId)
     .maybeSingle()
 
@@ -20,24 +28,25 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, statusMessage: 'Failed to resolve storefront path' })
   }
 
-  const cityRes = await client
-    .from('restaurants')
-    .select('cities(slug)')
-    .eq('shop_id', access.shopId)
-    .eq('is_active', true)
-    .limit(1)
-
-  if (cityRes.error) {
-    throw createError({ statusCode: 500, statusMessage: 'Failed to resolve storefront city' })
+  let citySlug = defaultCitySlug
+  if (shop?.city_id) {
+    const { data: city } = await client
+      .from('cities')
+      .select('slug')
+      .eq('id', shop.city_id)
+      .maybeSingle()
+    if (typeof city?.slug === 'string' && city.slug.trim()) {
+      citySlug = city.slug.trim()
+    }
   }
 
-  const firstRow = Array.isArray(cityRes.data) ? cityRes.data[0] as any : null
-  const citySlug = typeof firstRow?.cities?.slug === 'string' && firstRow.cities.slug.trim()
-    ? firstRow.cities.slug.trim()
-    : defaultCitySlug
-  const slug = typeof data?.slug === 'string' ? data.slug.trim() : ''
+  const slug = typeof shop?.slug === 'string' ? shop.slug.trim() : ''
+  if (!slug) {
+    return { ok: true, path: `/${citySlug}` }
+  }
+
   return {
     ok: true,
-    path: slug ? `/${citySlug}/${slug}` : '/',
+    path: `/${citySlug}/${slug}`,
   }
 })

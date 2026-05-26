@@ -1,5 +1,5 @@
 import { createError, defineEventHandler, setResponseHeader } from 'h3'
-import { serverSupabaseClient } from '#supabase/server'
+import { serverSupabaseServiceRole } from '#supabase/server'
 import { resolveCityBySlug } from '~/server/utils/inuuCity'
 
 export default defineEventHandler(async (event) => {
@@ -8,7 +8,7 @@ export default defineEventHandler(async (event) => {
   const venueSlug = typeof event.context.params?.venueSlug === 'string' ? event.context.params.venueSlug : ''
   const city = await resolveCityBySlug(event, slug)
 
-  const client = await serverSupabaseClient(event)
+  const client = await serverSupabaseServiceRole(event)
   const { data, error } = await client
     .from('venues')
     .select('*')

@@ -4,9 +4,6 @@ import { requireDashboardAccess } from '~/server/utils/dashboard'
 
 export default defineEventHandler(async (event) => {
   const access = await requireDashboardAccess(event)
-  if (access.role !== 'owner') {
-    throw createError({ statusCode: 403, statusMessage: 'Only owner can deactivate branch' })
-  }
   const branchId = getRouterParam(event, 'id')
   if (!branchId) {
     throw createError({ statusCode: 400, statusMessage: 'Branch id is required' })

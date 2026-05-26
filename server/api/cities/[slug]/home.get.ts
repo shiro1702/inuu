@@ -1,5 +1,5 @@
 import { defineEventHandler, setResponseHeader } from 'h3'
-import { serverSupabaseClient } from '#supabase/server'
+import { serverSupabaseServiceRole } from '#supabase/server'
 import { resolveCityBySlug } from '~/server/utils/inuuCity'
 
 export default defineEventHandler(async (event) => {
@@ -7,7 +7,7 @@ export default defineEventHandler(async (event) => {
 
   const slug = typeof event.context.params?.slug === 'string' ? event.context.params.slug : ''
   const city = await resolveCityBySlug(event, slug)
-  const client = await serverSupabaseClient(event)
+  const client = await serverSupabaseServiceRole(event)
   const nowIso = new Date().toISOString()
 
   const [storiesRes, eventsRes, venuesRes, listsRes, hotSlotsRes] = await Promise.all([

@@ -190,7 +190,6 @@ import { onMounted, reactive, ref } from 'vue'
 
 definePageMeta({ layout: 'dashboard' })
 
-const { load: loadAccess } = useDashboardAccess()
 const tab = ref<'promo' | 'loyalty'>('promo')
 
 const promos = ref<any[]>([])
@@ -323,7 +322,6 @@ async function saveLoyalty() {
 }
 
 onMounted(async () => {
-  await loadAccess()
   await loadPromos()
   await loadLoyalty()
 })

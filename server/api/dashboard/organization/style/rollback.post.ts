@@ -4,9 +4,6 @@ import { getOrganizationSettings, getStyleRecord, persistStyleRecord, withAuditE
 
 export default defineEventHandler(async (event) => {
   const access = await requireDashboardAccess(event)
-  if (access.role !== 'owner') {
-    throw createError({ statusCode: 403, statusMessage: 'Only owner can rollback organization style' })
-  }
 
   const current = await getStyleRecord(event, access.shopId)
   if (!current.prevConfig) {
@@ -28,7 +25,6 @@ export default defineEventHandler(async (event) => {
 
   return {
     ok: true,
-    role: access.role,
     settings,
     data: nextRecord.config,
     hasRollback: !!nextRecord.prevConfig,

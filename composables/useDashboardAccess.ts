@@ -1,6 +1,6 @@
 type DashboardRole = 'owner' | 'manager'
 
-type DashboardAccessResponse = {
+export type DashboardAccessResponse = {
   ok: boolean
   userId: string
   shopId: string | null
@@ -43,6 +43,12 @@ const managerPermissions: DashboardPermission[] = [
   'branches.create',
 ]
 
+let loadPromise: Promise<DashboardAccessResponse> | null = null
+
+export async function fetchDashboardAccess(): Promise<DashboardAccessResponse> {
+  return $fetch<DashboardAccessResponse>('/api/dashboard/access')
+}
+
 export function useDashboardAccess() {
   const state = useState<DashboardAccessResponse | null>('dashboard-access-state', () => null)
   const loading = useState<boolean>('dashboard-access-loading', () => false)
@@ -60,19 +66,41 @@ export function useDashboardAccess() {
 
   const can = (permission: DashboardPermission) => permissions.value.has(permission)
 
-  const load = async () => {
-    if (loading.value) return
+  const load = async (options?: { force?: boolean }) => {
+    if (!options?.force && state.value) {
+      return state.value
+    }
+
+    if (!options?.force && loadPromise) {
+      return loadPromise
+    }
+
     loading.value = true
     error.value = null
-    try {
-      const access = await $fetch<DashboardAccessResponse>('/api/dashboard/access')
-      state.value = access
-    } catch (err: any) {
-      state.value = null
-      error.value = err?.data?.statusMessage || err?.message || 'Failed to load dashboard access'
-    } finally {
-      loading.value = false
+
+    const run = async () => {
+      try {
+        const access = await fetchDashboardAccess()
+        state.value = access
+        return access
+      } catch (err: any) {
+        state.value = null
+        error.value = err?.data?.statusMessage || err?.message || 'Failed to load dashboard access'
+        throw err
+      } finally {
+        loading.value = false
+        loadPromise = null
+      }
     }
+
+    loadPromise = run()
+    return loadPromise
+  }
+
+  const reset = () => {
+    state.value = null
+    loadPromise = null
+    error.value = null
   }
 
   return {
@@ -83,5 +111,6 @@ export function useDashboardAccess() {
     error,
     can,
     load,
+    reset,
   }
 }

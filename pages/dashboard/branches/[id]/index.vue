@@ -67,12 +67,12 @@
           v-model="newTableNumber"
           class="w-full rounded-lg border border-gray-300 px-2 py-2 text-sm sm:max-w-xs"
           placeholder="Номер столика, например 12"
-          :disabled="!canEditCritical || creatingTable"
+          :disabled="creatingTable"
         >
         <button
           type="button"
           class="rounded-lg border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-50"
-          :disabled="!canEditCritical || creatingTable || !newTableNumber.trim()"
+          :disabled="creatingTable || !newTableNumber.trim()"
           @click="createTable"
         >
           {{ creatingTable ? 'Добавляем...' : 'Добавить столик' }}
@@ -86,7 +86,7 @@
             type="number"
             min="1"
             class="w-28 rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
-            :disabled="!canEditCritical || creatingBulkTables"
+            :disabled="creatingBulkTables"
           >
         </label>
         <label class="text-xs text-gray-600">
@@ -96,13 +96,13 @@
             type="number"
             min="1"
             class="w-28 rounded-lg border border-gray-300 px-2 py-1.5 text-sm"
-            :disabled="!canEditCritical || creatingBulkTables"
+            :disabled="creatingBulkTables"
           >
         </label>
         <button
           type="button"
           class="rounded-lg border border-gray-300 px-3 py-2 text-sm hover:bg-white disabled:opacity-50"
-          :disabled="!canEditCritical || creatingBulkTables"
+          :disabled="creatingBulkTables"
           @click="createTablesBulk"
         >
           {{ creatingBulkTables ? 'Генерируем...' : 'Сгенерировать диапазон столиков' }}
@@ -145,7 +145,7 @@
               type="button"
               class="rounded-lg border px-2.5 py-1.5 text-xs disabled:opacity-50"
               :class="table.isActive ? 'border-amber-300 text-amber-700 hover:bg-amber-50' : 'border-emerald-300 text-emerald-700 hover:bg-emerald-50'"
-              :disabled="!canEditCritical || updatingTableId === table.id"
+              :disabled="updatingTableId === table.id"
               @click="toggleTableActive(table)"
             >
               {{ table.isActive ? 'Деактивировать' : 'Активировать' }}
@@ -159,7 +159,7 @@
     <div class="grid gap-3 rounded-xl border border-gray-200 bg-white p-4 md:grid-cols-2">
       <label class="text-sm">
         <span class="mb-1 block text-gray-600">Название</span>
-        <input v-model="form.name" class="w-full rounded-lg border border-gray-300 px-2 py-2" :disabled="!canEditCritical">
+        <input v-model="form.name" class="w-full rounded-lg border border-gray-300 px-2 py-2">
       </label>
       <label class="text-sm">
         <span class="mb-1 block text-gray-600">Адрес</span>
@@ -167,7 +167,7 @@
           <input
             v-model="form.address"
             class="w-full rounded-lg border border-gray-300 px-2 py-2"
-            :disabled="!canEditCritical"
+           
             @input="onAddressInput"
           >
           <div
@@ -180,7 +180,7 @@
             </svg>
           </div>
           <div
-            v-if="suggestItems.length && canEditCritical"
+            v-if="suggestItems.length"
             class="absolute inset-x-0 top-full z-20 mt-1 max-h-56 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg"
           >
             <button
@@ -196,15 +196,15 @@
         </div>
       </label>
       <label class="inline-flex items-center gap-2 text-sm text-gray-700">
-        <input v-model="form.supportsDelivery" type="checkbox" class="rounded border-gray-300" :disabled="!canEditCritical || !allowedModesSet.has('delivery')">
+        <input v-model="form.supportsDelivery" type="checkbox" class="rounded border-gray-300" :disabled="!allowedModesSet.has('delivery')">
         Доставка
       </label>
       <label class="inline-flex items-center gap-2 text-sm text-gray-700">
-        <input v-model="form.supportsPickup" type="checkbox" class="rounded border-gray-300" :disabled="!canEditCritical || !allowedModesSet.has('pickup')">
+        <input v-model="form.supportsPickup" type="checkbox" class="rounded border-gray-300" :disabled="!allowedModesSet.has('pickup')">
         Самовывоз
       </label>
       <label class="inline-flex items-center gap-2 text-sm text-gray-700 md:col-span-2">
-        <input v-model="form.supportsDineIn" type="checkbox" class="rounded border-gray-300" :disabled="!canEditCritical || !allowedModesSet.has('dine-in')">
+        <input v-model="form.supportsDineIn" type="checkbox" class="rounded border-gray-300" :disabled="!allowedModesSet.has('dine-in')">
         В зале
       </label>
       <template v-if="form.supportsDineIn && allowedModesSet.has('dine-in')">
@@ -212,14 +212,14 @@
           v-if="orgDineInHallMode === 'to-table'"
           class="inline-flex items-center gap-2 text-sm text-gray-700 md:col-span-2"
         >
-          <input v-model="form.supportsQrMenu" type="checkbox" class="rounded border-gray-300" :disabled="!canEditCritical">
+          <input v-model="form.supportsQrMenu" type="checkbox" class="rounded border-gray-300">
           Заказы до столика (QR со столика)
         </label>
         <label
           v-if="orgDineInHallMode === 'pickup-point'"
           class="inline-flex items-center gap-2 text-sm text-gray-700 md:col-span-2"
         >
-          <input v-model="form.supportsShowcaseOrder" type="checkbox" class="rounded border-gray-300" :disabled="!canEditCritical">
+          <input v-model="form.supportsShowcaseOrder" type="checkbox" class="rounded border-gray-300">
           Заказ на общую выдачу (по QR)
         </label>
         <p v-if="orgDineInHallMode === 'qr-menu-browse'" class="md:col-span-2 text-xs text-gray-500">
@@ -237,7 +237,7 @@
               v-model="form.useOrganizationWorkingHours"
               type="checkbox"
               class="rounded border-gray-300"
-              :disabled="!canEditCritical"
+             
             >
             Использовать общий график ресторана
           </label>
@@ -252,7 +252,7 @@
                 <input
                   v-model="form.workingHours[day.key].isOpen"
                   type="checkbox"
-                  :disabled="!canEditCritical"
+                 
                 >
                 Открыто
               </label>
@@ -262,7 +262,7 @@
                   v-model="form.workingHours[day.key].openAt"
                   type="time"
                   class="w-full rounded border border-gray-300 px-2 py-1.5"
-                  :disabled="!canEditCritical || !form.workingHours[day.key].isOpen"
+                  :disabled="!form.workingHours[day.key].isOpen"
                 >
               </label>
               <label class="text-sm">
@@ -271,7 +271,7 @@
                   v-model="form.workingHours[day.key].closeAt"
                   type="time"
                   class="w-full rounded border border-gray-300 px-2 py-1.5"
-                  :disabled="!canEditCritical || !form.workingHours[day.key].isOpen"
+                  :disabled="!form.workingHours[day.key].isOpen"
                 >
               </label>
             </div>
@@ -280,11 +280,10 @@
         <p class="mb-2 text-xs text-gray-500">
           В филиале доступны только те способы работы, которые включены в общих настройках ресторана.
         </p>
-        <p v-if="!canEditCritical" class="mb-2 text-xs text-amber-700">Критичные поля доступны только Owner.</p>
-        <button class="rounded border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50" :disabled="!canEditCritical" @click="save">
+        <button class="rounded border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50" @click="save">
           Сохранить
         </button>
-        <button class="ml-2 rounded border border-red-300 px-3 py-1.5 text-sm text-red-700 hover:bg-red-50" :disabled="!canEditCritical" @click="deactivate">
+        <button class="ml-2 rounded border border-red-300 px-3 py-1.5 text-sm text-red-700 hover:bg-red-50" @click="deactivate">
           Деактивировать
         </button>
       </div>
@@ -374,7 +373,6 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { useDashboardAccess } from '../../../../composables/useDashboardAccess'
 import { dadataSuggest, type DadataSuggestItem } from '~/utils/dadataApi'
 
 declare const definePageMeta: (meta: Record<string, unknown>) => void
@@ -382,9 +380,6 @@ declare const useRoute: () => { params: Record<string, string | string[] | undef
 definePageMeta({ layout: 'dashboard' })
 
 const route = useRoute()
-const { role } = useDashboardAccess()
-const canEditCritical = computed(() => role.value === 'owner')
-
 type Branch = {
   id: string
   name: string
@@ -560,7 +555,7 @@ async function loadTables() {
 }
 
 async function createTable() {
-  if (!branch.value || !canEditCritical.value || creatingTable.value) return
+  if (!branch.value || creatingTable.value) return
   creatingTable.value = true
   tablesError.value = ''
   try {
@@ -584,7 +579,7 @@ async function createTable() {
 }
 
 async function createTablesBulk() {
-  if (!branch.value || !canEditCritical.value || creatingBulkTables.value) return
+  if (!branch.value || creatingBulkTables.value) return
   const from = Math.max(1, Math.floor(Number(bulkFrom.value || 0)))
   const to = Math.max(1, Math.floor(Number(bulkTo.value || 0)))
   if (!Number.isFinite(from) || !Number.isFinite(to) || to < from) {
@@ -631,7 +626,7 @@ async function createTablesBulk() {
 }
 
 async function toggleTableActive(table: RestaurantTable) {
-  if (!branch.value || !canEditCritical.value || updatingTableId.value) return
+  if (!branch.value || updatingTableId.value) return
   updatingTableId.value = table.id
   tablesError.value = ''
   try {
@@ -735,7 +730,7 @@ function now() {
 }
 
 async function save() {
-  if (!branch.value || !canEditCritical.value) return
+  if (!branch.value) return
   const res = await fetch(`/api/dashboard/branches/${branch.value.id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -777,7 +772,7 @@ async function save() {
 }
 
 async function deactivate() {
-  if (!branch.value || !canEditCritical.value) return
+  if (!branch.value) return
   const confirmed = window.confirm(`Деактивировать филиал "${branch.value.name}"?`)
   if (!confirmed) return
   const res = await fetch(`/api/dashboard/branches/${branch.value.id}/deactivate`, { method: 'POST' })
@@ -790,7 +785,6 @@ async function deactivate() {
 }
 
 function onAddressInput() {
-  if (!canEditCritical.value) return
   form.value.lat = null
   form.value.lon = null
   const query = form.value.address.trim()

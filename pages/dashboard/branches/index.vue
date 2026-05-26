@@ -73,7 +73,6 @@
                     {{ item.isActive ? 'Active' : 'Inactive' }}
                   </span>
                   <button
-                    v-if="can('branches.archive')"
                     class="rounded border border-red-200 px-2 py-1 text-xs text-red-700 hover:bg-red-50"
                     @click="archiveBranch(item.id)"
                   >
@@ -108,7 +107,6 @@ type DashboardRestaurant = {
   createdAt: string
 }
 
-const { can } = useDashboardAccess()
 const pending = ref(true)
 const errorMessage = ref<string | null>(null)
 const restaurants = ref<DashboardRestaurant[]>([])

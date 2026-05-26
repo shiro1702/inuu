@@ -59,9 +59,13 @@ export default defineNuxtConfig({
   },
   supabase: {
     redirect: false,
-    // serverSupabaseServiceRole: secretKey (sb_secret_…) приоритетнее legacy service_role JWT
-    secretKey: process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY,
-    serviceKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    // serverSupabaseServiceRole: secretKey (sb_secret_…) or legacy service_role JWT (eyJ…)
+    secretKey:
+      process.env.SUPABASE_SECRET_KEY
+      ?? process.env.SUPABASE_SERVICE_ROLE_KEY
+      ?? '',
+    // Deprecated JWT-only alias; do not put sb_secret_* here (use SUPABASE_SECRET_KEY).
+    serviceKey: process.env.SUPABASE_SERVICE_KEY ?? '',
   },
   app: {
     head: {

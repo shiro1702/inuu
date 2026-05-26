@@ -44,9 +44,6 @@ function validateDimensions(kind: UploadKind, width?: number, height?: number) {
 
 export default defineEventHandler(async (event) => {
   const access = await requireDashboardAccess(event)
-  if (access.role !== 'owner') {
-    throw createError({ statusCode: 403, statusMessage: 'Only owner can upload organization media' })
-  }
 
   const body = await readBody<UploadMediaBody>(event)
   if (!body?.kind || !body.mimeType || !body.dataBase64 || !body.fileName) {

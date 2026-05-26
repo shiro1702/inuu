@@ -31,10 +31,6 @@
     </div>
 
     <template v-else>
-      <div v-if="isReadonly" class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-        Режим только чтение: изменение стиля и айдентики доступно только Owner.
-      </div>
-
       <div class="flex flex-wrap gap-2">
         <button class="rounded border px-3 py-1.5 text-sm" :class="activeMainTab === 'identity' ? 'border-blue-400 bg-blue-50' : 'border-gray-300'" @click="activeMainTab = 'identity'">
           Айдентика
@@ -55,15 +51,15 @@
         <h2 class="md:col-span-2 text-sm font-semibold text-gray-900">Айдентика</h2>
         <label class="text-sm">
           <span class="mb-1 block text-gray-600">Slug</span>
-          <input v-model="settings.slug" class="w-full rounded-lg border border-gray-300 px-3 py-2" :disabled="isReadonly">
+          <input v-model="settings.slug" class="w-full rounded-lg border border-gray-300 px-3 py-2">
         </label>
         <label class="text-sm">
           <span class="mb-1 block text-gray-600">Публичное название</span>
-          <input v-model="settings.displayName" class="w-full rounded-lg border border-gray-300 px-3 py-2" :disabled="isReadonly">
+          <input v-model="settings.displayName" class="w-full rounded-lg border border-gray-300 px-3 py-2">
         </label>
         <label class="md:col-span-2 text-sm">
           <span class="mb-1 block text-gray-600">Короткий слоган под названием</span>
-          <input v-model="settings.tagline" class="w-full rounded-lg border border-gray-300 px-3 py-2" :disabled="isReadonly">
+          <input v-model="settings.tagline" class="w-full rounded-lg border border-gray-300 px-3 py-2">
           <span class="mt-1 block text-xs text-gray-500">Показывается под названием ресторана в карточке и на витрине.</span>
         </label>
         <label class="text-sm">
@@ -88,7 +84,7 @@
             <input
               v-model="cuisineSearch"
               class="w-full rounded border border-gray-300 px-2 py-1.5 text-sm"
-              :disabled="isReadonly"
+             
               placeholder="Поиск тега кухни..."
               @keydown.enter.prevent="addCuisineTagFromInput"
             >
@@ -115,42 +111,42 @@
         </label>
         <label class="text-sm">
           <span class="mb-1 block text-gray-600">Название ресторана</span>
-          <input v-model="form.identity.name" class="w-full rounded-lg border border-gray-300 px-3 py-2" :disabled="isReadonly">
+          <input v-model="form.identity.name" class="w-full rounded-lg border border-gray-300 px-3 py-2">
         </label>
         <label class="text-sm">
           <span class="mb-1 block text-gray-600">Короткое описание (до 160)</span>
-          <input v-model="form.identity.shortDescription" class="w-full rounded-lg border border-gray-300 px-3 py-2" :disabled="isReadonly">
+          <input v-model="form.identity.shortDescription" class="w-full rounded-lg border border-gray-300 px-3 py-2">
         </label>
         <label class="md:col-span-2 text-sm">
           <span class="mb-1 block text-gray-600">Полное описание (до 1000)</span>
-          <textarea v-model="form.identity.fullDescription" rows="4" class="w-full rounded-lg border border-gray-300 px-3 py-2" :disabled="isReadonly" />
+          <textarea v-model="form.identity.fullDescription" rows="4" class="w-full rounded-lg border border-gray-300 px-3 py-2" />
         </label>
         <div class="md:col-span-2 grid gap-3 md:grid-cols-2">
           <label class="text-sm">
             <span class="mb-1 block text-gray-600">Логотип (маленький, для шапки)</span>
-            <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" :disabled="isReadonly || saving" @change="onFileChange($event, 'logo')">
+            <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" :disabled="saving" @change="onFileChange($event, 'logo')">
             <p class="mt-1 text-xs text-gray-500">PNG/SVG/WebP, до 2MB, минимум 256x256.</p>
             <img v-if="form.identity.logoUrl" :src="form.identity.logoUrl" alt="logo" class="mt-2 h-14 w-14 rounded object-cover">
           </label>
           <label class="text-sm">
             <span class="mb-1 block text-gray-600">Логотип (большой, для главной)</span>
-            <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" :disabled="isReadonly || saving" @change="onFileChange($event, 'logo-large')">
+            <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" :disabled="saving" @change="onFileChange($event, 'logo-large')">
             <p class="mt-1 text-xs text-gray-500">Если не задан, автоматически используется маленький логотип из шапки.</p>
             <img v-if="form.identity.logoLargeUrl || form.identity.logoUrl" :src="form.identity.logoLargeUrl || form.identity.logoUrl" alt="logo-large" class="mt-2 h-14 w-auto rounded object-cover">
           </label>
           <label class="text-sm">
             <span class="mb-1 block text-gray-600">Favicon</span>
-            <input type="file" accept="image/png,image/x-icon,image/svg+xml" :disabled="isReadonly || saving" @change="onFileChange($event, 'favicon')">
+            <input type="file" accept="image/png,image/x-icon,image/svg+xml" :disabled="saving" @change="onFileChange($event, 'favicon')">
             <img v-if="form.identity.faviconUrl" :src="form.identity.faviconUrl" alt="favicon" class="mt-2 h-10 w-10 rounded object-cover">
           </label>
           <label class="text-sm">
             <span class="mb-1 block text-gray-600">Картинка карточки ресторана</span>
-            <input type="file" accept="image/png,image/jpeg,image/webp" :disabled="isReadonly || saving" @change="onFileChange($event, 'restaurant-card')">
+            <input type="file" accept="image/png,image/jpeg,image/webp" :disabled="saving" @change="onFileChange($event, 'restaurant-card')">
             <img v-if="form.identity.restaurantCardImageUrl" :src="form.identity.restaurantCardImageUrl" alt="restaurant card" class="mt-2 h-16 w-full rounded object-cover">
           </label>
           <label class="text-sm">
             <span class="mb-1 block text-gray-600">Hero image</span>
-            <input type="file" accept="image/png,image/jpeg,image/webp" :disabled="isReadonly || saving" @change="onFileChange($event, 'hero')">
+            <input type="file" accept="image/png,image/jpeg,image/webp" :disabled="saving" @change="onFileChange($event, 'hero')">
             <img v-if="form.identity.heroImageUrl" :src="form.identity.heroImageUrl" alt="hero" class="mt-2 h-16 w-full rounded object-cover">
           </label>
         </div>
@@ -181,7 +177,7 @@
         </div>
       </div>
       <div class="flex flex-wrap gap-2">
-        <button class="rounded border border-blue-500 bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700 disabled:opacity-50" :disabled="isReadonly || saving || !!validationErrors.length" @click="saveIdentity">
+        <button class="rounded border border-blue-500 bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700 disabled:opacity-50" :disabled="saving || !!validationErrors.length" @click="saveIdentity">
           {{ saving ? 'Сохраняем...' : 'Сохранить айдентику' }}
         </button>
       </div>
@@ -190,10 +186,10 @@
       <div v-if="activeMainTab === 'contacts'" class="space-y-4">
       <div class="grid gap-4 rounded-xl border border-gray-200 bg-white p-4 md:grid-cols-2">
         <h2 class="md:col-span-2 text-sm font-semibold text-gray-900">Контакты</h2>
-        <label class="text-sm"><span class="mb-1 block text-gray-600">Телефон</span><input v-model="settings.contacts.phone" class="w-full rounded-lg border border-gray-300 px-3 py-2" :disabled="isReadonly"></label>
-        <label class="text-sm"><span class="mb-1 block text-gray-600">Email</span><input v-model="settings.contacts.email" class="w-full rounded-lg border border-gray-300 px-3 py-2" :disabled="isReadonly"></label>
-        <label class="text-sm"><span class="mb-1 block text-gray-600">MAX</span><input v-model="settings.contacts.max" class="w-full rounded-lg border border-gray-300 px-3 py-2" :disabled="isReadonly"></label>
-        <label class="text-sm"><span class="mb-1 block text-gray-600">Telegram</span><input v-model="settings.contacts.telegram" class="w-full rounded-lg border border-gray-300 px-3 py-2" :disabled="isReadonly"></label>
+        <label class="text-sm"><span class="mb-1 block text-gray-600">Телефон</span><input v-model="settings.contacts.phone" class="w-full rounded-lg border border-gray-300 px-3 py-2"></label>
+        <label class="text-sm"><span class="mb-1 block text-gray-600">Email</span><input v-model="settings.contacts.email" class="w-full rounded-lg border border-gray-300 px-3 py-2"></label>
+        <label class="text-sm"><span class="mb-1 block text-gray-600">MAX</span><input v-model="settings.contacts.max" class="w-full rounded-lg border border-gray-300 px-3 py-2"></label>
+        <label class="text-sm"><span class="mb-1 block text-gray-600">Telegram</span><input v-model="settings.contacts.telegram" class="w-full rounded-lg border border-gray-300 px-3 py-2"></label>
         <div class="md:col-span-2 rounded-lg border border-gray-200 p-3">
           <p class="text-sm font-medium text-gray-700">Реквизиты для публичного футера</p>
           <p class="mt-1 text-xs text-gray-500">
@@ -202,21 +198,21 @@
           <div class="mt-3 grid gap-3 md:grid-cols-3">
             <label class="text-sm">
               <span class="mb-1 block text-gray-600">Юр. наименование / ИП ФИО</span>
-              <input v-model="settings.legal.legalName" class="w-full rounded-lg border border-gray-300 px-3 py-2" :disabled="isReadonly">
+              <input v-model="settings.legal.legalName" class="w-full rounded-lg border border-gray-300 px-3 py-2">
             </label>
             <label class="text-sm">
               <span class="mb-1 block text-gray-600">ИНН</span>
-              <input v-model="settings.legal.inn" class="w-full rounded-lg border border-gray-300 px-3 py-2" :disabled="isReadonly" inputmode="numeric">
+              <input v-model="settings.legal.inn" class="w-full rounded-lg border border-gray-300 px-3 py-2" inputmode="numeric">
             </label>
             <label class="text-sm">
               <span class="mb-1 block text-gray-600">ОГРН / ОГРНИП</span>
-              <input v-model="settings.legal.ogrn" class="w-full rounded-lg border border-gray-300 px-3 py-2" :disabled="isReadonly" inputmode="numeric">
+              <input v-model="settings.legal.ogrn" class="w-full rounded-lg border border-gray-300 px-3 py-2" inputmode="numeric">
             </label>
           </div>
         </div>
       </div>
       <div class="flex flex-wrap gap-2">
-        <button class="rounded border border-blue-500 bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700 disabled:opacity-50" :disabled="isReadonly || saving || !!validationErrors.length" @click="saveContacts">
+        <button class="rounded border border-blue-500 bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700 disabled:opacity-50" :disabled="saving || !!validationErrors.length" @click="saveContacts">
           {{ saving ? 'Сохраняем...' : 'Сохранить контакты' }}
         </button>
       </div>
@@ -226,14 +222,14 @@
       <div class="grid gap-4 rounded-xl border border-gray-200 bg-white p-4 md:grid-cols-2">
         <h2 class="md:col-span-2 text-sm font-semibold text-gray-900">Операционные настройки</h2>
         <label class="text-sm"><span class="mb-1 block text-gray-600">Статус</span>
-          <select v-model="settings.ops.status" class="w-full rounded-lg border border-gray-300 px-3 py-2" :disabled="isReadonly">
+          <select v-model="settings.ops.status" class="w-full rounded-lg border border-gray-300 px-3 py-2">
             <option value="open">Открыт</option><option value="closed">Закрыт</option><option value="coming_soon">Скоро открытие</option><option value="temporarily_unavailable">Временно недоступен</option>
           </select>
         </label>
-        <label class="text-sm"><span class="mb-1 block text-gray-600">Минимальный заказ</span><input v-model.number="settings.ops.minOrderAmount" type="number" min="0" class="w-full rounded-lg border border-gray-300 px-3 py-2" :disabled="isReadonly"></label>
-        <label class="text-sm"><span class="mb-1 block text-gray-600">Время приготовления (мин)</span><input v-model.number="settings.ops.prepTimeMinutes" type="number" min="0" class="w-full rounded-lg border border-gray-300 px-3 py-2" :disabled="isReadonly"></label>
-        <label class="text-sm"><span class="mb-1 block text-gray-600">Стоимость доставки</span><input v-model.number="settings.ops.deliveryFee" type="number" min="0" class="w-full rounded-lg border border-gray-300 px-3 py-2" :disabled="isReadonly"></label>
-        <label class="text-sm"><span class="mb-1 block text-gray-600">Бесплатная доставка от</span><input v-model.number="settings.ops.freeDeliveryFrom" type="number" min="0" class="w-full rounded-lg border border-gray-300 px-3 py-2" :disabled="isReadonly"></label>
+        <label class="text-sm"><span class="mb-1 block text-gray-600">Минимальный заказ</span><input v-model.number="settings.ops.minOrderAmount" type="number" min="0" class="w-full rounded-lg border border-gray-300 px-3 py-2"></label>
+        <label class="text-sm"><span class="mb-1 block text-gray-600">Время приготовления (мин)</span><input v-model.number="settings.ops.prepTimeMinutes" type="number" min="0" class="w-full rounded-lg border border-gray-300 px-3 py-2"></label>
+        <label class="text-sm"><span class="mb-1 block text-gray-600">Стоимость доставки</span><input v-model.number="settings.ops.deliveryFee" type="number" min="0" class="w-full rounded-lg border border-gray-300 px-3 py-2"></label>
+        <label class="text-sm"><span class="mb-1 block text-gray-600">Бесплатная доставка от</span><input v-model.number="settings.ops.freeDeliveryFrom" type="number" min="0" class="w-full rounded-lg border border-gray-300 px-3 py-2"></label>
         <div class="md:col-span-2 rounded-lg border border-gray-200 p-3">
           <p class="text-sm font-medium text-gray-700">Способы работы ресторана</p>
           <p class="mt-1 text-xs text-gray-500">
@@ -245,7 +241,7 @@
                 type="checkbox"
                 class="mt-0.5"
                 :checked="settings.ops.fulfillmentTypes.includes(option.value)"
-                :disabled="isReadonly"
+               
                 @change="onFulfillmentCheckboxChange($event, option.value)"
               >
               <span>
@@ -259,30 +255,30 @@
             <p class="mt-1 text-xs text-gray-500">Один активный сценарий. Для «До столика» можно включить кнопки вызова персонала (гостевой экран — позже).</p>
             <div class="mt-2 space-y-2">
               <label class="flex items-start gap-2 rounded border border-gray-200 bg-white p-2 text-sm text-gray-700">
-                <input v-model="settings.ops.dineInHallMode" type="radio" value="qr-menu-browse" class="mt-0.5" :disabled="isReadonly">
+                <input v-model="settings.ops.dineInHallMode" type="radio" value="qr-menu-browse" class="mt-0.5">
                 <span><span class="font-medium">QR-меню</span><span class="block text-xs text-gray-500">Только просмотр меню, без оформления заказа.</span></span>
               </label>
               <label class="flex items-start gap-2 rounded border border-gray-200 bg-white p-2 text-sm text-gray-700">
-                <input v-model="settings.ops.dineInHallMode" type="radio" value="to-table" class="mt-0.5" :disabled="isReadonly">
+                <input v-model="settings.ops.dineInHallMode" type="radio" value="to-table" class="mt-0.5">
                 <span><span class="font-medium">До столика</span><span class="block text-xs text-gray-500">Заказ по QR со столика; стол и вызов персонала.</span></span>
               </label>
               <label class="flex items-start gap-2 rounded border border-gray-200 bg-white p-2 text-sm text-gray-700">
-                <input v-model="settings.ops.dineInHallMode" type="radio" value="pickup-point" class="mt-0.5" :disabled="isReadonly">
+                <input v-model="settings.ops.dineInHallMode" type="radio" value="pickup-point" class="mt-0.5">
                 <span><span class="font-medium">На выдачу</span><span class="block text-xs text-gray-500">Заказ по QR, выдача с общей точки.</span></span>
               </label>
             </div>
             <div v-if="settings.ops.dineInHallMode === 'to-table'" class="mt-3 rounded border border-gray-200 bg-white p-3">
               <p class="text-sm font-medium text-gray-700">Глобально разрешенные сервисные вызовы (экран стола)</p>
               <label class="mt-2 flex items-center gap-2 text-sm text-gray-700">
-                <input v-model="settings.ops.dineInStaffButtons.waiter" type="checkbox" class="rounded border-gray-300" :disabled="isReadonly">
+                <input v-model="settings.ops.dineInStaffButtons.waiter" type="checkbox" class="rounded border-gray-300">
                 Позвать официанта
               </label>
               <label class="mt-1 flex items-center gap-2 text-sm text-gray-700">
-                <input v-model="settings.ops.dineInStaffButtons.hookah" type="checkbox" class="rounded border-gray-300" :disabled="isReadonly">
+                <input v-model="settings.ops.dineInStaffButtons.hookah" type="checkbox" class="rounded border-gray-300">
                 Позвать кальянщика
               </label>
               <label class="mt-1 flex items-center gap-2 text-sm text-gray-700">
-                <input v-model="settings.ops.dineInStaffButtons.requestBill" type="checkbox" class="rounded border-gray-300" :disabled="isReadonly">
+                <input v-model="settings.ops.dineInStaffButtons.requestBill" type="checkbox" class="rounded border-gray-300">
                 Выставить счет
               </label>
             </div>
@@ -304,7 +300,7 @@
                 <input
                   v-model="settings.ops.workingHours[day.key].isOpen"
                   type="checkbox"
-                  :disabled="isReadonly"
+                 
                 >
                 Открыто
               </label>
@@ -314,7 +310,7 @@
                   v-model="settings.ops.workingHours[day.key].openAt"
                   type="time"
                   class="w-full rounded border border-gray-300 px-2 py-1.5"
-                  :disabled="isReadonly || !settings.ops.workingHours[day.key].isOpen"
+                  :disabled="!settings.ops.workingHours[day.key].isOpen"
                 >
               </label>
               <label class="text-sm">
@@ -323,27 +319,27 @@
                   v-model="settings.ops.workingHours[day.key].closeAt"
                   type="time"
                   class="w-full rounded border border-gray-300 px-2 py-1.5"
-                  :disabled="isReadonly || !settings.ops.workingHours[day.key].isOpen"
+                  :disabled="!settings.ops.workingHours[day.key].isOpen"
                 >
               </label>
             </div>
           </div>
         </div>
         <label class="text-sm"><span class="mb-1 block text-gray-600">Принятие заказов</span>
-          <select v-model="settings.ops.orderAcceptanceMode" class="w-full rounded-lg border border-gray-300 px-3 py-2" :disabled="isReadonly">
+          <select v-model="settings.ops.orderAcceptanceMode" class="w-full rounded-lg border border-gray-300 px-3 py-2">
             <option value="manual">Ручное</option><option value="auto">Автоматическое</option>
           </select>
         </label>
-        <label class="text-sm"><span class="mb-1 block text-gray-600">Валюта</span><input v-model="settings.locale.currency" class="w-full rounded-lg border border-gray-300 px-3 py-2 uppercase" :disabled="isReadonly"></label>
-        <label class="text-sm"><span class="mb-1 block text-gray-600">Часовой пояс</span><input v-model="settings.locale.timezone" class="w-full rounded-lg border border-gray-300 px-3 py-2" :disabled="isReadonly"></label>
+        <label class="text-sm"><span class="mb-1 block text-gray-600">Валюта</span><input v-model="settings.locale.currency" class="w-full rounded-lg border border-gray-300 px-3 py-2 uppercase"></label>
+        <label class="text-sm"><span class="mb-1 block text-gray-600">Часовой пояс</span><input v-model="settings.locale.timezone" class="w-full rounded-lg border border-gray-300 px-3 py-2"></label>
         <label class="text-sm md:col-span-2"><span class="mb-1 block text-gray-600">Налоговый режим (РФ)</span>
-          <select v-model="settings.tax.vatMode" class="w-full rounded-lg border border-gray-300 px-3 py-2" :disabled="isReadonly">
+          <select v-model="settings.tax.vatMode" class="w-full rounded-lg border border-gray-300 px-3 py-2">
             <option value="none">Без НДС</option><option value="included">НДС включен в цену</option><option value="excluded">НДС начисляется сверху</option>
           </select>
         </label>
       </div>
       <div class="flex flex-wrap gap-2">
-        <button class="rounded border border-blue-500 bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700 disabled:opacity-50" :disabled="isReadonly || saving || !!validationErrors.length" @click="saveOperations">
+        <button class="rounded border border-blue-500 bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700 disabled:opacity-50" :disabled="saving || !!validationErrors.length" @click="saveOperations">
           {{ saving ? 'Сохраняем...' : 'Сохранить операционные настройки' }}
         </button>
       </div>
@@ -391,7 +387,7 @@
             :key="preset.id"
             class="rounded-lg border p-3 text-left transition hover:border-gray-400"
             :class="preset.id === form.presetId ? 'border-blue-400 bg-blue-50' : 'border-gray-200 bg-white'"
-            :disabled="isReadonly"
+           
             @click="applyPreset(preset.id)"
           >
             <div class="flex items-center justify-between">
@@ -408,9 +404,9 @@
           </button>
         </div>
         <div class="mt-4 flex flex-wrap gap-2">
-          <input v-model="newPresetTitle" class="w-64 rounded border border-gray-300 px-3 py-1.5 text-sm" placeholder="Название нового пресета" :disabled="isReadonly || saving">
-          <input v-model="newPresetMood" class="w-64 rounded border border-gray-300 px-3 py-1.5 text-sm" placeholder="Настроение пресета" :disabled="isReadonly || saving">
-          <button class="rounded border border-violet-400 bg-violet-600 px-3 py-1.5 text-sm text-white disabled:opacity-50" :disabled="isReadonly || saving || !newPresetTitle.trim()" @click="savePreset">
+          <input v-model="newPresetTitle" class="w-64 rounded border border-gray-300 px-3 py-1.5 text-sm" placeholder="Название нового пресета" :disabled="saving">
+          <input v-model="newPresetMood" class="w-64 rounded border border-gray-300 px-3 py-1.5 text-sm" placeholder="Настроение пресета" :disabled="saving">
+          <button class="rounded border border-violet-400 bg-violet-600 px-3 py-1.5 text-sm text-white disabled:opacity-50" :disabled="saving || !newPresetTitle.trim()" @click="savePreset">
             Сохранить как новый пресет
           </button>
         </div>
@@ -425,13 +421,13 @@
               type="color"
               :value="safeColor(form.tokens[field.key])"
               class="h-9 w-11 cursor-pointer rounded border border-gray-300 bg-white p-1 disabled:cursor-not-allowed"
-              :disabled="isReadonly"
+             
               @input="onColorInput($event, field.key)"
             >
             <input
               v-model="form.tokens[field.key]"
               class="w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-xs uppercase"
-              :disabled="isReadonly"
+             
               placeholder="#000000"
             >
             <span class="h-8 w-8 rounded border border-gray-300" :style="{ backgroundColor: safeColor(form.tokens[field.key]) }" />
@@ -449,16 +445,16 @@
             min="0"
             max="32"
             class="w-full rounded-lg border border-gray-300 px-3 py-2"
-            :disabled="isReadonly"
+           
           >
         </label>
       </div>
 
       <div class="flex flex-wrap gap-2">
-        <button class="rounded border border-blue-500 bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700 disabled:opacity-50" :disabled="isReadonly || saving || !!validationErrors.length" @click="saveStyles">
+        <button class="rounded border border-blue-500 bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700 disabled:opacity-50" :disabled="saving || !!validationErrors.length" @click="saveStyles">
           {{ saving ? 'Сохраняем...' : 'Сохранить стили' }}
         </button>
-        <button class="rounded border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50" :disabled="isReadonly || saving || !hasRollback" @click="rollback">
+        <button class="rounded border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50" :disabled="saving || !hasRollback" @click="rollback">
           Вернуть предыдущий стиль
         </button>
       </div>
@@ -471,7 +467,7 @@
       </div>
 
       <div class="flex flex-wrap gap-2">
-        <button class="rounded border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50" :disabled="isReadonly || saving" @click="resetForm">
+        <button class="rounded border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-50" :disabled="saving" @click="resetForm">
           Отменить несохраненные изменения
         </button>
       </div>
@@ -493,7 +489,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { $fetch } from 'ofetch'
-import { useDashboardAccess } from '../../../composables/useDashboardAccess'
 import type {
   OrganizationSettings,
   OrganizationStyleAuditEntry,
@@ -505,7 +500,6 @@ import type {
 declare const definePageMeta: (meta: Record<string, unknown>) => void
 definePageMeta({ layout: 'dashboard' })
 
-const { role, load } = useDashboardAccess()
 const loading = ref(true)
 const saving = ref(false)
 const hasRollback = ref(false)
@@ -652,7 +646,6 @@ const radiusFields = [
   { key: 'card', label: 'radius.card' },
 ] as const
 
-const isReadonly = computed(() => role.value !== 'owner')
 const normalizedCuisineSearch = computed(() => cuisineSearch.value.trim())
 const filteredCuisineSuggestions = computed(() => {
   const query = normalizedCuisineSearch.value.toLowerCase()
@@ -786,7 +779,6 @@ function removeCuisineTag(tag: string) {
 async function loadData() {
   loading.value = true
   try {
-    await load()
     const [styleResponse, presetsResponse] = await Promise.all([
       $fetch<OrganizationStyleResponse>('/api/dashboard/organization/style'),
       $fetch<{ ok: true; items: OrganizationStylePreset[] }>('/api/dashboard/organization/style-presets'),
@@ -836,7 +828,6 @@ function pushToast(
 }
 
 async function saveByEndpoint(endpoint: string, successText: string, fallbackErrorText: string) {
-  if (isReadonly.value || validationErrors.value.length) return
   syncCuisineToSettings()
   saving.value = true
   try {
@@ -887,7 +878,6 @@ async function saveStyles() {
 }
 
 async function rollback() {
-  if (isReadonly.value || !hasRollback.value) return
   saving.value = true
   try {
     const response = await $fetch<OrganizationStyleResponse>('/api/dashboard/organization/style/rollback', {
@@ -957,7 +947,7 @@ function contrastRatio(a: { r: number; g: number; b: number }, b: { r: number; g
 }
 
 async function savePreset() {
-  if (isReadonly.value || !newPresetTitle.value.trim()) return
+  if (!newPresetTitle.value.trim()) return
   saving.value = true
   try {
     const response = await $fetch<{ ok: true; item: OrganizationStylePreset }>('/api/dashboard/organization/style-presets', {
@@ -984,7 +974,6 @@ async function savePreset() {
 }
 
 async function onFileChange(event: Event, kind: 'logo' | 'logo-large' | 'favicon' | 'restaurant-card' | 'hero') {
-  if (isReadonly.value) return
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
   if (!file) return

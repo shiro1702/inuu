@@ -1,5 +1,5 @@
 import { defineEventHandler, getQuery, setResponseHeader } from 'h3'
-import { serverSupabaseClient } from '#supabase/server'
+import { serverSupabaseServiceRole } from '#supabase/server'
 import { resolveCityBySlug } from '~/server/utils/inuuCity'
 
 export default defineEventHandler(async (event) => {
@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
   const query = getQuery(event)
   const limit = Math.min(50, Math.max(1, Number(query.limit) || 24))
 
-  const client = await serverSupabaseClient(event)
+  const client = await serverSupabaseServiceRole(event)
   const { data, error } = await client
     .from('venues')
     .select('id,slug,title,description,address,lat,lng,cover_media_url,vibe_tags,rating_avg,editorial_quote,phone,instagram_url')

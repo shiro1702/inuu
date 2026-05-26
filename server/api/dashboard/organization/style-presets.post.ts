@@ -11,9 +11,6 @@ type CreatePresetBody = {
 
 export default defineEventHandler(async (event) => {
   const access = await requireDashboardAccess(event)
-  if (access.role !== 'owner') {
-    throw createError({ statusCode: 403, statusMessage: 'Only owner can create custom presets' })
-  }
 
   const body = await readBody<CreatePresetBody>(event)
   if (!body?.title || !body?.config) {

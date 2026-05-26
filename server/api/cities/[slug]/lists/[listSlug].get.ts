@@ -1,5 +1,5 @@
 import { createError, defineEventHandler, setResponseHeader } from 'h3'
-import { serverSupabaseClient } from '#supabase/server'
+import { serverSupabaseServiceRole } from '#supabase/server'
 import { resolveCityBySlug } from '~/server/utils/inuuCity'
 
 type CuratedListItemRow = {
@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
   const listSlug = typeof event.context.params?.listSlug === 'string' ? event.context.params.listSlug : ''
   const city = await resolveCityBySlug(event, slug)
 
-  const client = await serverSupabaseClient(event)
+  const client = await serverSupabaseServiceRole(event)
   const { data: list, error: listError } = await client
     .from('curated_lists')
     .select('id,slug,title,description')

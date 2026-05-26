@@ -33,9 +33,6 @@ async function sendMax(baseUrl: string, token: string, conversationId: string, t
 
 export default defineEventHandler(async (event) => {
   const access = await requireDashboardAccess(event)
-  if (access.role !== 'owner') {
-    throw createError({ statusCode: 403, statusMessage: 'Only owner can send test messages' })
-  }
 
   const body = await readBody<Body>(event).catch(() => ({}))
   const festivalId = body.festivalId?.trim()

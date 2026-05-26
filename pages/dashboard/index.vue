@@ -69,28 +69,24 @@
     <template v-else>
       <div class="flex flex-wrap gap-3">
         <NuxtLink
-          v-if="can('orders.view')"
           to="/dashboard/orders"
           class="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm hover:border-gray-300"
         >
           Перейти к заказам
         </NuxtLink>
         <NuxtLink
-          v-if="can('settings.org.edit')"
           to="/dashboard/settings/organization"
           class="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm hover:border-gray-300"
         >
           Настройки организации
         </NuxtLink>
         <NuxtLink
-          v-if="can('branches.view')"
           to="/dashboard/branches"
           class="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm hover:border-gray-300"
         >
           Открыть филиалы
         </NuxtLink>
         <NuxtLink
-          v-if="can('orders.view')"
           to="/dashboard/moderation/city-ugc"
           class="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm hover:border-gray-300"
         >
@@ -102,7 +98,6 @@
         <p class="text-sm font-medium text-blue-900">В организации пока нет точек.</p>
         <p class="mt-1 text-sm text-blue-800">Создайте первую точку, чтобы начать принимать записи.</p>
         <NuxtLink
-          v-if="can('branches.create')"
           to="/dashboard/branches/new"
           class="mt-3 inline-flex rounded-lg border border-blue-300 bg-white px-3 py-1.5 text-sm text-blue-900 hover:bg-blue-100"
         >
@@ -126,7 +121,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 declare const definePageMeta: (meta: Record<string, unknown>) => void
 definePageMeta({ layout: 'dashboard' })
 
-const { access, can, hasOrganization, load } = useDashboardAccess()
+const { access, hasOrganization, load } = useDashboardAccess()
 const pending = ref(true)
 const errorMessage = ref<string | null>(null)
 const branchCount = ref(0)
@@ -163,11 +158,11 @@ watch(orgName, (name) => {
   }
 })
 
-async function loadDashboardData() {
+async function loadDashboardData(options?: { force?: boolean }) {
   pending.value = true
   errorMessage.value = null
   try {
-    await load()
+    await load(options)
     if (!hasOrganization.value) {
       branchCount.value = 0
       return
@@ -196,7 +191,7 @@ async function createOrganization() {
         orgType: orgType.value,
       },
     })
-    await loadDashboardData()
+    await loadDashboardData({ force: true })
   } catch (err: any) {
     createError.value = err?.data?.statusMessage || err?.message || 'Не удалось создать организацию'
   } finally {

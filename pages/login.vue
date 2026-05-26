@@ -46,6 +46,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter, useSupabaseClient } from '#imports';
+import { fetchDashboardAccess } from '~/composables/useDashboardAccess';
 
 const route = useRoute();
 const router = useRouter();
@@ -69,10 +70,8 @@ const token = computed(() => {
 
 async function resolveDefaultRedirectPath(): Promise<string> {
   try {
-    const accessRes = await fetch('/api/dashboard/access')
-    if (!accessRes.ok) return '/dashboard'
-    const access = await accessRes.json() as { ok: boolean; shopId?: string }
-    if (!access?.ok || !access.shopId) return '/dashboard'
+    const access = await fetchDashboardAccess()
+    if (!access.ok || !access.shopId) return '/dashboard'
 
     const restaurantsRes = await fetch(`/api/restaurants?shop_id=${encodeURIComponent(access.shopId)}`)
     if (!restaurantsRes.ok) return '/dashboard'

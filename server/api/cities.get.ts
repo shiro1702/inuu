@@ -1,5 +1,5 @@
 import { createError, defineEventHandler, getQuery, setResponseHeader } from 'h3'
-import { serverSupabaseClient } from '#supabase/server'
+import { serverSupabaseServiceRole } from '#supabase/server'
 
 type CityRow = {
   id: string
@@ -41,7 +41,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'City slug is required' })
   }
 
-  const client = await serverSupabaseClient(event)
+  const client = await serverSupabaseServiceRole(event)
   let data: any = null
   let error: any = null
   const primary = await client

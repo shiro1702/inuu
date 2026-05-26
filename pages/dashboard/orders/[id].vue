@@ -59,8 +59,7 @@
 
     <div class="rounded-xl border border-gray-200 bg-white p-4">
       <h2 class="text-sm font-semibold">Смена статуса</h2>
-      <div v-if="!can('orders.status.change')" class="mt-2 text-sm text-red-700">Недостаточно прав.</div>
-      <div v-else class="mt-3 space-y-3">
+      <div class="mt-3 space-y-3">
         <label class="block text-sm">
           <span class="mb-1 block text-gray-600">Новый статус</span>
           <select v-model="nextStatus" class="w-full rounded-lg border border-gray-300 px-2 py-2">
@@ -159,8 +158,6 @@ import {
 definePageMeta({ layout: 'dashboard' })
 
 const route = useRoute()
-const { can } = useDashboardAccess()
-
 type OrderItem = {
   productId: string
   name: string

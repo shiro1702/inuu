@@ -10,7 +10,6 @@ export default defineEventHandler(async (event) => {
   ])
   return {
     ok: true,
-    role: access.role,
     settings,
     data: record.config,
     hasRollback: !!record.prevConfig,

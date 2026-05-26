@@ -22,6 +22,11 @@ function normalizeRole(input: unknown): 'owner' | 'manager' {
   return 'owner'
 }
 
+function isIgnorableProfilesSchemaError(message: string | undefined): boolean {
+  if (!message) return false
+  return /column/i.test(message) && /(shop_id|role)/i.test(message)
+}
+
 export function invalidateDashboardAccessCache(userId: string) {
   dashboardAccessCache.delete(userId)
 }
@@ -58,34 +63,21 @@ export async function resolveDashboardAccess(event: any): Promise<DashboardAcces
   let shopId: string | null = null
   let role: 'owner' | 'manager' = 'owner'
 
-  const { data: profileData, error: profileError } = await client
-    .from('profiles')
+  const memberAccess = await client
+    .from('shop_members')
     .select('shop_id,role')
-    .eq('id', userId)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: true })
+    .limit(1)
     .maybeSingle()
 
-  if (profileError && !/column .*role/i.test(profileError.message)) {
-    throw createError({ statusCode: 500, statusMessage: 'Failed to read profile' })
+  if (memberAccess.error && !/relation .*shop_members.* does not exist/i.test(memberAccess.error.message)) {
+    throw createError({ statusCode: 500, statusMessage: 'Failed to read shop membership' })
   }
 
-  if (profileData?.shop_id) {
-    shopId = profileData.shop_id as string
-    role = normalizeRole((profileData as any).role)
-  }
-
-  if (!shopId) {
-    const fallback = await client
-      .from('profiles')
-      .select('shop_id')
-      .eq('id', userId)
-      .maybeSingle()
-    if (fallback.error) {
-      throw createError({ statusCode: 500, statusMessage: 'Failed to read profile' })
-    }
-    if (fallback.data?.shop_id) {
-      shopId = fallback.data.shop_id as string
-      role = 'owner'
-    }
+  if (memberAccess.data?.shop_id) {
+    shopId = memberAccess.data.shop_id as string
+    role = normalizeRole((memberAccess.data as any).role)
   }
 
   if (!shopId) {
@@ -99,21 +91,19 @@ export async function resolveDashboardAccess(event: any): Promise<DashboardAcces
   }
 
   if (!shopId) {
-    const memberAccess = await client
-      .from('shop_members')
+    const { data: profileData, error: profileError } = await client
+      .from('profiles')
       .select('shop_id,role')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: true })
-      .limit(1)
+      .eq('id', userId)
       .maybeSingle()
 
-    if (memberAccess.error && !/relation .*shop_members.* does not exist/i.test(memberAccess.error.message)) {
-      throw createError({ statusCode: 500, statusMessage: 'Failed to read shop membership' })
-    }
-
-    if (memberAccess.data?.shop_id) {
-      shopId = memberAccess.data.shop_id as string
-      role = normalizeRole((memberAccess.data as any).role)
+    if (profileError) {
+      if (!isIgnorableProfilesSchemaError(profileError.message)) {
+        throw createError({ statusCode: 500, statusMessage: 'Failed to read profile' })
+      }
+    } else if (profileData?.shop_id) {
+      shopId = profileData.shop_id as string
+      role = normalizeRole((profileData as any).role)
     }
   }
 

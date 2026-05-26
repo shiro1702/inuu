@@ -20,9 +20,6 @@ type SaveStyleBody = {
 
 export default defineEventHandler(async (event) => {
   const access = await requireDashboardAccess(event)
-  if (access.role !== 'owner') {
-    throw createError({ statusCode: 403, statusMessage: 'Only owner can save organization style' })
-  }
 
   const body = await readBody<SaveStyleBody>(event)
   if (!body?.data) {
@@ -76,7 +73,6 @@ export default defineEventHandler(async (event) => {
 
   return {
     ok: true,
-    role: access.role,
     settings,
     data: nextRecord.config,
     hasRollback: !!nextRecord.prevConfig,

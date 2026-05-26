@@ -27,9 +27,6 @@ function normalizeFestivalFulfillmentType(value: unknown): 'delivery' | 'pickup'
 
 export default defineEventHandler(async (event) => {
   const access = await requireDashboardAccess(event)
-  if (access.role !== 'owner') {
-    throw createError({ statusCode: 403, statusMessage: 'Only owner can update branch settings' })
-  }
   const branchId = getRouterParam(event, 'id')
   if (!branchId) {
     throw createError({ statusCode: 400, statusMessage: 'Branch id is required' })

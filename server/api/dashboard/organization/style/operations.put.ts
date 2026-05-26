@@ -15,9 +15,6 @@ type SaveOperationsBody = {
 
 export default defineEventHandler(async (event) => {
   const access = await requireDashboardAccess(event)
-  if (access.role !== 'owner') {
-    throw createError({ statusCode: 403, statusMessage: 'Only owner can save organization operations' })
-  }
 
   const body = await readBody<SaveOperationsBody>(event)
   if (!body?.settings) {
@@ -41,7 +38,6 @@ export default defineEventHandler(async (event) => {
   const settings = await getOrganizationSettings(event, access.shopId)
   return {
     ok: true,
-    role: access.role,
     settings,
     data: style.config,
     hasRollback: !!style.prevConfig,
