@@ -1,12 +1,12 @@
 import Groq from 'groq-sdk'
 import { createError } from 'h3'
 import {
-  EVENT_PARSE_TAGS,
   eventParseInputSchema,
   eventParseResultSchema,
   type EventParseInput,
   type EventParseResult,
 } from '~/server/utils/ai/eventParseSchema'
+import { slugifyTaxonomy } from '~/server/utils/cityContentTaxonomy'
 
 type ParseAttempt = {
   ok: boolean
@@ -27,12 +27,19 @@ type ParseOutput = {
   latencyMs: number
 }
 
-function buildSystemPrompt() {
+function buildSystemPrompt(input: EventParseInput) {
+  const tagList = input.hints?.availableTags?.map((t) => t.slug).join(', ') || ''
+  const categoryList = input.hints?.availableCategories?.map((c) => c.slug).join(', ') || ''
   return [
     'Ты парсер событий и новостей для городского агрегатора.',
     'Твоя задача: извлечь данные из входного текста и вернуть ТОЛЬКО JSON.',
     'Запрещено выдумывать факты: если не найдено — ставь null или пустой массив.',
-    `topic_tags можно выбирать только из: ${EVENT_PARSE_TAGS.join(', ')}.`,
+    tagList
+      ? `topic_tags: выбери все подходящие slug из справочника [${tagList}]. Если нет точного — добавь новый slug латиницей (food, live-music). До 8 тегов.`
+      : 'topic_tags: slug латиницей, до 8 штук, только реально подходящие теме.',
+    categoryList
+      ? `category_slug: один slug из [${categoryList}] или новый slug латиницей, если ничего не подходит.`
+      : 'category_slug: slug категории латиницей или null.',
     'dates должны быть строками в ISO-like формате, если дата неясна — не выдумывать.',
     'confidence: число от 0 до 1.',
     'missing_fields: список недостающих полей для модератора.',
@@ -45,6 +52,12 @@ function buildUserPrompt(input: EventParseInput) {
   const sourceUrl = input.sourceUrl || null
   const sourceExternalId = input.sourceExternalId || null
   const hints = input.hints || {}
+  const tagsHint = Array.isArray(hints.availableTags) && hints.availableTags.length
+    ? `KNOWN_TAGS: ${JSON.stringify(hints.availableTags)}`
+    : ''
+  const categoriesHint = Array.isArray(hints.availableCategories) && hints.availableCategories.length
+    ? `KNOWN_CATEGORIES: ${JSON.stringify(hints.availableCategories)}`
+    : ''
 
   return [
     'Верни JSON строго по этой форме:',
@@ -79,7 +92,9 @@ function buildUserPrompt(input: EventParseInput) {
     `CONTEXT: source.url=${sourceUrl}`,
     `CONTEXT: source.external_id=${sourceExternalId}`,
     `CONTEXT: city_slug=${citySlug}`,
-    `CONTEXT: hints=${JSON.stringify(hints)}`,
+    `CONTEXT: hints=${JSON.stringify({ categorySlug: hints.categorySlug, topicTags: hints.topicTags })}`,
+    tagsHint,
+    categoriesHint,
     '',
     'INPUT_TEXT:',
     input.rawText,
@@ -105,14 +120,15 @@ function normalizeResult(result: EventParseResult): EventParseResult {
   const normalizedTags = Array.from(
     new Set(
       (result.topic_tags || [])
-        .map((tag) => tag.trim().toLowerCase())
-        .filter((tag) => EVENT_PARSE_TAGS.includes(tag as (typeof EVENT_PARSE_TAGS)[number])),
+        .map((tag) => slugifyTaxonomy(tag))
+        .filter((tag) => tag.length >= 2),
     ),
-  ).slice(0, 5)
+  ).slice(0, 8)
 
   return {
     ...result,
     topic_tags: normalizedTags,
+    category_slug: result.category_slug ? slugifyTaxonomy(result.category_slug) : null,
     source: {
       ...result.source,
       url: result.source.url || null,
@@ -136,7 +152,7 @@ async function runSingleAttempt(args: {
     temperature: 0,
     response_format: { type: 'json_object' },
     messages: [
-      { role: 'system', content: buildSystemPrompt() },
+      { role: 'system', content: buildSystemPrompt(args.input) },
       { role: 'user', content: buildUserPrompt(args.input) },
     ],
   })

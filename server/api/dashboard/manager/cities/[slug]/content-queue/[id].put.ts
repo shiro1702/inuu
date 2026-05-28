@@ -1,6 +1,7 @@
 import { createError, defineEventHandler, readBody } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import { resolveManagerCityScopeOrThrow } from '~/server/utils/managerCityAccess'
+import { ensureCityContentTags, ensureCityEventCategory } from '~/server/utils/cityContentTaxonomy'
 
 type Body = {
   title?: string | null
@@ -32,10 +33,12 @@ export default defineEventHandler(async (event) => {
   const payload = { ...((current as any).payload || {}) } as any
   if (typeof body.title === 'string') payload.title = body.title.trim()
   if (typeof body.description === 'string') payload.description = body.description.trim()
-  if (typeof body.categorySlug === 'string') payload.category_slug = body.categorySlug.trim()
+  if (typeof body.categorySlug === 'string') {
+    payload.category_slug = await ensureCityEventCategory(event, scope.cityId, body.categorySlug.trim())
+  }
   if (typeof body.registrationUrl === 'string') payload.registration_url = body.registrationUrl.trim()
   if (Array.isArray(body.topicTags)) {
-    payload.topic_tags = Array.from(new Set(body.topicTags.map((x) => String(x || '').trim()).filter(Boolean))).slice(0, 8)
+    payload.topic_tags = await ensureCityContentTags(event, scope.cityId, body.topicTags)
   }
 
   const { data, error } = await client

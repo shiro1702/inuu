@@ -4,6 +4,7 @@ import { parseEventWithGroq } from '~/server/utils/ai/groqEventParser'
 import type { EventParseInput } from '~/server/utils/ai/eventParseSchema'
 import { writeAiParseLog } from '~/server/utils/ai/aiParseLogs'
 import { resolveCityBySlug } from '~/server/utils/inuuCity'
+import { loadCityParseTaxonomy, resolveParsedTaxonomy } from '~/server/utils/cityContentTaxonomy'
 
 function normalizeTitle(value: string): string {
   return value.toLowerCase().replace(/\s+/g, ' ').trim()
@@ -72,15 +73,41 @@ export async function runContentIngest(
   event: H3Event,
   input: EventParseInput & { persist?: boolean },
 ): Promise<ContentIngestResult> {
-  const parseOutput = await parseEventWithGroq(input)
-  const result = parseOutput.result
+  const citySlugHint = input.citySlug || null
+  let taxonomyHints = input.hints || {}
+  let cityForTaxonomy: Awaited<ReturnType<typeof resolveCityBySlug>> | null = null
+
+  if (citySlugHint) {
+    cityForTaxonomy = await resolveCityBySlug(event, citySlugHint)
+    const taxonomy = await loadCityParseTaxonomy(event, cityForTaxonomy.id)
+    taxonomyHints = {
+      ...taxonomyHints,
+      availableTags: taxonomy.tags,
+      availableCategories: taxonomy.categories,
+    }
+  }
+
+  const parseOutput = await parseEventWithGroq({ ...input, hints: taxonomyHints })
+  let result = parseOutput.result
   const lastUsage = [...parseOutput.attempts].reverse().find((x) => x.ok && x.usage)?.usage
   const citySlug = result.city_slug || input.citySlug
   if (!citySlug) {
     throw new Error('city_slug is required either in input or parse result')
   }
 
-  const city = await resolveCityBySlug(event, citySlug)
+  const city = cityForTaxonomy?.slug === citySlug
+    ? cityForTaxonomy
+    : await resolveCityBySlug(event, citySlug)
+
+  const resolvedTaxonomy = await resolveParsedTaxonomy(event, city.id, {
+    topicTags: result.topic_tags,
+    categorySlug: result.category_slug,
+  })
+  result = {
+    ...result,
+    topic_tags: resolvedTaxonomy.topicTags,
+    category_slug: resolvedTaxonomy.categorySlug,
+  }
   const duplicates = await findEventDuplicates({
     event,
     cityId: city.id,

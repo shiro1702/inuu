@@ -169,6 +169,25 @@
             <span class="font-medium text-gray-700">Cover URL (optional)</span>
             <input v-model="newsForm.coverMediaUrl" class="w-full rounded-lg border border-gray-300 px-3 py-2" />
           </label>
+          <div v-if="selectedCitySlug" class="md:col-span-2">
+            <DashboardTaxonomyPicker
+              v-model="newsForm.categorySlug"
+              :city-slug="selectedCitySlug"
+              kind="category"
+              label="Категория"
+              placeholder="Поиск категории…"
+            />
+          </div>
+          <div v-if="selectedCitySlug" class="md:col-span-2">
+            <DashboardTaxonomyPicker
+              v-model="newsForm.topicTags"
+              :city-slug="selectedCitySlug"
+              kind="tags"
+              label="Теги"
+              placeholder="Поиск или новый тег…"
+              hint="Enter — выбрать; «+ Создать» — добавить в справочник города"
+            />
+          </div>
         </div>
 
         <label class="inline-flex items-center gap-2 text-sm text-gray-700">
@@ -222,10 +241,15 @@
                 <span class="font-medium text-gray-700">Title</span>
                 <input v-model="queueEdits[item.id].title" class="w-full rounded border border-gray-300 px-2 py-1 text-sm" />
               </label>
-              <label class="space-y-1 text-xs">
-                <span class="font-medium text-gray-700">Category</span>
-                <input v-model="queueEdits[item.id].categorySlug" class="w-full rounded border border-gray-300 px-2 py-1 text-sm" />
-              </label>
+              <div v-if="selectedCitySlug" class="space-y-1 text-xs">
+                <DashboardTaxonomyPicker
+                  v-model="queueEdits[item.id].categorySlug"
+                  :city-slug="selectedCitySlug"
+                  kind="category"
+                  label="Категория"
+                  placeholder="Поиск категории…"
+                />
+              </div>
               <label class="space-y-1 text-xs md:col-span-2">
                 <span class="font-medium text-gray-700">Description</span>
                 <textarea v-model="queueEdits[item.id].description" rows="3" class="w-full rounded border border-gray-300 px-2 py-1 text-sm" />
@@ -234,10 +258,15 @@
                 <span class="font-medium text-gray-700">Registration URL</span>
                 <input v-model="queueEdits[item.id].registrationUrl" class="w-full rounded border border-gray-300 px-2 py-1 text-sm" />
               </label>
-              <label class="space-y-1 text-xs">
-                <span class="font-medium text-gray-700">Tags (comma)</span>
-                <input v-model="queueEdits[item.id].topicTagsText" class="w-full rounded border border-gray-300 px-2 py-1 text-sm" />
-              </label>
+              <div v-if="selectedCitySlug" class="space-y-1 text-xs md:col-span-2">
+                <DashboardTaxonomyPicker
+                  v-model="queueEdits[item.id].topicTags"
+                  :city-slug="selectedCitySlug"
+                  kind="tags"
+                  label="Теги"
+                  placeholder="Поиск или новый тег…"
+                />
+              </div>
             </div>
             <div class="mt-2 flex flex-wrap items-center gap-2">
               <button class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50" @click="saveQueueEdit(item.id)">Save edit</button>
@@ -302,6 +331,8 @@ const newsForm = reactive({
   excerpt: '',
   coverMediaUrl: '',
   publishNow: false,
+  categorySlug: '' as string,
+  topicTags: [] as string[],
 })
 
 const queueStatus = ref('pending')
@@ -312,7 +343,7 @@ const queueEdits = reactive<Record<string, {
   description: string
   categorySlug: string
   registrationUrl: string
-  topicTagsText: string
+  topicTags: string[]
 }>>({})
 
 function pretty(value: unknown): string {
@@ -502,6 +533,8 @@ async function createNews() {
         excerpt: newsForm.excerpt || null,
         coverMediaUrl: newsForm.coverMediaUrl || null,
         publishNow: newsForm.publishNow,
+        categorySlug: newsForm.categorySlug || null,
+        topicTags: newsForm.topicTags,
       }),
     })
     const response = await res.json() as any
@@ -519,7 +552,9 @@ function hydrateQueueEdit(item: any) {
     description: String(item?.payload?.description || ''),
     categorySlug: String(item?.payload?.category_slug || ''),
     registrationUrl: String(item?.payload?.registration_url || ''),
-    topicTagsText: Array.isArray(item?.payload?.topic_tags) ? item.payload.topic_tags.join(', ') : '',
+    topicTags: Array.isArray(item?.payload?.topic_tags)
+      ? item.payload.topic_tags.map((x: unknown) => String(x || '').trim()).filter(Boolean)
+      : [],
   }
 }
 
@@ -590,10 +625,7 @@ async function saveQueueEdit(submissionId: string) {
         description: edit.description,
         categorySlug: edit.categorySlug,
         registrationUrl: edit.registrationUrl,
-        topicTags: edit.topicTagsText
-          .split(',')
-          .map((x) => x.trim())
-          .filter(Boolean),
+        topicTags: edit.topicTags,
       }),
     })
     const payload = await res.json() as any

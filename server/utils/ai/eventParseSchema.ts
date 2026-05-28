@@ -34,7 +34,7 @@ export const eventParseResultSchema = z.object({
   price_from: z.number().nonnegative().nullable().default(null),
   capacity: z.number().int().positive().nullable().default(null),
   registration_url: nullableTrimmedString,
-  topic_tags: z.array(z.string().trim().min(2).max(40)).max(5),
+  topic_tags: z.array(z.string().trim().min(2).max(40)).max(8),
   recurrence: z.object({
     rule: z.enum(RECURRENCE_RULES).default('none'),
     dates: z.array(z.string().trim().min(10).max(64)).max(32),
@@ -55,6 +55,8 @@ export type EventParseInput = {
   hints?: {
     categorySlug?: string | null
     topicTags?: string[]
+    availableTags?: Array<{ slug: string; name: string }>
+    availableCategories?: Array<{ slug: string; name: string }>
   }
 }
 
@@ -69,6 +71,14 @@ export const eventParseInputSchema = z.object({
     .object({
       categorySlug: z.string().trim().max(64).nullable().optional(),
       topicTags: z.array(z.string().trim().min(2).max(40)).max(10).optional(),
+      availableTags: z
+        .array(z.object({ slug: z.string(), name: z.string() }))
+        .max(100)
+        .optional(),
+      availableCategories: z
+        .array(z.object({ slug: z.string(), name: z.string() }))
+        .max(100)
+        .optional(),
     })
     .optional(),
 })

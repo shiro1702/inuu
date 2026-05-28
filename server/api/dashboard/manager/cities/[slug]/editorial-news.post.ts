@@ -1,6 +1,7 @@
 import { createError, defineEventHandler, readBody } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import { resolveManagerCityScopeOrThrow } from '~/server/utils/managerCityAccess'
+import { ensureCityContentTags, ensureCityEventCategory } from '~/server/utils/cityContentTaxonomy'
 
 type Body = {
   title?: string
@@ -8,6 +9,8 @@ type Body = {
   excerpt?: string | null
   coverMediaUrl?: string | null
   publishNow?: boolean
+  topicTags?: string[]
+  categorySlug?: string | null
 }
 
 function slugify(input: string): string {
@@ -34,6 +37,12 @@ export default defineEventHandler(async (event) => {
   const slugBase = slugify(title) || `news-${Date.now()}`
   const postSlug = `${slugBase}-${Date.now().toString().slice(-5)}`
   const publishNow = body.publishNow === true
+  const topicTags = Array.isArray(body.topicTags)
+    ? await ensureCityContentTags(event, scope.cityId, body.topicTags)
+    : []
+  const categorySlug = body.categorySlug
+    ? await ensureCityEventCategory(event, scope.cityId, String(body.categorySlug))
+    : null
 
   const payload = {
     city_id: scope.cityId,
@@ -43,6 +52,8 @@ export default defineEventHandler(async (event) => {
     body: text,
     excerpt: body.excerpt ? String(body.excerpt).trim() : null,
     cover_media_url: body.coverMediaUrl ? String(body.coverMediaUrl).trim() : null,
+    topic_tags: topicTags,
+    category_slug: categorySlug,
     is_published: publishNow,
     published_at: publishNow ? new Date().toISOString() : null,
   }
