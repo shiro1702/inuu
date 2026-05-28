@@ -60,6 +60,7 @@
 | [features/content/07-paid-news-publication.md](./features/content/07-paid-news-publication.md) | Оплата за публикацию новостей |
 | [features/content/08-event-sourcing-and-moderation-pipeline.md](./features/content/08-event-sourcing-and-moderation-pipeline.md) | Конвейер наполнения: бот + парсер + AI + модерация |
 | [features/content/09-how-to-create-news-and-events.md](./features/content/09-how-to-create-news-and-events.md) | Практическая инструкция: как создавать новости/события через новый backend |
+| [features/content/10-telegram-sources-without-bot-access.md](./features/content/10-telegram-sources-without-bot-access.md) | Как подключать TG-источники, куда нельзя добавить бота |
 
 ### Вертикали
 

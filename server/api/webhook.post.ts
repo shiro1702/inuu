@@ -24,6 +24,7 @@ import {
 import { isShopFeatureEnabled } from '~/server/utils/features'
 import { applyReviewPromptTelegramCallback, processDueReviewPrompts } from '~/server/utils/reviewPromptFlow'
 import { parseReviewTokenCallback } from '~/server/utils/reviewPromptParse'
+import { tryHandleInuuParserSourceTelegramMessage, type InuuTelegramMessage } from '~/server/utils/inuuContentBot'
 
 const TELEGRAM_API = (token: string) => `https://api.telegram.org/bot${token}`
 
@@ -864,7 +865,28 @@ export default defineEventHandler(async (event) => {
       })
       return { ok: true }
     }
+
+    const parserHandledInText = await tryHandleInuuParserSourceTelegramMessage(event, {
+      botToken,
+      message: body.message as InuuTelegramMessage,
+    }).catch((err) => {
+      console.error('[webhook] parser source message:', err)
+      return false
+    })
+    if (parserHandledInText) return { ok: true }
+
     return { ok: true }
+  }
+
+  if (body.message?.chat?.id !== undefined) {
+    const parserHandled = await tryHandleInuuParserSourceTelegramMessage(event, {
+      botToken,
+      message: body.message as InuuTelegramMessage,
+    }).catch((err) => {
+      console.error('[webhook] parser source message:', err)
+      return false
+    })
+    if (parserHandled) return { ok: true }
   }
 
   // Нажатие inline-кнопки менеджером (callback_query)
