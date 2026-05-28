@@ -58,6 +58,20 @@
 - Партнёр: `/submit` → `content_submissions` → чат менеджеров с ✅/❌  
 - Редакция: `/news`, `/event` без очереди (опционально раньше 1b)  
 - Паттерн как `festivalUgcModeration.ts` + роутинг `inuu:sub:*` в webhook  
+- Редакторский score (⭐1..⭐5) и кнопка `Редактировать` в Mini App  
+- Единый inbound: bot submit + TG parser с обязательным `source_url`  
+
+### Фаза 1c — «Оплата публикации» (+~1 нед к 1b)
+
+См. **[07-paid-news-publication.md](./07-paid-news-publication.md)**.
+
+- Этап 0: счёт вручную, `payment_status = invoiced`  
+- Этап 1: `content_products` + YooKassa B2B в боте **до** модерации  
+- `is_sponsored` на сайте, политика возвратов  
+
+### Фаза 1d — «Рассылка подборок в боте» (параллельно 1b)
+
+См. **[06-bot-digest-subscriptions.md](./06-bot-digest-subscriptions.md)** — полная спека; для первого релиза — раздел **MVP-набор**: 3 темы (`digest`, `events`, `news`), 5 тегов интересов, 2 пресета в `/start`.
 
 ### Фаза 3 — «Каналы»
 
@@ -119,6 +133,16 @@ alter table public.editorial_posts
 - Чат модерации — привязка через существующий механизм токенов → `cities.editorial_moderation_chat_id`
 - Approve/reject — любой участник группы; в БД пишем `reviewed_by_telegram_id` (+ username, profile если есть)
 - Reject — кнопки причин + опциональный комментарий (reply в группе)
+- Source-aware pipeline: хранить `source_kind/source_url/source_external_id` для anti-dup и аналитики каналов
+
+Подробная спецификация конвейера: [08-event-sourcing-and-moderation-pipeline.md](./08-event-sourcing-and-moderation-pipeline.md).
+
+## Оплата публикации (фаза 1c)
+
+См. [07-paid-news-publication.md](./07-paid-news-publication.md):
+
+- MVP: оплата **до** модерации + счёт для юрлиц
+- Редакция `/news` — без оплаты
 
 ---
 

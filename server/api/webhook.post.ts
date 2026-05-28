@@ -118,6 +118,15 @@ type ChatLinkTokenRow = {
   used_at: string | null
 }
 
+type CityChatLinkTokenRow = {
+  token: string
+  city_id: string
+  channel: 'telegram' | 'max'
+  target: 'manager' | 'moderation' | 'parser_source'
+  expires_at: string
+  used_at: string | null
+}
+
 function formatOrderRef(orderNumber: unknown, fallbackOrderId: string): string {
   const raw = typeof orderNumber === 'string' && orderNumber.trim()
     ? orderNumber.trim()
@@ -163,6 +172,20 @@ function parseBindToken(text: string): string | null {
   }
   if (command.startsWith('/bind_')) {
     const token = first.slice('/bind_'.length)
+    return token ? token.trim() : null
+  }
+  return null
+}
+
+function parseBindCityToken(text: string): string | null {
+  const trimmed = text.trim()
+  const [first = '', second = ''] = trimmed.split(/\s+/, 2)
+  const command = first.toLowerCase()
+  if (command === '/bindcity' || command.startsWith('/bindcity@')) {
+    return second ? second.trim() : null
+  }
+  if (command.startsWith('/bindcity_')) {
+    const token = first.slice('/bindcity_'.length)
     return token ? token.trim() : null
   }
   return null
@@ -551,6 +574,27 @@ export default defineEventHandler(async (event) => {
         })
         return { ok: true }
       }
+      if (startParam.startsWith('linkcitytg_')) {
+        const token = startParam.slice('linkcitytg_'.length).trim()
+        if (!token) {
+          await telegram(botToken, 'sendMessage', {
+            chat_id: chatId,
+            text: 'Не удалось прочитать токен привязки города. Сгенерируйте ссылку заново в кабинете.',
+          })
+          return { ok: true }
+        }
+        await telegram(botToken, 'sendMessage', {
+          chat_id: chatId,
+          text: [
+            'Токен привязки города получен.',
+            'Теперь добавьте меня в нужную группу/чат и отправьте там команду:',
+            `/bindcity ${token}`,
+            '',
+            'Привязку может завершить только администратор чата.',
+          ].join('\n'),
+        })
+        return { ok: true }
+      }
 
       // Обычный /start без параметров — приветствие и кнопка Web App
       if (!startParam) {
@@ -690,6 +734,114 @@ export default defineEventHandler(async (event) => {
       await telegram(botToken, 'sendMessage', {
         chat_id: chatId,
         text: `Чат успешно привязан к ресторану "${updatedRestaurant.name}".`,
+      })
+      return { ok: true }
+    }
+    const bindCityToken = parseBindCityToken(text)
+    if (bindCityToken) {
+      const fromId = body.message.from?.id
+      const chatType = (body.message.chat?.type || '').toLowerCase()
+      const isGroupChat = chatType === 'group' || chatType === 'supergroup'
+      if (!isGroupChat) {
+        await telegram(botToken, 'sendMessage', {
+          chat_id: chatId,
+          text: 'Команда /bindcity работает только в группе/супергруппе.',
+        })
+        return { ok: true }
+      }
+      if (!fromId) {
+        await telegram(botToken, 'sendMessage', {
+          chat_id: chatId,
+          text: 'Не удалось определить пользователя. Повторите команду позже.',
+        })
+        return { ok: true }
+      }
+
+      const supabase = await serverSupabaseServiceRole(event)
+      const { data: tokenRow } = await supabase
+        .from('city_chat_link_tokens')
+        .select('token,city_id,channel,target,expires_at,used_at')
+        .eq('token', bindCityToken)
+        .maybeSingle<CityChatLinkTokenRow>()
+
+      if (!tokenRow || tokenRow.channel !== 'telegram') {
+        await telegram(botToken, 'sendMessage', {
+          chat_id: chatId,
+          text: 'Токен city-привязки не найден. Сгенерируйте новую ссылку в кабинете.',
+        })
+        return { ok: true }
+      }
+      if (tokenRow.used_at) {
+        await telegram(botToken, 'sendMessage', {
+          chat_id: chatId,
+          text: 'Этот токен уже использован. Сгенерируйте новый в кабинете.',
+        })
+        return { ok: true }
+      }
+      if (new Date(tokenRow.expires_at).getTime() < Date.now()) {
+        await telegram(botToken, 'sendMessage', {
+          chat_id: chatId,
+          text: 'Токен истек. Сгенерируйте новый в кабинете.',
+        })
+        return { ok: true }
+      }
+
+      const memberResult = await telegram(botToken, 'getChatMember', {
+        chat_id: chatId,
+        user_id: fromId,
+      }).catch(() => null) as { result?: { status?: string } } | null
+      const memberStatus = String(memberResult?.result?.status || '').toLowerCase()
+      if (!(memberStatus === 'administrator' || memberStatus === 'creator')) {
+        await telegram(botToken, 'sendMessage', {
+          chat_id: chatId,
+          text: 'Только администратор группы может выполнить привязку.',
+        })
+        return { ok: true }
+      }
+
+      const chatIdValue = String(chatId)
+      const { data: cityData } = await supabase
+        .from('cities')
+        .select('content_ops_settings,name,slug')
+        .eq('id', tokenRow.city_id)
+        .maybeSingle()
+      const currentSettings = ((cityData as any)?.content_ops_settings || {}) as Record<string, any>
+      const telegramSettings = { ...(currentSettings.telegram || {}) }
+      if (tokenRow.target === 'manager') telegramSettings.manager_chat_id = chatIdValue
+      if (tokenRow.target === 'moderation') telegramSettings.moderation_chat_id = chatIdValue
+      if (tokenRow.target === 'parser_source') {
+        const prev = Array.isArray(telegramSettings.parser_source_chats) ? telegramSettings.parser_source_chats : []
+        telegramSettings.parser_source_chats = Array.from(new Set([...prev.map((x: any) => String(x)), chatIdValue]))
+      }
+      const nextSettings = { ...currentSettings, telegram: telegramSettings }
+
+      const { error: cityUpdateError } = await supabase
+        .from('cities')
+        .update({ content_ops_settings: nextSettings })
+        .eq('id', tokenRow.city_id)
+      if (cityUpdateError) {
+        await telegram(botToken, 'sendMessage', {
+          chat_id: chatId,
+          text: 'Не удалось сохранить city-привязку. Попробуйте еще раз.',
+        })
+        return { ok: true }
+      }
+
+      await supabase
+        .from('city_chat_link_tokens')
+        .update({ used_at: new Date().toISOString(), bound_chat_id: chatIdValue })
+        .eq('token', bindCityToken)
+        .is('used_at', null)
+
+      const cityName = String((cityData as any)?.name || (cityData as any)?.slug || 'город')
+      const targetLabel = tokenRow.target === 'manager'
+        ? 'manager chat'
+        : tokenRow.target === 'moderation'
+          ? 'moderation chat'
+          : 'parser source'
+      await telegram(botToken, 'sendMessage', {
+        chat_id: chatId,
+        text: `Чат успешно привязан к ${targetLabel} для "${cityName}".`,
       })
       return { ok: true }
     }

@@ -220,8 +220,9 @@ pages/[city_slug]/
 | R10 | tourism leads | 1 нед |
 | R11 | **TG-бот контент:** `content_submissions`, bind `cities.editorial_moderation_chat_id`, `/submit` + модерация в группе | ~1.5 нед |
 | R12 | TG-бот: `/news`, `/event` для редакции | 1–2 д |
+| R13 | **Оплата публикации:** `content_products`, payment в боте (B2B YooKassa), `is_sponsored`, возвраты | ~1 нед |
 
-Спека: [features/content/04-telegram-bot-content-moderation.md](../features/content/04-telegram-bot-content-moderation.md).
+Спека: [04](../features/content/04-telegram-bot-content-moderation.md), [07](../features/content/07-paid-news-publication.md).
 
 **R11 — принятые решения:** один `@inuu_bot`; модератор = любой участник группы (`getChatMember`); аудит `reviewed_by_telegram_id`; отклонение — preset-кнопки + reply-комментарий.
 

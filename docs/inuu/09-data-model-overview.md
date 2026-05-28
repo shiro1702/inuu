@@ -39,13 +39,22 @@ venues
 events
   id, city_id, venue_id?, organizer_id, slug, title,
   starts_at, ends_at, capacity, price, category_id,
-  cover_media_id, is_promoted
+  cover_media_id, is_promoted,
+  organization_id?, source_kind?, source_url?, source_external_id?,
+  editorial_score?
 
 event_bookings  (или общая bookings с type=event)
   id, event_id, user_id, status, paid_amount, qr_token
 
 categories
   id, city_id?, slug, name, parent_id, sort_order
+
+event_series (опционально, фаза 2+)
+  id, city_id, slug, title, organization_id?, venue_id?,
+  recurrence_rule, timezone
+
+event_sessions (опционально, фаза 2+)
+  id, series_id, starts_at, ends_at, capacity, price, status
 ```
 
 ---
@@ -132,6 +141,11 @@ editorial_posts  (новости)
 curated_lists  (подборки)
   id, city_id, slug, title, items[] (polymorphic refs)
 
+content_submissions (очередь модерации)
+  id, city_id, kind, status, payload,
+  source_kind, source_url, source_external_id,
+  editorial_score, reviewed_by_telegram_id, reviewed_at
+
 stories
   id, city_id, author_type (editorial|venue|provider),
   author_id, media_id, link_url, expires_at
@@ -164,6 +178,7 @@ payouts
 
 - `(city_id, slug)` unique на публичных сущностях.
 - `(city_id, starts_at)` на events.
+- `(city_id, source_external_id)` unique partial where source_external_id is not null.
 - `(provider_id, starts_at)` на slots.
 - `(user_id, city_id)` на favorites.
 

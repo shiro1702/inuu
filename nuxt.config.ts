@@ -42,6 +42,8 @@ export default defineNuxtConfig({
     supabaseUrl: process.env.SUPABASE_URL ?? '',
     supabaseServiceKey:
       process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY ?? '',
+    groqApiKey: process.env.NUXT_GROQ_API_KEY ?? '',
+    groqModel: process.env.NUXT_GROQ_MODEL ?? 'llama-3.3-70b-versatile',
     public: {
       brandName: 'INUU',
       platformBaseDomain: process.env.NUXT_PLATFORM_BASE_DOMAIN ?? '',

@@ -42,6 +42,15 @@ type ChatLinkTokenRow = {
   used_at: string | null
 }
 
+type CityChatLinkTokenRow = {
+  token: string
+  city_id: string
+  channel: 'telegram' | 'max'
+  target: 'manager' | 'moderation' | 'parser_source'
+  expires_at: string
+  used_at: string | null
+}
+
 function formatOrderRef(orderNumber: unknown, fallbackOrderId: string): string {
   const raw = typeof orderNumber === 'string' && orderNumber.trim() ? orderNumber.trim() : fallbackOrderId.trim()
   const normalized = raw.replace(/\s+/g, '')
@@ -102,6 +111,32 @@ function parseMaxBindToken(text: string): string | null {
     return token ? token.trim() : null
   }
   return null
+}
+
+function parseMaxBindCityToken(text: string): string | null {
+  const trimmed = text.trim()
+  const [first = '', second = ''] = trimmed.split(/\s+/, 2)
+  const command = first.toLowerCase()
+  if (command === 'bindmaxcity' || command === '/bindmaxcity' || command.startsWith('/bindmaxcity@')) {
+    return second ? second.trim() : null
+  }
+  if (command.startsWith('bindmaxcity_')) {
+    const token = first.slice('bindmaxcity_'.length)
+    return token ? token.trim() : null
+  }
+  if (command.startsWith('/bindmaxcity_')) {
+    const token = first.slice('/bindmaxcity_'.length)
+    return token ? token.trim() : null
+  }
+  return null
+}
+
+function extractMaxBindCityTokenFromUpdate(update: MaxUpdate, messageText: string): string | null {
+  const direct = parseMaxBindCityToken(messageText)
+  if (direct) return direct
+  const dump = JSON.stringify(update)
+  const match = /(?:^|["\s:/])\/?bindmaxcity(?:@[\w.-]+)?[\s_]+([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i.exec(dump)
+  return match?.[1]?.trim() || null
 }
 
 function extractMaxBindTokenFromUpdate(update: MaxUpdate, messageText: string): string | null {
@@ -452,6 +487,29 @@ export default defineEventHandler(async (event) => {
     }).catch((e) => console.error('webhook-max: linkmaxchat instructions failed:', e))
     return { ok: true }
   }
+  if (actorUserId != null && startPayload.startsWith('linkcitymax_')) {
+    const token = startPayload.slice('linkcitymax_'.length).trim()
+    if (!token) {
+      await sendMaxDmPlain({
+        baseUrl: maxBaseUrl,
+        token: maxToken,
+        userId: actorUserId,
+        text: 'Не удалось прочитать city-токен привязки. Сгенерируйте ссылку заново в кабинете.',
+      }).catch(() => {})
+      return { ok: true }
+    }
+    await sendMaxDmPlain({
+      baseUrl: maxBaseUrl,
+      token: maxToken,
+      userId: actorUserId,
+      text: [
+        'Токен city-привязки MAX получен.',
+        'Теперь добавьте MAX-бота в нужную группу/чат и отправьте там команду:',
+        `/bindmaxcity ${token}`,
+      ].join('\n'),
+    }).catch(() => {})
+    return { ok: true }
+  }
 
   if (actorUserId != null && startPayload.startsWith('orderdelay_')) {
     const orderId = startPayload.slice('orderdelay_'.length).trim()
@@ -695,6 +753,105 @@ export default defineEventHandler(async (event) => {
       restaurantId: tokenRow.restaurant_id,
       tokenPrefix: bindToken.slice(0, 8),
     })
+    return { ok: true }
+  }
+  const bindCityToken = extractMaxBindCityTokenFromUpdate(body, messageTextRaw)
+  if (bindCityToken) {
+    const conversationIdValue = extractMaxConversationId(body)
+    if (!conversationIdValue) {
+      if (actorUserId != null) {
+        await sendMaxDmPlain({
+          baseUrl: maxBaseUrl,
+          token: maxToken,
+          userId: actorUserId,
+          text: 'Команда bindmaxcity работает только в группе/чате.',
+        }).catch(() => {})
+      }
+      return { ok: true }
+    }
+
+    const supabase = await serverSupabaseServiceRole(event)
+    const { data: tokenRow } = await supabase
+      .from('city_chat_link_tokens')
+      .select('token,city_id,channel,target,expires_at,used_at')
+      .eq('token', bindCityToken)
+      .maybeSingle<CityChatLinkTokenRow>()
+
+    if (!tokenRow || tokenRow.channel !== 'max') {
+      await sendMaxToConversation({
+        baseUrl: maxBaseUrl,
+        token: maxToken,
+        conversationId: conversationIdValue,
+        text: 'Токен city-привязки не найден. Сгенерируйте новую ссылку в кабинете.',
+      }).catch(() => {})
+      return { ok: true }
+    }
+    if (tokenRow.used_at) {
+      await sendMaxToConversation({
+        baseUrl: maxBaseUrl,
+        token: maxToken,
+        conversationId: conversationIdValue,
+        text: 'Этот токен уже использован. Сгенерируйте новый в кабинете.',
+      }).catch(() => {})
+      return { ok: true }
+    }
+    if (new Date(tokenRow.expires_at).getTime() < Date.now()) {
+      await sendMaxToConversation({
+        baseUrl: maxBaseUrl,
+        token: maxToken,
+        conversationId: conversationIdValue,
+        text: 'Токен истек. Сгенерируйте новый в кабинете.',
+      }).catch(() => {})
+      return { ok: true }
+    }
+
+    const { data: cityData } = await supabase
+      .from('cities')
+      .select('content_ops_settings,name,slug')
+      .eq('id', tokenRow.city_id)
+      .maybeSingle()
+    const currentSettings = ((cityData as any)?.content_ops_settings || {}) as Record<string, any>
+    const maxSettings = { ...(currentSettings.max || {}) }
+    if (tokenRow.target === 'manager') maxSettings.manager_chat_id = conversationIdValue
+    if (tokenRow.target === 'moderation') maxSettings.moderation_chat_id = conversationIdValue
+    if (tokenRow.target === 'parser_source') {
+      const prev = Array.isArray(maxSettings.parser_source_chats) ? maxSettings.parser_source_chats : []
+      maxSettings.parser_source_chats = Array.from(new Set([...prev.map((x: any) => String(x)), conversationIdValue]))
+    }
+    const nextSettings = { ...currentSettings, max: maxSettings }
+
+    const { error: cityUpdateError } = await supabase
+      .from('cities')
+      .update({ content_ops_settings: nextSettings })
+      .eq('id', tokenRow.city_id)
+    if (cityUpdateError) {
+      await sendMaxToConversation({
+        baseUrl: maxBaseUrl,
+        token: maxToken,
+        conversationId: conversationIdValue,
+        text: 'Не удалось сохранить city-привязку MAX-чата. Попробуйте еще раз.',
+      }).catch(() => {})
+      return { ok: true }
+    }
+
+    await supabase
+      .from('city_chat_link_tokens')
+      .update({ used_at: new Date().toISOString(), bound_chat_id: conversationIdValue })
+      .eq('token', bindCityToken)
+      .is('used_at', null)
+
+    const cityName = String((cityData as any)?.name || (cityData as any)?.slug || 'город')
+    const targetLabel = tokenRow.target === 'manager'
+      ? 'manager chat'
+      : tokenRow.target === 'moderation'
+        ? 'moderation chat'
+        : 'parser source'
+    await sendMaxToConversation({
+      baseUrl: maxBaseUrl,
+      token: maxToken,
+      conversationId: conversationIdValue,
+      text: `MAX-чат успешно привязан к ${targetLabel} для "${cityName}".`,
+    }).catch(() => {})
     return { ok: true }
   }
 

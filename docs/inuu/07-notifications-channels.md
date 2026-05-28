@@ -65,6 +65,8 @@ city_subscriptions (
 3. `/my` — билеты и записи (аналог «мои заказы»).
 4. Дайджест — cron / `pg_cron` → batch `dispatchNotificationEvent` с cooldown в `profiles.metadata`.
 
+Подробно: рассылка **подборок** (`curated_lists`), теги контента и фильтр подписок — **[features/content/06-bot-digest-subscriptions.md](./features/content/06-bot-digest-subscriptions.md)**.
+
 ### Mini App
 
 - Меню WebApp → `NUXT_APP_URL/{city_slug}`.

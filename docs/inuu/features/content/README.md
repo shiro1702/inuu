@@ -21,6 +21,9 @@ Seed: `supabase/migrations/019_inuu_seed_ulan_ude.sql`. Редакция как 
 | [02-masterclasses-events-options.md](./02-masterclasses-events-options.md) | Как добавлять **мастер-классы** и афишу |
 | [03-recommended-mvp.md](./03-recommended-mvp.md) | Сводная рекомендация и фазы |
 | [04-telegram-bot-content-moderation.md](./04-telegram-bot-content-moderation.md) | **TG-бот:** приём контента + approve/reject для менеджеров |
+| [05-bot-news-dialog-script.md](./05-bot-news-dialog-script.md) | Скрипт диалога `/news` и `/submit` → новость |
+| [06-bot-digest-subscriptions.md](./06-bot-digest-subscriptions.md) | **Рассылка подборок** в боте и **подписки по темам/тегам** |
+| [07-paid-news-publication.md](./07-paid-news-publication.md) | **Оплата** за публикацию партнёрских новостей (варианты, SKU, БД) |
 
 ## Связанные спеки
 

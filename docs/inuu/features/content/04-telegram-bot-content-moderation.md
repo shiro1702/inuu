@@ -57,11 +57,13 @@ Fallback на MVP: env `NUXT_INUU_EDITORIAL_MODERATION_CHAT_ID` только е�
 
 - `/news`, `/event` — FSM → сразу `editorial_posts` / `events` с `is_published = true`.
 - Доступ: участники **того же** чата модерации **или** отдельная команда только из лички с проверкой `getChatMember` (опционально ужесточить позже).
+- Диалог: [05-bot-news-dialog-script.md](./05-bot-news-dialog-script.md). Оплата не требуется.
 
 ### 2. Партнёр — заявка (`/submit`)
 
-- FSM → `content_submissions.status = pending`.
+- FSM → оплата (если платный SKU) → `content_submissions.status = pending`.
 - Сообщение в `cities.editorial_moderation_chat_id` с кнопками модерации.
+- Тарифы и платёжный контур: [07-paid-news-publication.md](./07-paid-news-publication.md).
 
 ---
 
@@ -100,6 +102,10 @@ create table public.content_submissions (
   reviewed_at timestamptz,
   reject_reason_code public.content_reject_reason_code,
   reject_comment text,              -- свободный текст менеджера
+  editorial_score smallint check (editorial_score between 1 and 5),
+  source_kind text,                 -- bot_submit | telegram_parse | manual_editor
+  source_url text,                  -- ссылка на первоисточник
+  source_external_id text,          -- id поста/объекта у источника
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -137,6 +143,8 @@ create table public.content_submissions (
 
 [ ✅ Опубликовать ]  [ ✏️ На доработку ]
 [ ❌ Отклонить ]
+[ ⭐1 ] [ ⭐2 ] [ ⭐3 ] [ ⭐4 ] [ ⭐5 ]
+[ 🛠 Редактировать ]
 ```
 
 После публикации — `editMessageReplyMarkup` убрать кнопки, дописать строку:
@@ -154,6 +162,8 @@ create table public.content_submissions (
 | `inuu:sub:reject:{id}` | **второй ряд кнопок** — причины (см. ниже) |
 | `inuu:sub:rej:{id}:{code}` | reject с кодом; если `other` → ждём комментарий |
 | `inuu:sub:rej_cancel:{id}` | вернуть исходную клавиатуру |
+| `inuu:sub:score:{id}:{1..5}` | сохранить редакторский приоритет (`editorial_score`) |
+| `inuu:sub:edit:{id}` | открыть Mini App форму редактирования заявки |
 
 Префикс `inuu:sub:` не пересекается с `ugc:`, `order`, review tokens.
 
@@ -214,6 +224,17 @@ create table public.content_submissions (
 
 Фото: `getFile` → Storage → `cover_media_url`.
 
+Перед `approve` валидировать:
+
+1. `source_url` заполнен для `source_kind != manual_editor`.
+2. Есть минимум один `topic_tag`.
+3. Корректна ссылка `registration_url` (внешняя или внутренняя).
+
+Для recurring в MVP:
+
+- Либо создать N событий по датам из payload,
+- Либо (после миграции) использовать `event_series` + `event_sessions`.
+
 ---
 
 ## Безопасность
@@ -253,6 +274,7 @@ NUXT_INUU_EDITORIAL_MODERATION_CHAT_ID=
 ## Связанные документы
 
 - [03-recommended-mvp.md](./03-recommended-mvp.md) — фаза 1b
+- [08-event-sourcing-and-moderation-pipeline.md](./08-event-sourcing-and-moderation-pipeline.md) — единый pipeline
 - [01-news-editorial-options.md](./01-news-editorial-options.md) — вариант E
 - [TELEGRAM_AUTH_VIA_BOT_RU.md](../../../features/TELEGRAM_AUTH_VIA_BOT_RU.md)
 - Привязка чатов: `server/api/webhook.post.ts` (bind token), dashboard `telegram-chat-link-token.post.ts`

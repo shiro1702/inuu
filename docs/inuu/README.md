@@ -28,6 +28,7 @@
 | [marketing/OUTREACH_B2B_PARTNERS.md](./marketing/OUTREACH_B2B_PARTNERS.md) | Первое касание B2B |
 | [09-data-model-overview.md](./09-data-model-overview.md) | Схема БД Supabase |
 | [10-existing-codebase.md](./10-existing-codebase.md) | Что оставить / вычистить в коде |
+| [implementation/03-ai-ingest-and-global-dashboards.md](./implementation/03-ai-ingest-and-global-dashboards.md) | Что реализовано: AI ingest, логи, manager/admin dashboards |
 
 ### Реализация в репозитории
 
@@ -36,6 +37,14 @@
 | [implementation/README.md](./implementation/README.md) | План вычистки legacy и рефакторинга |
 | [implementation/01-cleanup-unused.md](./implementation/01-cleanup-unused.md) | Удаление ресторанного функционала |
 | [implementation/02-refactor-existing.md](./implementation/02-refactor-existing.md) | Переделка модулей под INUU |
+| [implementation/03-ai-ingest-and-global-dashboards.md](./implementation/03-ai-ingest-and-global-dashboards.md) | Фиксация реализации AI ingest и глобальных dashboard API |
+| [implementation/04-dashboard-pages-ai-and-city-ops.md](./implementation/04-dashboard-pages-ai-and-city-ops.md) | Документация по новым страницам dashboard и city-ops API |
+
+### Runbooks (операционка)
+
+| Документ | Содержание |
+|----------|------------|
+| [runbooks/MANAGER_CONTENT_RUNBOOK_RU.md](./runbooks/MANAGER_CONTENT_RUNBOOK_RU.md) | Ежедневная инструкция менеджера: ingestion, модерация, мониторинг |
 
 ### Контент: как добавлять новости и МК
 
@@ -46,6 +55,11 @@
 | [features/content/02-masterclasses-events-options.md](./features/content/02-masterclasses-events-options.md) | Мастер-классы и афиша |
 | [features/content/03-recommended-mvp.md](./features/content/03-recommended-mvp.md) | Рекомендуемые фазы MVP |
 | [features/content/04-telegram-bot-content-moderation.md](./features/content/04-telegram-bot-content-moderation.md) | TG-бот: контент и модерация заявок |
+| [features/content/05-bot-news-dialog-script.md](./features/content/05-bot-news-dialog-script.md) | Скрипт диалога новостей в боте |
+| [features/content/06-bot-digest-subscriptions.md](./features/content/06-bot-digest-subscriptions.md) | Рассылка подборок и подписки по темам в боте |
+| [features/content/07-paid-news-publication.md](./features/content/07-paid-news-publication.md) | Оплата за публикацию новостей |
+| [features/content/08-event-sourcing-and-moderation-pipeline.md](./features/content/08-event-sourcing-and-moderation-pipeline.md) | Конвейер наполнения: бот + парсер + AI + модерация |
+| [features/content/09-how-to-create-news-and-events.md](./features/content/09-how-to-create-news-and-events.md) | Практическая инструкция: как создавать новости/события через новый backend |
 
 ### Вертикали
 
