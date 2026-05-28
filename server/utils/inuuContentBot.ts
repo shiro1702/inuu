@@ -1,6 +1,7 @@
 import type { H3Event } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import { runContentIngest } from '~/server/utils/contentIngestCore'
+import { notifyContentSubmissionTelegramChats } from '~/server/utils/inuuContentModeration'
 
 const TELEGRAM_API = (token: string) => `https://api.telegram.org/bot${token}`
 
@@ -139,61 +140,6 @@ function formatIngestReply(result: Awaited<ReturnType<typeof runContentIngest>>)
   return lines.join('\n')
 }
 
-function formatManagerNotification(result: Awaited<ReturnType<typeof runContentIngest>>): string {
-  const shortId = result.persisted.id ? result.persisted.id.slice(0, 8) : '—'
-  return [
-    '📥 Новый материал из TG parser source',
-    `Город: ${result.city.name} (${result.city.slug})`,
-    `Заявка: #${shortId}`,
-    `Заголовок: ${result.parse.title}`,
-    `Статус: ${result.moderationStatus}`,
-    result.parse.source.url ? `Источник: ${result.parse.source.url}` : null,
-    'Проверьте в dashboard → Контент AI → Очередь модерации.',
-  ].filter(Boolean).join('\n')
-}
-
-async function notifyOpsChats(
-  event: H3Event,
-  args: {
-    botToken: string
-    settings: ContentOpsTelegramSettings
-    text: string
-    submissionId: string | null
-  },
-): Promise<void> {
-  const moderationChatId = String(args.settings.moderation_chat_id || '').trim()
-  const managerChatId = String(args.settings.manager_chat_id || '').trim()
-
-  if (moderationChatId) {
-    const res = await telegramSend(args.botToken, 'sendMessage', {
-      chat_id: moderationChatId,
-      text: args.text,
-    }) as { result?: { message_id?: number } }
-    const msgId = res?.result?.message_id
-    if (msgId && args.submissionId) {
-      const client = await serverSupabaseServiceRole(event)
-      await client
-        .from('content_submissions')
-        .update({
-          moderation_chat_id: moderationChatId,
-          moderation_message_id: msgId,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', args.submissionId)
-        .then(({ error }) => {
-          if (error) console.error('[inuuContentBot] moderation_message_id update:', error)
-        })
-    }
-  }
-
-  if (managerChatId && managerChatId !== moderationChatId) {
-    await telegramSend(args.botToken, 'sendMessage', {
-      chat_id: managerChatId,
-      text: args.text,
-    })
-  }
-}
-
 export async function tryHandleInuuParserSourceTelegramMessage(
   event: H3Event,
   args: { botToken: string; message: InuuTelegramMessage },
@@ -210,7 +156,6 @@ export async function tryHandleInuuParserSourceTelegramMessage(
   if (isParserSourceCommand(rawText)) return false
 
   const { sourceUrl, sourceExternalId } = buildSourceMeta(args.message, chatIdValue)
-  const telegramSettings = city.content_ops_settings?.telegram || {}
 
   await telegramSend(args.botToken, 'sendMessage', {
     chat_id: chatId,
@@ -235,21 +180,12 @@ export async function tryHandleInuuParserSourceTelegramMessage(
       reply_to_message_id: args.message.message_id,
     })
 
-    const notifyText = formatManagerNotification(result)
     if (result.persisted.ok && result.persisted.id) {
-      await notifyOpsChats(event, {
-        botToken: args.botToken,
-        settings: telegramSettings,
-        text: notifyText,
+      await notifyContentSubmissionTelegramChats(event, {
         submissionId: result.persisted.id,
-      }).catch((err) => console.error('[inuuContentBot] notify ops:', err))
-    } else if (telegramSettings.manager_chat_id || telegramSettings.moderation_chat_id) {
-      await notifyOpsChats(event, {
+        cityId: result.city.id,
         botToken: args.botToken,
-        settings: telegramSettings,
-        text: `${notifyText}\n\n⚠️ ${result.persisted.warning || 'Не удалось сохранить в очередь'}`,
-        submissionId: null,
-      }).catch((err) => console.error('[inuuContentBot] notify ops (failed persist):', err))
+      }).catch((err) => console.error('[inuuContentBot] moderation cards:', err))
     }
 
     return true

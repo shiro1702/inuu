@@ -25,6 +25,7 @@ import { isShopFeatureEnabled } from '~/server/utils/features'
 import { applyReviewPromptTelegramCallback, processDueReviewPrompts } from '~/server/utils/reviewPromptFlow'
 import { parseReviewTokenCallback } from '~/server/utils/reviewPromptParse'
 import { tryHandleInuuParserSourceTelegramMessage, type InuuTelegramMessage } from '~/server/utils/inuuContentBot'
+import { handleInuuSubTelegramCallback } from '~/server/utils/inuuContentModeration'
 
 const TELEGRAM_API = (token: string) => `https://api.telegram.org/bot${token}`
 
@@ -950,6 +951,44 @@ export default defineEventHandler(async (event) => {
         callback_query_id: query.id,
         text: 'Не удалось сохранить оценку',
         show_alert: false,
+      })
+    }
+    return { ok: true }
+  }
+
+  if (query.data.startsWith('inuu:sub:')) {
+    const chatId = Number(query.message.chat.id)
+    const messageId = Number(query.message.message_id)
+    const fromId = Number(query.from?.id)
+    if (!Number.isFinite(chatId) || !Number.isFinite(messageId) || !Number.isFinite(fromId)) {
+      await telegram(botToken, 'answerCallbackQuery', {
+        callback_query_id: query.id,
+        text: 'Некорректный запрос',
+        show_alert: false,
+      })
+      return { ok: true }
+    }
+    try {
+      const result = await handleInuuSubTelegramCallback(event, {
+        botToken,
+        callbackQueryId: query.id,
+        data: String(query.data),
+        chatId,
+        messageId,
+        fromId,
+        fromUsername: query.from?.username || null,
+      })
+      await telegram(botToken, 'answerCallbackQuery', {
+        callback_query_id: query.id,
+        text: result.alertText,
+        show_alert: result.showAlert,
+      })
+    } catch (err) {
+      console.error('webhook inuu:sub moderation failed:', err)
+      await telegram(botToken, 'answerCallbackQuery', {
+        callback_query_id: query.id,
+        text: 'Не удалось применить действие',
+        show_alert: true,
       })
     }
     return { ok: true }

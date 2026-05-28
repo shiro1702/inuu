@@ -214,6 +214,7 @@
                 <button class="rounded border border-green-300 px-2 py-1 text-xs text-green-700 hover:bg-green-50" @click="queueAction(item.id, 'approve')">Approve</button>
                 <button class="rounded border border-amber-300 px-2 py-1 text-xs text-amber-700 hover:bg-amber-50" @click="queueAction(item.id, 'needs_revision')">Need revision</button>
                 <button class="rounded border border-red-300 px-2 py-1 text-xs text-red-700 hover:bg-red-50" @click="queueAction(item.id, 'reject')">Reject</button>
+                <button class="rounded border border-blue-300 px-2 py-1 text-xs text-blue-700 hover:bg-blue-50" @click="notifyQueueTelegram(item.id)">В TG чат</button>
               </div>
             </div>
             <div class="mt-3 grid gap-2 md:grid-cols-2">
@@ -554,6 +555,24 @@ async function queueAction(submissionId: string, action: 'approve' | 'reject' | 
     await loadQueue()
   } catch (error: any) {
     queueMessage.value = error?.data?.statusMessage || error?.message || 'Не удалось выполнить действие'
+  }
+}
+
+async function notifyQueueTelegram(submissionId: string) {
+  if (!selectedCitySlug.value) return
+  queueMessage.value = ''
+  try {
+    const res = await fetch(
+      `/api/dashboard/manager/cities/${selectedCitySlug.value}/content-queue/${submissionId}/notify-telegram`,
+      { method: 'POST' },
+    )
+    const payload = await res.json() as any
+    if (!res.ok || payload?.ok === false) {
+      throw new Error(payload?.statusMessage || payload?.message || 'Не удалось отправить в Telegram')
+    }
+    queueMessage.value = 'Карточка с кнопками отправлена в TG manager/moderation чаты'
+  } catch (error: any) {
+    queueMessage.value = error?.data?.statusMessage || error?.message || 'Ошибка отправки в Telegram'
   }
 }
 

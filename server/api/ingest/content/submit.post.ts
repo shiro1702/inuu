@@ -1,6 +1,7 @@
 import { createError, defineEventHandler, readBody } from 'h3'
 import { eventParseInputSchema } from '~/server/utils/ai/eventParseSchema'
 import { runContentIngest } from '~/server/utils/contentIngestCore'
+import { notifyContentSubmissionTelegramChats } from '~/server/utils/inuuContentModeration'
 
 type IngestBody = {
   rawText?: string
@@ -41,6 +42,18 @@ export default defineEventHandler(async (event) => {
       ...parsedInput.data,
       persist: body.persist === true,
     })
+
+    if (body.persist === true && result.persisted.ok && result.persisted.id) {
+      const config = useRuntimeConfig(event)
+      const botToken = String((event.context.tenant as any)?.telegramBotToken || config.botToken || '').trim()
+      if (botToken) {
+        await notifyContentSubmissionTelegramChats(event, {
+          submissionId: result.persisted.id,
+          cityId: result.city.id,
+          botToken,
+        }).catch((err) => console.error('[ingest] telegram moderation cards:', err))
+      }
+    }
 
     return {
       ok: true as const,
