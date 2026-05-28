@@ -614,8 +614,12 @@ export default defineEventHandler(async (event) => {
       await telegram(botToken, 'sendMessage', {
         chat_id: chatId,
         text: [
-          'Чтобы войти на сайт, откройте магазин в браузере и нажмите «Войти через Telegram».',
-          'Сайт создаст одноразовую ссылку — откройте её здесь, в чате с ботом.',
+          'Команда не распознана.',
+          '',
+          'Для привязки городских чатов используйте deep-link из раздела /dashboard/content-ai и команду в группе:',
+          '• /bindcity <token> — Telegram city chat',
+          '',
+          'Для входа на сайт используйте кнопку «Войти через Telegram» на сайте — бот пришлёт одноразовую ссылку автоматически.',
         ].join('\n'),
       })
       return { ok: true }
@@ -848,7 +852,15 @@ export default defineEventHandler(async (event) => {
     if (text === '/help') {
       await telegram(botToken, 'sendMessage', {
         chat_id: chatId,
-        text: 'Поддержка: свяжитесь с нами в чате или по контактам, указанным в описании бота.',
+        text: [
+          'Доступные команды:',
+          '• /start — старт',
+          '• /bindcity <token> — привязка Telegram-группы к city settings',
+          '• /bind <token> — legacy-привязка manager_group_chat для ресторана',
+          '',
+          'Где взять token:',
+          '• dashboard -> Контент AI -> Быстрая привязка чатов через бота',
+        ].join('\n'),
       })
       return { ok: true }
     }
