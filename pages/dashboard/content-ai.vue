@@ -234,6 +234,13 @@
                 <button class="rounded border border-amber-300 px-2 py-1 text-xs text-amber-700 hover:bg-amber-50" @click="queueAction(item.id, 'needs_revision')">Need revision</button>
                 <button class="rounded border border-red-300 px-2 py-1 text-xs text-red-700 hover:bg-red-50" @click="queueAction(item.id, 'reject')">Reject</button>
                 <button class="rounded border border-blue-300 px-2 py-1 text-xs text-blue-700 hover:bg-blue-50" @click="notifyQueueTelegram(item.id)">В TG чат</button>
+                <button
+                  v-if="item.status === 'approved'"
+                  class="rounded border border-indigo-300 px-2 py-1 text-xs text-indigo-700 hover:bg-indigo-50"
+                  @click="publishQueueToSite(item.id)"
+                >
+                  На сайт
+                </button>
               </div>
             </div>
             <div class="mt-3 grid gap-2 md:grid-cols-2">
@@ -586,10 +593,41 @@ async function queueAction(submissionId: string, action: 'approve' | 'reject' | 
     })
     const payload = await res.json() as any
     if (!res.ok || payload?.ok === false) throw new Error(payload?.statusMessage || payload?.message || 'Action failed')
-    queueMessage.value = `Действие ${action} применено`
+    if (action === 'approve' && payload?.published?.entitySlug) {
+      const path = payload.published.publicPath || ''
+      queueMessage.value = payload.published.alreadyPublished
+        ? `Уже опубликовано: ${path || payload.published.entitySlug}`
+        : `Опубликовано на сайте${path ? `: ${path}` : ''}`
+    } else if (action === 'approve') {
+      queueMessage.value = 'Одобрено и опубликовано'
+    } else {
+      queueMessage.value = `Действие ${action} применено`
+    }
     await loadQueue()
   } catch (error: any) {
     queueMessage.value = error?.data?.statusMessage || error?.message || 'Не удалось выполнить действие'
+  }
+}
+
+async function publishQueueToSite(submissionId: string) {
+  if (!selectedCitySlug.value) return
+  queueMessage.value = ''
+  try {
+    const res = await fetch(
+      `/api/dashboard/manager/cities/${selectedCitySlug.value}/content-queue/${submissionId}/publish`,
+      { method: 'POST' },
+    )
+    const payload = await res.json() as any
+    if (!res.ok || payload?.ok === false) {
+      throw new Error(payload?.statusMessage || payload?.message || 'Не удалось опубликовать')
+    }
+    const path = payload?.published?.publicPath
+    queueMessage.value = payload?.published?.alreadyPublished
+      ? `Уже на сайте${path ? `: ${path}` : ''}`
+      : `Опубликовано${path ? `: ${path}` : ''}`
+    await loadQueue()
+  } catch (error: any) {
+    queueMessage.value = error?.data?.statusMessage || error?.message || 'Ошибка публикации на сайт'
   }
 }
 

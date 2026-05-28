@@ -1,6 +1,7 @@
 import { createError, defineEventHandler, readBody } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import { resolveManagerCityScopeOrThrow } from '~/server/utils/managerCityAccess'
+import { publishContentSubmission } from '~/server/utils/contentSubmissionPublish'
 
 type Body = {
   submissionId?: string
@@ -50,12 +51,32 @@ export default defineEventHandler(async (event) => {
     .update(patch as any)
     .eq('id', submissionId)
     .eq('city_id', scope.cityId)
-    .select('id,status,editorial_score,reject_comment,updated_at')
+    .select('id,status,editorial_score,reject_comment,updated_at,published_entity_type,published_entity_id')
     .maybeSingle()
 
   if (error) {
     throw createError({ statusCode: 500, statusMessage: error.message || 'Failed to apply queue action' })
   }
 
-  return { ok: true as const, item: data || null }
+  let published: Awaited<ReturnType<typeof publishContentSubmission>> | null = null
+  if (action === 'approve') {
+    published = await publishContentSubmission(event, submissionId)
+  }
+
+  return {
+    ok: true as const,
+    item: data || null,
+    published: published
+      ? {
+          entityType: published.entityType,
+          entityId: published.entityId,
+          entitySlug: published.entitySlug,
+          alreadyPublished: published.alreadyPublished,
+          publicPath:
+            published.entityType === 'event'
+              ? `/${scope.citySlug}/events/${published.entitySlug}`
+              : null,
+        }
+      : null,
+  }
 })

@@ -1,6 +1,7 @@
 import { createError, type H3Event } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import type { EventParseResult } from '~/server/utils/ai/eventParseSchema'
+import { publishContentSubmission } from '~/server/utils/contentSubmissionPublish'
 
 const TELEGRAM_API = (token: string) => `https://api.telegram.org/bot${token}`
 
@@ -374,12 +375,23 @@ export async function handleInuuSubTelegramCallback(
       .from('content_submissions')
       .update({ status: 'approved', ...reviewedPatch })
       .eq('id', parsed.submissionId)
+    let publishLabel = 'Одобрено'
+    try {
+      const published = await publishContentSubmission(event, parsed.submissionId)
+      publishLabel = published.entityType === 'event'
+        ? `Опубликовано: /events/${published.entitySlug}`
+        : 'Новость опубликована в editorial_posts'
+      if (published.alreadyPublished) publishLabel = 'Уже было опубликовано ранее'
+    } catch (err) {
+      console.error('[inuuContentModeration] publish on approve:', err)
+      publishLabel = 'Одобрено, но публикация не удалась — проверьте дату/поля'
+    }
     await telegram(args.botToken, 'editMessageReplyMarkup', {
       chat_id: args.chatId,
       message_id: args.messageId,
       reply_markup: { inline_keyboard: [] },
     })
-    return { alertText: 'Одобрено (публикация в events — из dashboard)', showAlert: false }
+    return { alertText: publishLabel, showAlert: false }
   }
 
   if (parsed.action === 'revise') {
