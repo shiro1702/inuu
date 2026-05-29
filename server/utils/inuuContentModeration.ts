@@ -28,6 +28,71 @@ const REJECT_LABELS: Record<string, string> = {
   other: 'Другое',
 }
 
+const CONTENT_SUBMISSION_STATUS_LABELS: Record<string, string> = {
+  draft: 'Черновик',
+  pending: 'На модерации',
+  needs_revision: 'На доработке',
+  approved: 'Опубликовано',
+  rejected: 'Отклонено',
+}
+
+const CONTENT_SUBMISSION_STATUS_EMOJI: Record<string, string> = {
+  draft: '⚪',
+  pending: '🟡',
+  needs_revision: '🟠',
+  approved: '🟢',
+  rejected: '🔴',
+}
+
+const MODERATION_CARD_SELECT =
+  'id,city_id,status,payload,source_kind,moderation_chat_id,moderation_message_id,reviewed_by_username,reviewed_at,reject_reason_code,editorial_score'
+
+export function formatContentSubmissionStatusLabel(status: string): string {
+  const key = String(status || 'pending').trim()
+  return CONTENT_SUBMISSION_STATUS_LABELS[key] || key
+}
+
+function formatModerationTimestamp(iso: string | null | undefined): string | null {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return null
+  return d.toLocaleString('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+export type ContentSubmissionCardMeta = {
+  reviewedByUsername?: string | null
+  reviewedAt?: string | null
+  rejectReasonCode?: string | null
+  editorialScore?: number | null
+  statusSuffix?: string | null
+}
+
+export function formatContentSubmissionStatusFooter(args: {
+  status: string
+} & ContentSubmissionCardMeta): string {
+  const key = String(args.status || 'pending').trim()
+  const emoji = CONTENT_SUBMISSION_STATUS_EMOJI[key] || '⚪'
+  const label = formatContentSubmissionStatusLabel(key)
+  const parts: string[] = [`${emoji} Статус: ${label}`]
+  const user = args.reviewedByUsername ? String(args.reviewedByUsername).replace(/^@/, '') : ''
+  if (user) parts.push(`@${user}`)
+  const ts = formatModerationTimestamp(args.reviewedAt)
+  if (ts) parts.push(ts)
+  if (args.rejectReasonCode && REJECT_LABELS[args.rejectReasonCode]) {
+    parts.push(REJECT_LABELS[args.rejectReasonCode])
+  }
+  if (typeof args.editorialScore === 'number') {
+    parts.push(`⭐${args.editorialScore}`)
+  }
+  return parts.join(' · ')
+}
+
 export type ContentOpsTelegramSettings = {
   manager_chat_id?: string
   moderation_chat_id?: string
@@ -56,6 +121,24 @@ export function resolveTelegramModerationChatIds(settings: ContentOpsTelegramSet
   return ids
 }
 
+export function formatSubmissionIdHeader(submissionId: string): string[] {
+  const id = String(submissionId || '').trim()
+  const shortId = id.slice(0, 8) || '—'
+  return [
+    `📋 Заявка #${shortId}`,
+    id ? `🆔 ${id}` : null,
+  ].filter(Boolean) as string[]
+}
+
+export function formatSubmissionEditMessageLines(submissionId: string): string[] {
+  const id = String(submissionId || '').trim()
+  const shortId = id.slice(0, 8) || '—'
+  return [
+    `✏️ Редактирование заявки #${shortId}`,
+    id ? `🆔 ${id}` : null,
+  ].filter(Boolean) as string[]
+}
+
 export function formatContentSubmissionCard(args: {
   submissionId: string
   cityName: string
@@ -63,9 +146,9 @@ export function formatContentSubmissionCard(args: {
   status: string
   sourceKind: string | null
   payload: EventParseResult | Record<string, unknown>
+  meta?: ContentSubmissionCardMeta
 }): string {
   const p = args.payload as EventParseResult
-  const shortId = args.submissionId.slice(0, 8)
   const dates = Array.isArray(p.recurrence?.dates) ? p.recurrence.dates : []
   const dateLine = dates.length
     ? dates.length > 4
@@ -80,11 +163,12 @@ export function formatContentSubmissionCard(args: {
       ? `от ${p.price_from} ₽`
       : '—'
   const tags = Array.isArray(p.topic_tags) && p.topic_tags.length ? p.topic_tags.join(', ') : '—'
+  const meta = args.meta || {}
 
   return [
-    `📋 Заявка #${shortId}`,
+    ...formatSubmissionIdHeader(args.submissionId),
     `Город: ${args.cityName} (${args.citySlug})`,
-    `Статус: ${args.status}`,
+    `Статус: ${formatContentSubmissionStatusLabel(args.status)}`,
     `Источник: ${args.sourceKind || p.source?.kind || '—'}`,
     '────────────────',
     String(p.title || 'Без названия'),
@@ -95,7 +179,110 @@ export function formatContentSubmissionCard(args: {
     p.source?.url ? `🔗 ${p.source.url}` : null,
     '────────────────',
     ...formatDescriptionsForModeration(p as unknown as Record<string, unknown>),
+    '────────────────',
+    formatContentSubmissionStatusFooter({ status: args.status, ...meta }),
+    meta.statusSuffix || null,
   ].filter(Boolean).join('\n')
+}
+
+async function editModerationCardMessage(args: {
+  botToken: string
+  chatId: string
+  messageId: number
+  text: string
+  keyboard?: Record<string, unknown> | null
+}): Promise<void> {
+  const markup = args.keyboard ?? undefined
+  const base = {
+    chat_id: args.chatId,
+    message_id: args.messageId,
+    reply_markup: markup,
+  }
+  try {
+    await telegram(args.botToken, 'editMessageText', { ...base, text: args.text })
+    return
+  } catch {
+    // photo cards use caption instead of text
+  }
+  try {
+    await telegram(args.botToken, 'editMessageCaption', { ...base, caption: args.text })
+    return
+  } catch (err) {
+    if (markup) {
+      await telegram(args.botToken, 'editMessageReplyMarkup', {
+        chat_id: args.chatId,
+        message_id: args.messageId,
+        reply_markup: markup,
+      }).catch((fallbackErr) => console.error('[inuuContentModeration] edit card markup:', fallbackErr))
+      return
+    }
+    console.error('[inuuContentModeration] edit card message:', err)
+  }
+}
+
+async function buildContentSubmissionCardText(
+  event: H3Event,
+  submission: Record<string, unknown>,
+  extras?: { statusSuffix?: string | null },
+): Promise<string> {
+  const client = await serverSupabaseServiceRole(event)
+  const { data: city } = await client
+    .from('cities')
+    .select('name,slug')
+    .eq('id', String(submission.city_id))
+    .maybeSingle()
+
+  return formatContentSubmissionCard({
+    submissionId: String(submission.id),
+    cityName: String((city as any)?.name || ''),
+    citySlug: String((city as any)?.slug || ''),
+    status: String(submission.status || 'pending'),
+    sourceKind: submission.source_kind ? String(submission.source_kind) : null,
+    payload: ((submission.payload || {}) as EventParseResult),
+    meta: {
+      reviewedByUsername: submission.reviewed_by_username ? String(submission.reviewed_by_username) : null,
+      reviewedAt: submission.reviewed_at ? String(submission.reviewed_at) : null,
+      rejectReasonCode: submission.reject_reason_code ? String(submission.reject_reason_code) : null,
+      editorialScore: typeof submission.editorial_score === 'number' ? submission.editorial_score : null,
+      statusSuffix: extras?.statusSuffix ?? null,
+    },
+  })
+}
+
+export async function updateContentSubmissionModerationCardInChat(
+  event: H3Event,
+  args: {
+    submissionId: string
+    botToken: string
+    chatId?: string | null
+    messageId?: number | null
+    keyboard?: Record<string, unknown> | null
+    statusSuffix?: string | null
+  },
+): Promise<void> {
+  const client = await serverSupabaseServiceRole(event)
+  const { data: submission } = await client
+    .from('content_submissions')
+    .select(MODERATION_CARD_SELECT)
+    .eq('id', args.submissionId)
+    .maybeSingle()
+
+  if (!submission?.id) return
+  const chatId = String(args.chatId || (submission as any).moderation_chat_id || '').trim()
+  const messageId = Number(args.messageId ?? (submission as any).moderation_message_id)
+  if (!chatId || !Number.isFinite(messageId)) return
+
+  const text = await buildContentSubmissionCardText(event, submission as Record<string, unknown>, {
+    statusSuffix: args.statusSuffix,
+  })
+
+  await editModerationCardMessage({
+    botToken: args.botToken,
+    chatId,
+    messageId,
+    text,
+    keyboard: args.keyboard,
+  })
 }
 
 function submissionCoverUrl(payload: Record<string, unknown>): string | null {
@@ -301,57 +488,18 @@ export async function showPostApproveScoreKeyboard(
     messageId?: number | null
   },
 ): Promise<void> {
-  const client = await serverSupabaseServiceRole(event)
-  const { data: submission } = await client
-    .from('content_submissions')
-    .select('id,city_id,status,payload,source_kind,moderation_chat_id,moderation_message_id,published_entity_type')
-    .eq('id', args.submissionId)
-    .maybeSingle()
-
-  if (!submission?.id) return
-  if ((submission as any).published_entity_type !== 'event') return
-
-  const chatId = String(args.chatId || (submission as any).moderation_chat_id || '').trim()
-  const messageId = Number(
-    args.messageId ?? (submission as any).moderation_message_id,
-  )
-  if (!chatId || !Number.isFinite(messageId)) return
-
-  const { data: city } = await client
-    .from('cities')
-    .select('name,slug')
-    .eq('id', (submission as any).city_id)
-    .maybeSingle()
-
   const suffix = args.publishPath
-    ? `\n\n✅ Опубликовано на сайте\n${args.publishPath}\n\nОцените приоритет в ленте:`
-    : '\n\n✅ Опубликовано\n\nОцените приоритет в ленте:'
+    ? `✅ Опубликовано на сайте\n${args.publishPath}\n\nОцените приоритет в ленте:`
+    : '✅ Опубликовано\n\nОцените приоритет в ленте:'
 
-  const text = `${formatContentSubmissionCard({
-    submissionId: String(submission.id),
-    cityName: String((city as any)?.name || ''),
-    citySlug: String((city as any)?.slug || ''),
-    status: 'approved',
-    sourceKind: (submission as any).source_kind ? String((submission as any).source_kind) : null,
-    payload: ((submission as any).payload || {}) as EventParseResult,
-  })}${suffix}`
-
-  const keyboard = buildContentSubmissionScoreKeyboard(args.submissionId)
-
-  try {
-    await telegram(args.botToken, 'editMessageText', {
-      chat_id: chatId,
-      message_id: messageId,
-      text,
-      reply_markup: keyboard,
-    })
-  } catch {
-    await telegram(args.botToken, 'editMessageReplyMarkup', {
-      chat_id: chatId,
-      message_id: messageId,
-      reply_markup: keyboard,
-    }).catch((err) => console.error('[inuuContentModeration] score keyboard:', err))
-  }
+  await updateContentSubmissionModerationCardInChat(event, {
+    submissionId: args.submissionId,
+    botToken: args.botToken,
+    chatId: args.chatId,
+    messageId: args.messageId,
+    keyboard: buildContentSubmissionScoreKeyboard(args.submissionId),
+    statusSuffix: suffix,
+  })
 }
 
 export async function loadCityTelegramOpsSettings(
@@ -371,48 +519,11 @@ export async function refreshContentSubmissionModerationCard(
   event: H3Event,
   args: { submissionId: string; botToken: string },
 ): Promise<void> {
-  const client = await serverSupabaseServiceRole(event)
-  const { data: submission } = await client
-    .from('content_submissions')
-    .select('id,city_id,status,payload,source_kind,moderation_chat_id,moderation_message_id')
-    .eq('id', args.submissionId)
-    .maybeSingle()
-
-  if (!submission?.id) return
-  const chatId = String((submission as any).moderation_chat_id || '').trim()
-  const messageId = Number((submission as any).moderation_message_id)
-  if (!chatId || !Number.isFinite(messageId)) return
-
-  const { data: city } = await client
-    .from('cities')
-    .select('name,slug')
-    .eq('id', (submission as any).city_id)
-    .maybeSingle()
-
-  const text = formatContentSubmissionCard({
-    submissionId: String(submission.id),
-    cityName: String((city as any)?.name || ''),
-    citySlug: String((city as any)?.slug || ''),
-    status: String((submission as any).status || 'pending'),
-    sourceKind: (submission as any).source_kind ? String((submission as any).source_kind) : null,
-    payload: ((submission as any).payload || {}) as EventParseResult,
+  await updateContentSubmissionModerationCardInChat(event, {
+    submissionId: args.submissionId,
+    botToken: args.botToken,
+    keyboard: buildContentSubmissionMainKeyboard(args.submissionId),
   })
-  const keyboard = buildContentSubmissionMainKeyboard(String(submission.id))
-
-  try {
-    await telegram(args.botToken, 'editMessageText', {
-      chat_id: chatId,
-      message_id: messageId,
-      text,
-      reply_markup: keyboard,
-    })
-  } catch {
-    await telegram(args.botToken, 'editMessageReplyMarkup', {
-      chat_id: chatId,
-      message_id: messageId,
-      reply_markup: keyboard,
-    }).catch((err) => console.error('[inuuContentModeration] refresh card:', err))
-  }
 }
 
 async function notifyContentSubmissionMaxChats(
@@ -638,7 +749,7 @@ export async function handleInuuSubTelegramCallback(
       await telegram(args.botToken, 'sendMessage', {
         chat_id: args.fromId,
         text: [
-          `✏️ Редактирование заявки #${parsed.submissionId.slice(0, 8)}`,
+          ...formatSubmissionEditMessageLines(parsed.submissionId),
           'Нажмите кнопку ниже — откроется форма в Mini App.',
         ].join('\n'),
         reply_markup: {
@@ -737,11 +848,17 @@ export async function handleInuuSubTelegramCallback(
         messageId: args.messageId,
       }).catch((err) => console.error('[inuuContentModeration] post-approve score UI:', err))
     } else {
-      await telegram(args.botToken, 'editMessageReplyMarkup', {
-        chat_id: args.chatId,
-        message_id: args.messageId,
-        reply_markup: { inline_keyboard: [] },
-      })
+      const newsSuffix = publishPath
+        ? `✅ Опубликовано на сайте\n${publishPath}`
+        : '✅ Новость опубликована'
+      await updateContentSubmissionModerationCardInChat(event, {
+        submissionId: parsed.submissionId,
+        botToken: args.botToken,
+        chatId: String(args.chatId),
+        messageId: args.messageId,
+        keyboard: { inline_keyboard: [] },
+        statusSuffix: newsSuffix,
+      }).catch((err) => console.error('[inuuContentModeration] post-approve news card:', err))
     }
     return { alertText: publishLabel, showAlert: false }
   }
@@ -751,11 +868,13 @@ export async function handleInuuSubTelegramCallback(
       .from('content_submissions')
       .update({ status: 'needs_revision', ...reviewedPatch })
       .eq('id', parsed.submissionId)
-    await telegram(args.botToken, 'editMessageReplyMarkup', {
-      chat_id: args.chatId,
-      message_id: args.messageId,
-      reply_markup: { inline_keyboard: [] },
-    })
+    await updateContentSubmissionModerationCardInChat(event, {
+      submissionId: parsed.submissionId,
+      botToken: args.botToken,
+      chatId: String(args.chatId),
+      messageId: args.messageId,
+      keyboard: { inline_keyboard: [] },
+    }).catch((err) => console.error('[inuuContentModeration] revise card:', err))
     return { alertText: 'Отправлено на доработку', showAlert: false }
   }
 
@@ -770,11 +889,13 @@ export async function handleInuuSubTelegramCallback(
       })
       .eq('id', parsed.submissionId)
     const label = REJECT_LABELS[code] || code
-    await telegram(args.botToken, 'editMessageReplyMarkup', {
-      chat_id: args.chatId,
-      message_id: args.messageId,
-      reply_markup: { inline_keyboard: [] },
-    })
+    await updateContentSubmissionModerationCardInChat(event, {
+      submissionId: parsed.submissionId,
+      botToken: args.botToken,
+      chatId: String(args.chatId),
+      messageId: args.messageId,
+      keyboard: { inline_keyboard: [] },
+    }).catch((err) => console.error('[inuuContentModeration] reject card:', err))
     return { alertText: `Отклонено: ${label}`, showAlert: false }
   }
 
@@ -799,11 +920,13 @@ export async function handleInuuSubTelegramCallback(
         .eq('id', String(publishedEntityId))
     }
 
-    await telegram(args.botToken, 'editMessageReplyMarkup', {
-      chat_id: args.chatId,
-      message_id: args.messageId,
-      reply_markup: { inline_keyboard: [] },
-    })
+    await updateContentSubmissionModerationCardInChat(event, {
+      submissionId: parsed.submissionId,
+      botToken: args.botToken,
+      chatId: String(args.chatId),
+      messageId: args.messageId,
+      keyboard: { inline_keyboard: [] },
+    }).catch((err) => console.error('[inuuContentModeration] score card:', err))
     return { alertText: `Оценка ${parsed.score} сохранена`, showAlert: false }
   }
 

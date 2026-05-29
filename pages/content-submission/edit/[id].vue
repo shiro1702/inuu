@@ -2,6 +2,7 @@
   <section class="mx-auto min-h-screen max-w-lg bg-gray-50 px-4 py-4 pb-24">
     <header class="mb-4">
       <p class="text-xs font-medium uppercase tracking-wide text-gray-500">Редактирование заявки</p>
+      <p v-if="submissionId" class="mt-1 font-mono text-xs text-gray-500">ID: {{ submissionId }}</p>
       <h1 class="text-lg font-semibold text-gray-900">{{ form.title || 'Без заголовка' }}</h1>
       <p v-if="cityName" class="text-sm text-gray-600">{{ cityName }}</p>
       <p v-if="statusLabel" class="mt-1 text-xs text-gray-500">Статус: {{ statusLabel }}</p>
@@ -153,6 +154,19 @@ const form = reactive({
 
 const authHeaders = computed(() => buildMessengerAuthHeaders())
 
+const SUBMISSION_STATUS_LABELS: Record<string, string> = {
+  draft: 'Черновик',
+  pending: 'На модерации',
+  needs_revision: 'На доработке',
+  approved: 'Опубликовано',
+  rejected: 'Отклонено',
+}
+
+function formatSubmissionStatusLabel(status: string): string {
+  const key = String(status || '').trim()
+  return SUBMISSION_STATUS_LABELS[key] || key || '—'
+}
+
 onMounted(() => {
   expandMessengerViewport()
   void loadSubmission()
@@ -190,7 +204,7 @@ async function loadSubmission() {
 
     citySlug.value = String(payload?.city?.slug || route.query.city || '')
     cityName.value = String(payload?.city?.name || '')
-    statusLabel.value = String(payload?.item?.status || '')
+    statusLabel.value = formatSubmissionStatusLabel(String(payload?.item?.status || ''))
 
     const p = payload?.item?.payload || {}
     form.title = String(p.title || '')

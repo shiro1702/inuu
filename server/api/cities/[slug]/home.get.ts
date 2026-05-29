@@ -1,6 +1,10 @@
 import { defineEventHandler, setResponseHeader } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import { resolveCityBySlug } from '~/server/utils/inuuCity'
+import { prepareEventsListForDisplay } from '~/server/utils/eventListDisplay'
+
+const HOME_EVENTS_LIMIT = 6
+const HOME_EVENTS_FETCH_POOL = 48
 
 export default defineEventHandler(async (event) => {
   setResponseHeader(event, 'Cache-Control', 'public, max-age=60, s-maxage=120, stale-while-revalidate=300')
@@ -21,12 +25,12 @@ export default defineEventHandler(async (event) => {
       .limit(12),
     client
       .from('events')
-      .select('id,slug,title,description,starts_at,ends_at,price,currency,cover_media_url,is_promoted,venue_id')
+      .select('id,slug,title,description,excerpt,starts_at,ends_at,price,currency,cover_media_url,is_promoted,venue_id,series_slug')
       .eq('city_id', city.id)
       .eq('is_published', true)
       .gte('starts_at', nowIso)
       .order('starts_at', { ascending: true })
-      .limit(12),
+      .limit(HOME_EVENTS_FETCH_POOL),
     client
       .from('venues')
       .select('id,slug,title,description,address,lat,lng,cover_media_url,vibe_tags,rating_avg,editorial_quote')
@@ -62,7 +66,7 @@ export default defineEventHandler(async (event) => {
       editorialName: city.editorial_name,
     },
     stories: storiesRes.data ?? [],
-    events: eventsRes.data ?? [],
+    events: prepareEventsListForDisplay(eventsRes.data ?? [], HOME_EVENTS_LIMIT, { sortByImportance: true }),
     venues: venuesRes.data ?? [],
     curatedLists: listsRes.data ?? [],
     hotSlots: hotSlotsRes.data ?? [],

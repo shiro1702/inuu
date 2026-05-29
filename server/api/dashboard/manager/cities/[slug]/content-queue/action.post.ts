@@ -2,7 +2,10 @@ import { createError, defineEventHandler, readBody } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import { resolveManagerCityScopeOrThrow } from '~/server/utils/managerCityAccess'
 import { publishContentSubmission } from '~/server/utils/contentSubmissionPublish'
-import { showPostApproveScoreKeyboard } from '~/server/utils/inuuContentModeration'
+import {
+  showPostApproveScoreKeyboard,
+  updateContentSubmissionModerationCardInChat,
+} from '~/server/utils/inuuContentModeration'
 
 type Body = {
   submissionId?: string
@@ -97,6 +100,16 @@ export default defineEventHandler(async (event) => {
 
   if (error) {
     throw createError({ statusCode: 500, statusMessage: error.message || 'Failed to apply queue action' })
+  }
+
+  const config = useRuntimeConfig(event)
+  const botToken = String((event.context.tenant as any)?.telegramBotToken || config.botToken || '').trim()
+  if (botToken && ['reject', 'needs_revision', 'score'].includes(action)) {
+    await updateContentSubmissionModerationCardInChat(event, {
+      submissionId,
+      botToken,
+      keyboard: { inline_keyboard: [] },
+    }).catch((err) => console.error('[content-queue] refresh moderation card:', err))
   }
 
   return {

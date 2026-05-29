@@ -23,6 +23,7 @@ Seed: `supabase/migrations/019_inuu_seed_ulan_ude.sql`. Редакция как 
 | [04-telegram-bot-content-moderation.md](./04-telegram-bot-content-moderation.md) | **TG-бот:** приём контента + approve/reject для менеджеров |
 | [05-bot-news-dialog-script.md](./05-bot-news-dialog-script.md) | Скрипт диалога `/news` и `/submit` → новость |
 | [06-bot-digest-subscriptions.md](./06-bot-digest-subscriptions.md) | **Рассылка подборок** в боте и **подписки по темам/тегам** |
+| [12-afisha-tag-subscriptions.md](./12-afisha-tag-subscriptions.md) | **Подписка на теги с афиши** (Mini App + бот, OR-фильтр, API) |
 | [07-paid-news-publication.md](./07-paid-news-publication.md) | **Оплата** за публикацию партнёрских новостей (варианты, SKU, БД) |
 | [11-digest-parsing-and-curated-picks.md](./11-digest-parsing-and-curated-picks.md) | **Digest-парсинг**, URL enricher, подборки недели/месяца |
 

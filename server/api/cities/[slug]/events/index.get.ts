@@ -1,7 +1,13 @@
 import { defineEventHandler, getQuery, setResponseHeader } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import { resolveCityBySlug } from '~/server/utils/inuuCity'
-import { countSeriesDates, dedupeEventsListForDisplay } from '~/server/utils/eventSeries'
+import {
+  filterEventsByDateRange,
+  filterEventsByTags,
+  parseIsoDateParam,
+  parseTagSlugsFromQuery,
+  prepareEventsListForDisplay,
+} from '~/server/utils/eventListDisplay'
 
 export default defineEventHandler(async (event) => {
   setResponseHeader(event, 'Cache-Control', 'public, max-age=60, s-maxage=120')
@@ -10,6 +16,9 @@ export default defineEventHandler(async (event) => {
   const query = getQuery(event)
   const limit = Math.min(50, Math.max(1, Number(query.limit) || 24))
   const categorySlug = typeof query.category === 'string' ? query.category.trim() : ''
+  const tagSlugs = parseTagSlugsFromQuery(query.tag)
+  const dateFrom = typeof query.from === 'string' ? parseIsoDateParam(query.from) : null
+  const dateTo = typeof query.to === 'string' ? parseIsoDateParam(query.to) : null
   const nowIso = new Date().toISOString()
 
   const client = await serverSupabaseServiceRole(event)
@@ -24,9 +33,11 @@ export default defineEventHandler(async (event) => {
     categoryId = cat?.id ? String(cat.id) : null
   }
 
+  const fetchPool = tagSlugs.length ? Math.max(limit * 6, 120) : Math.max(limit * 3, 60)
+
   let request = client
     .from('events')
-    .select('id,slug,title,description,excerpt,starts_at,ends_at,price,currency,cover_media_url,is_promoted,venue_id,series_slug,category_id')
+    .select('id,slug,title,description,excerpt,starts_at,ends_at,price,currency,cover_media_url,is_promoted,venue_id,series_slug,category_id,source_metadata')
     .eq('city_id', city.id)
     .eq('is_published', true)
     .gte('starts_at', nowIso)
@@ -34,20 +45,18 @@ export default defineEventHandler(async (event) => {
 
   const { data, error } = await request
     .order('starts_at', { ascending: true })
-    .limit(Math.max(limit * 3, 60))
+    .limit(fetchPool)
 
   if (error) {
     console.error('[events/index] load failed:', error)
     return { ok: false, items: [] }
   }
 
-  const rows = data ?? []
-  const seriesCounts = countSeriesDates(rows)
-  const deduped = dedupeEventsListForDisplay(rows).slice(0, limit)
-  const items = deduped.map((row) => ({
-    ...row,
-    series_date_count: row.series_slug ? seriesCounts.get(String(row.series_slug)) || 1 : 1,
-  }))
+  let rows = data ?? []
+  rows = filterEventsByTags(rows, tagSlugs)
+  rows = filterEventsByDateRange(rows, dateFrom, dateTo, city.timezone)
+
+  const items = prepareEventsListForDisplay(rows, limit)
 
   return { ok: true, items }
 })

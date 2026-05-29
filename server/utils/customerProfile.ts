@@ -114,6 +114,23 @@ async function resolveProfileFromMessengerInitData(
  * Профиль покупателя для API адресов/бонусов.
  * В mini app при наличии initData идентификатор берётся из мессенджера, а не из случайной web-сессии.
  */
+export async function ensureCustomerProfileRow(event: H3Event, userId: string): Promise<void> {
+  const client = await serverSupabaseServiceRole(event)
+  const { data: existing } = await client
+    .from('profiles')
+    .select('id')
+    .eq('id', userId)
+    .maybeSingle()
+  if (existing?.id) return
+
+  const { error } = await client.from('profiles').insert({ id: userId })
+  if (!error) return
+  if (error.code === '23505') return
+
+  console.error('[ensureCustomerProfileRow] insert failed:', error)
+  throw createError({ statusCode: 500, statusMessage: 'Failed to ensure profile' })
+}
+
 export async function resolveCustomerProfileId(event: H3Event, botToken: string | null | undefined): Promise<string> {
   const initData = readInitDataFromEvent(event)
 
@@ -132,7 +149,10 @@ export async function resolveCustomerProfileId(event: H3Event, botToken: string 
         : typeof rawUser.sub === 'string'
           ? rawUser.sub
           : null
-    if (userId) return userId
+    if (userId) {
+      await ensureCustomerProfileRow(event, userId)
+      return userId
+    }
   }
 
   throw createError({ statusCode: 401, message: 'Unauthorized' })
