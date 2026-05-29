@@ -12,6 +12,9 @@
     <div class="p-4">
       <p class="text-xs font-medium uppercase tracking-wide text-indigo-600">
         {{ formattedDate }}
+        <span v-if="seriesDateCount > 1" class="normal-case text-indigo-500">
+          · ещё {{ seriesDateCount - 1 }} {{ datesLabel }}
+        </span>
       </p>
       <h3 class="mt-1 text-lg font-semibold text-gray-900 group-hover:text-primary">
         {{ event.title }}
@@ -36,10 +39,22 @@ const props = defineProps<{
     starts_at: string
     price?: number
     cover_media_url?: string | null
+    series_date_count?: number
   }
 }>()
 
 const { cityBasePath } = useCity()
+
+const seriesDateCount = computed(() => Math.max(1, Number(props.event.series_date_count) || 1))
+
+const datesLabel = computed(() => {
+  const n = seriesDateCount.value - 1
+  const mod10 = n % 10
+  const mod100 = n % 100
+  if (mod10 === 1 && mod100 !== 11) return 'дата'
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'даты'
+  return 'дат'
+})
 
 const formattedDate = computed(() => {
   try {

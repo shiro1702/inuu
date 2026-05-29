@@ -41,6 +41,7 @@ function buildSystemPrompt(input: EventParseInput) {
       ? `category_slug: один slug из [${categoryList}] или новый slug латиницей, если ничего не подходит.`
       : 'category_slug: slug категории латиницей или null.',
     'dates должны быть строками в ISO-like формате, если дата неясна — не выдумывать.',
+    'Если в тексте несколько дат одного и того же мероприятия — все даты в recurrence.dates, не дроби на разные события.',
     'confidence: число от 0 до 1.',
     'missing_fields: список недостающих полей для модератора.',
   ].join('\n')

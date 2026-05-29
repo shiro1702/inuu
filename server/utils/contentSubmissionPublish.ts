@@ -2,7 +2,12 @@ import { createError, type H3Event } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import type { EventParseResult } from '~/server/utils/ai/eventParseSchema'
 import { slugifyTaxonomy } from '~/server/utils/cityContentTaxonomy'
-import { resolveEventStartsAt } from '~/server/utils/eventStartsAt'
+import { listEventStartsAtFromPayload } from '~/server/utils/eventStartsAt'
+import {
+  buildEventSeriesSlug,
+  buildEventSessionSlug,
+  isMissingEventsSeriesSlugColumnError,
+} from '~/server/utils/eventSeries'
 
 function slugifyTitle(input: string): string {
   return slugifyTaxonomy(input).slice(0, 80) || `item-${Date.now()}`
@@ -24,6 +29,50 @@ export type PublishSubmissionResult = {
   entityId: string
   entitySlug: string
   alreadyPublished: boolean
+  publishedEventCount?: number
+  seriesSlug?: string | null
+}
+
+function stripEventRowFields(
+  row: Record<string, unknown>,
+  fields: Array<'source_channel' | 'source_metadata' | 'series_slug'>,
+): Record<string, unknown> {
+  const next = { ...row }
+  for (const field of fields) delete next[field]
+  return next
+}
+
+async function insertEventRow(args: {
+  client: Awaited<ReturnType<typeof serverSupabaseServiceRole>>
+  row: Record<string, unknown>
+}): Promise<{ id: string; slug: string; starts_at?: string }> {
+  const variants: Record<string, unknown>[] = [args.row]
+  variants.push(stripEventRowFields(args.row, ['source_channel', 'source_metadata']))
+  variants.push(stripEventRowFields(args.row, ['series_slug']))
+  variants.push(stripEventRowFields(args.row, ['source_channel', 'source_metadata', 'series_slug']))
+
+  let lastError: { message?: string } | null = null
+  for (const row of variants) {
+    const attempt = await args.client
+      .from('events')
+      .insert(row as any)
+      .select('id,slug,starts_at')
+      .maybeSingle()
+
+    if (!attempt.error && attempt.data?.id) {
+      return attempt.data as { id: string; slug: string; starts_at?: string }
+    }
+
+    lastError = attempt.error
+    const retryable = isMissingEventsSourceColumnsError(attempt.error)
+      || isMissingEventsSeriesSlugColumnError(attempt.error)
+    if (!retryable) break
+  }
+
+  throw createError({
+    statusCode: 500,
+    statusMessage: lastError?.message || 'Failed to publish event',
+  })
 }
 
 export async function publishContentSubmission(
@@ -47,7 +96,7 @@ export async function publishContentSubmission(
     const table = publishedType === 'editorial_post' ? 'editorial_posts' : 'events'
     const { data: existing } = await client
       .from(table)
-      .select('id,slug')
+      .select('id,slug,series_slug')
       .eq('id', publishedId)
       .maybeSingle()
     if (existing?.id) {
@@ -56,6 +105,7 @@ export async function publishContentSubmission(
         entityId: String(existing.id),
         entitySlug: String((existing as any).slug || ''),
         alreadyPublished: true,
+        seriesSlug: (existing as any).series_slug || null,
       }
     }
   }
@@ -141,84 +191,86 @@ export async function publishContentSubmission(
   }
 
   const cityTimezone = String((city as any)?.timezone || 'Asia/Irkutsk')
-  const startsAt = resolveEventStartsAt(payload, cityTimezone)
-  const eventSlug = `${slugifyTitle(title)}-${String(submission.id).slice(0, 8)}`
+  const startsAtList = listEventStartsAtFromPayload(payload, cityTimezone)
+  const seriesSlug = buildEventSeriesSlug(title, payload.venue?.name)
   const priceRub = payload.is_free
     ? 0
     : Math.max(0, Math.round(Number(payload.price_from || 0)))
 
-  const eventCore = {
-    city_id: cityId,
-    shop_id: shopId,
-    category_id: categoryId,
-    slug: eventSlug,
-    title,
-    description: description || title,
-    starts_at: startsAt,
-    ends_at: null,
-    capacity: typeof payload.capacity === 'number' ? payload.capacity : null,
-    price: priceRub,
-    currency: 'RUB',
-    cover_media_url: null,
-    is_promoted: typeof (submission as any).editorial_score === 'number'
-      && (submission as any).editorial_score >= 4,
-    is_published: true,
+  const sourceMeta = {
+    content_submission_id: submission.id,
+    source_url: (submission as any).source_url || payload.source?.url || null,
+    topic_tags: payload.topic_tags || [],
+    registration_url: payload.registration_url || null,
+    city_slug: (city as any)?.slug || payload.city_slug || null,
+    series_dates_count: startsAtList.length,
   }
 
-  const eventWithSource = {
-    ...eventCore,
-    source_channel: (submission as any).source_kind || payload.source?.kind || 'manual_editor',
-    source_metadata: {
-      content_submission_id: submission.id,
-      source_url: (submission as any).source_url || payload.source?.url || null,
-      topic_tags: payload.topic_tags || [],
-      registration_url: payload.registration_url || null,
-      city_slug: (city as any)?.slug || payload.city_slug || null,
-    },
+  const createdEvents: Array<{ id: string; slug: string; starts_at?: string }> = []
+
+  for (const startsAt of startsAtList) {
+    let eventSlug = buildEventSessionSlug(seriesSlug, startsAt)
+    const eventCore = {
+      city_id: cityId,
+      shop_id: shopId,
+      category_id: categoryId,
+      slug: eventSlug,
+      title,
+      description: description || title,
+      starts_at: startsAt,
+      ends_at: null,
+      capacity: typeof payload.capacity === 'number' ? payload.capacity : null,
+      price: priceRub,
+      currency: 'RUB',
+      cover_media_url: null,
+      is_promoted: typeof (submission as any).editorial_score === 'number'
+        && (submission as any).editorial_score >= 4,
+      is_published: true,
+      series_slug: seriesSlug,
+      source_channel: (submission as any).source_kind || payload.source?.kind || 'manual_editor',
+      source_metadata: sourceMeta,
+    }
+
+    let created: { id: string; slug: string; starts_at?: string }
+    try {
+      created = await insertEventRow({ client, row: eventCore })
+    } catch (err: any) {
+      const msg = String(err?.statusMessage || err?.message || '').toLowerCase()
+      if (msg.includes('duplicate') || msg.includes('unique')) {
+        eventSlug = `${eventSlug}-${String(submission.id).slice(0, 6)}`
+        created = await insertEventRow({
+          client,
+          row: { ...eventCore, slug: eventSlug },
+        })
+      } else {
+        throw err
+      }
+    }
+    createdEvents.push(created)
   }
 
-  let createdEvent: { id: string; slug: string; starts_at?: string } | null = null
-  let eventError: { code?: string; message?: string } | null = null
-
-  const fullInsert = await client
-    .from('events')
-    .insert(eventWithSource as any)
-    .select('id,slug,starts_at')
-    .maybeSingle()
-  createdEvent = fullInsert.data as typeof createdEvent
-  eventError = fullInsert.error
-
-  if (eventError && isMissingEventsSourceColumnsError(eventError)) {
-    const coreInsert = await client
-      .from('events')
-      .insert(eventCore as any)
-      .select('id,slug,starts_at')
-      .maybeSingle()
-    createdEvent = coreInsert.data as typeof createdEvent
-    eventError = coreInsert.error
+  if (!createdEvents.length) {
+    throw createError({ statusCode: 500, statusMessage: 'Failed to publish event' })
   }
 
-  if (eventError || !createdEvent?.id) {
-    throw createError({
-      statusCode: 500,
-      statusMessage: eventError?.message || 'Failed to publish event',
-    })
-  }
+  const primary = createdEvents[0]
 
   await client
     .from('content_submissions')
     .update({
       status: 'approved',
       published_entity_type: 'event',
-      published_entity_id: createdEvent.id,
+      published_entity_id: primary.id,
       updated_at: new Date().toISOString(),
     } as any)
     .eq('id', submissionId)
 
   return {
     entityType: 'event',
-    entityId: String(createdEvent.id),
-    entitySlug: String((createdEvent as any).slug),
+    entityId: String(primary.id),
+    entitySlug: String(primary.slug),
     alreadyPublished: false,
+    publishedEventCount: createdEvents.length,
+    seriesSlug,
   }
 }

@@ -17,6 +17,14 @@ function confidenceStatus(args: { confidence: number; missingFields: string[]; h
   return 'pending'
 }
 
+type EventDuplicateItem = {
+  id: string
+  slug: string
+  title: string
+  startsAt: string | null
+  seriesSlug: string | null
+}
+
 async function findEventDuplicates(args: {
   event: H3Event
   cityId: string
@@ -24,38 +32,59 @@ async function findEventDuplicates(args: {
   dates: string[]
 }) {
   const client = await serverSupabaseServiceRole(args.event)
-  const sinceIso = new Date(Date.now() - 1000 * 60 * 60 * 24 * 30).toISOString()
+  const sinceIso = new Date(Date.now() - 1000 * 60 * 60 * 24 * 90).toISOString()
 
   const { data, error } = await client
     .from('events')
-    .select('id,slug,title,starts_at')
+    .select('id,slug,title,starts_at,series_slug')
     .eq('city_id', args.cityId)
     .gte('starts_at', sinceIso)
     .order('starts_at', { ascending: true })
     .limit(300)
 
+  const empty = {
+    checked: false as const,
+    items: [] as EventDuplicateItem[],
+    seriesMatches: [] as EventDuplicateItem[],
+  }
+
   if (error) {
-    return { checked: false as const, items: [] as Array<{ id: string; slug: string; title: string; startsAt: string | null }> }
+    return empty
   }
 
   const targetTitle = normalizeTitle(args.title)
   const targetDates = new Set(args.dates.map((x) => x.slice(0, 10)))
-  const candidates = (data ?? []).filter((row: any) => {
+  const titleMatches = (data ?? []).filter((row: any) => {
     const rowTitle = normalizeTitle(String(row.title || ''))
-    const titleHit = rowTitle === targetTitle || rowTitle.includes(targetTitle) || targetTitle.includes(rowTitle)
-    const rowDate = typeof row.starts_at === 'string' ? row.starts_at.slice(0, 10) : ''
-    const dateHit = rowDate ? targetDates.has(rowDate) : false
-    return titleHit && dateHit
+    return rowTitle === targetTitle || rowTitle.includes(targetTitle) || targetTitle.includes(rowTitle)
   })
+
+  const mapRow = (row: any): EventDuplicateItem => ({
+    id: String(row.id),
+    slug: String(row.slug || ''),
+    title: String(row.title || ''),
+    startsAt: typeof row.starts_at === 'string' ? row.starts_at : null,
+    seriesSlug: row.series_slug ? String(row.series_slug) : null,
+  })
+
+  const items = titleMatches
+    .filter((row: any) => {
+      const rowDate = typeof row.starts_at === 'string' ? row.starts_at.slice(0, 10) : ''
+      return rowDate ? targetDates.has(rowDate) : false
+    })
+    .map(mapRow)
+
+  const seriesMatches = titleMatches
+    .filter((row: any) => {
+      const rowDate = typeof row.starts_at === 'string' ? row.starts_at.slice(0, 10) : ''
+      return rowDate ? !targetDates.has(rowDate) : true
+    })
+    .map(mapRow)
 
   return {
     checked: true as const,
-    items: candidates.map((row: any) => ({
-      id: String(row.id),
-      slug: String(row.slug || ''),
-      title: String(row.title || ''),
-      startsAt: typeof row.starts_at === 'string' ? row.starts_at : null,
-    })),
+    items,
+    seriesMatches,
   }
 }
 
@@ -227,6 +256,7 @@ export async function runContentIngest(
     payload: {
       moderationStatus,
       duplicateCount: duplicates.items.length,
+      seriesMatchCount: duplicates.seriesMatches.length,
       persisted: persisted.ok,
       hasDates: result.recurrence.dates.length > 0,
       eventKind: result.event_kind,

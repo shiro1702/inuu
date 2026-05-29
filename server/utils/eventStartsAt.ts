@@ -60,6 +60,37 @@ function parseEventDate(raw: string, timeZone: string): Date | null {
   return Number.isNaN(d.getTime()) ? null : d
 }
 
+function uniqueSortedEventDates(dates: Date[]): Date[] {
+  const byDay = new Map<string, Date>()
+  for (const d of dates) {
+    const key = d.toISOString().slice(0, 10)
+    const prev = byDay.get(key)
+    if (!prev || d.getTime() < prev.getTime()) byDay.set(key, d)
+  }
+  return [...byDay.values()].sort((a, b) => a.getTime() - b.getTime())
+}
+
+/** All upcoming starts_at values from parse payload (one per calendar day). */
+export function listEventStartsAtFromPayload(
+  payload: EventParseResult,
+  timeZone = 'Asia/Irkutsk',
+): string[] {
+  const rawDates = Array.isArray(payload.recurrence?.dates) ? payload.recurrence.dates : []
+  const parsed = uniqueSortedEventDates(
+    rawDates
+      .map((d) => parseEventDate(d, timeZone))
+      .filter((d): d is Date => d !== null),
+  )
+
+  const minStart = Date.now() + MIN_LEAD_MS
+  const future = parsed.filter((d) => d.getTime() >= minStart)
+  if (future.length > 0) {
+    return future.map((d) => d.toISOString())
+  }
+
+  return [resolveEventStartsAt(payload, timeZone)]
+}
+
 /** Pick a future starts_at for the city afisha (never in the past). */
 export function resolveEventStartsAt(
   payload: EventParseResult,

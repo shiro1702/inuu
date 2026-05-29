@@ -26,5 +26,24 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: 'Event not found' })
   }
 
-  return { ok: true, event: data }
+  let seriesSessions: Array<{ slug: string; starts_at: string }> = []
+  const seriesSlug = (data as any).series_slug
+  if (seriesSlug) {
+    const nowIso = new Date().toISOString()
+    const { data: siblings } = await client
+      .from('events')
+      .select('slug,starts_at')
+      .eq('city_id', city.id)
+      .eq('series_slug', seriesSlug)
+      .eq('is_published', true)
+      .gte('starts_at', nowIso)
+      .order('starts_at', { ascending: true })
+
+    seriesSessions = (siblings ?? []).map((row: any) => ({
+      slug: String(row.slug),
+      starts_at: String(row.starts_at),
+    }))
+  }
+
+  return { ok: true, event: data, seriesSessions }
 })

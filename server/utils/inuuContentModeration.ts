@@ -66,7 +66,11 @@ export function formatContentSubmissionCard(args: {
   const p = args.payload as EventParseResult
   const shortId = args.submissionId.slice(0, 8)
   const dates = Array.isArray(p.recurrence?.dates) ? p.recurrence.dates : []
-  const dateLine = dates.length ? dates.slice(0, 2).join(', ') : 'дата не указана'
+  const dateLine = dates.length
+    ? dates.length > 4
+      ? `${dates.slice(0, 3).join(', ')} … (+${dates.length - 3})`
+      : dates.join(', ')
+    : 'дата не указана'
   const venueName = p.venue?.name || '—'
   const venueAddress = p.venue?.address ? ` · ${p.venue.address}` : ''
   const priceLine = p.is_free

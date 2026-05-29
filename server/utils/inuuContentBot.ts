@@ -124,6 +124,7 @@ export async function findCityByTelegramParserSourceChat(
 function formatIngestReply(result: Awaited<ReturnType<typeof runContentIngest>>): string {
   const shortId = result.persisted.id ? result.persisted.id.slice(0, 8) : '—'
   const dupCount = result.duplicates.items.length
+  const seriesCount = result.duplicates.seriesMatches?.length ?? 0
   const lines = [
     '✅ Анонс принят в обработку',
     `Город: ${result.city.name}`,
@@ -134,7 +135,10 @@ function formatIngestReply(result: Awaited<ReturnType<typeof runContentIngest>>)
   ]
   if (result.persisted.resent) lines.push('Повторно отправлено на модерацию (обновлена карточка в чате менеджеров).')
   else if (result.persisted.warning) lines.push(`Примечание: ${result.persisted.warning}`)
-  if (dupCount > 0) lines.push(`⚠️ Похожих событий в афише: ${dupCount}`)
+  if (dupCount > 0) lines.push(`⚠️ Похожих событий в афише (та же дата): ${dupCount}`)
+  if (seriesCount > 0) lines.push(`📅 Другие даты этого события уже в афише: ${seriesCount}`)
+  const dateCount = result.parse.recurrence.dates.length
+  if (dateCount > 1) lines.push(`Дат в анонсе: ${dateCount} (при публикации создадутся отдельные слоты)`)
   if (result.parse.missing_fields.length) {
     lines.push(`Не хватает полей: ${result.parse.missing_fields.slice(0, 5).join(', ')}`)
   }
