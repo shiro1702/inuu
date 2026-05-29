@@ -88,7 +88,7 @@ const isCityInuuRoute = computed(() => {
 const showLegacyHeader = computed(() => {
   const routePath = typeof route.path === 'string' ? route.path : ''
   if (routePath.startsWith('/dashboard') || routePath.startsWith('/platform')) return false
-  if (routePath.startsWith('/moderation')) return false
+  if (routePath.startsWith('/moderation') || routePath.startsWith('/content-submission')) return false
   if (isCityInuuRoute.value) return false
   return true
 })

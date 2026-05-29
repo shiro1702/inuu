@@ -11,6 +11,18 @@ export type CityDto = {
 
 const cityCache = new Map<string, CityDto>()
 
+/** Не городские slug (иначе /moderation → /api/cities/moderation/home). */
+const RESERVED_CITY_SLUGS = new Set([
+  'moderation',
+  'dashboard',
+  'platform',
+  'content-submission',
+  'api',
+  'login',
+  'register',
+  'profile',
+])
+
 export function useCity(citySlugRef?: Ref<string | undefined>) {
   const route = useRoute()
   const config = useRuntimeConfig()
@@ -19,13 +31,21 @@ export function useCity(citySlugRef?: Ref<string | undefined>) {
   const city = ref<CityDto | null>(null)
 
   const slug = computed(() => {
-    const fromRef = citySlugRef?.value
-    if (typeof fromRef === 'string' && fromRef.trim()) return fromRef.trim()
-    const param = route.params.city_slug
-    if (typeof param === 'string' && param.trim()) return param.trim()
-    if (Array.isArray(param) && typeof param[0] === 'string') return param[0].trim()
     const fallback = config.public.defaultCitySlug
-    return typeof fallback === 'string' && fallback.trim() ? fallback.trim() : 'ulan-ude'
+    const defaultSlug = typeof fallback === 'string' && fallback.trim() ? fallback.trim() : 'ulan-ude'
+
+    const fromRef = citySlugRef?.value
+    if (typeof fromRef === 'string' && fromRef.trim() && !RESERVED_CITY_SLUGS.has(fromRef.trim())) {
+      return fromRef.trim()
+    }
+    const param = route.params.city_slug
+    const fromParam = typeof param === 'string'
+      ? param.trim()
+      : Array.isArray(param) && typeof param[0] === 'string'
+        ? param[0].trim()
+        : ''
+    if (fromParam && !RESERVED_CITY_SLUGS.has(fromParam)) return fromParam
+    return defaultSlug
   })
 
   const cityBasePath = computed(() => `/${slug.value}`)

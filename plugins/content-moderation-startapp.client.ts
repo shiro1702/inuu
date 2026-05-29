@@ -24,7 +24,7 @@ export default defineNuxtPlugin(() => {
   function tryRedirect() {
     const submissionId = resolveSubmissionIdFromStartParam()
     if (!submissionId) return
-    const target = `/moderation/content-submission/${submissionId}`
+    const target = `/content-submission/edit/${submissionId}`
     if (route.path === target) return
     void router.replace(target)
   }

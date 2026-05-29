@@ -9,15 +9,25 @@ export type ContentSubmissionEditLinks = {
 
 function resolveAppBaseUrl(event: H3Event): string {
   const config = useRuntimeConfig(event)
-  const fromConfig = String(config.appUrl || process.env.NUXT_APP_URL || '').trim().replace(/\/$/, '')
-  if (fromConfig) return fromConfig
+  const raw = String(config.appUrl || process.env.NUXT_APP_URL || '').trim()
+  if (raw) {
+    try {
+      const normalized = raw.startsWith('http') ? raw : `https://${raw}`
+      const parsed = new URL(normalized)
+      return `${parsed.protocol}//${parsed.host}`
+    } catch {
+      return raw.replace(/\/$/, '')
+    }
+  }
   try {
     const url = getRequestURL(event)
-    return `${url.protocol}//${url.host}`.replace(/\/$/, '')
+    return `${url.protocol}//${url.host}`
   } catch {
     return ''
   }
 }
+
+export const CONTENT_SUBMISSION_EDIT_PATH = '/content-submission/edit'
 
 export function buildContentSubmissionEditLinks(
   event: H3Event,
@@ -32,7 +42,7 @@ export function buildContentSubmissionEditLinks(
   const params = new URLSearchParams()
   if (args.citySlug.trim()) params.set('city', args.citySlug.trim())
   const q = params.toString()
-  const httpsUrl = `${base}/moderation/content-submission/${encodeURIComponent(submissionId)}${q ? `?${q}` : ''}`
+  const httpsUrl = `${base}${CONTENT_SUBMISSION_EDIT_PATH}/${encodeURIComponent(submissionId)}${q ? `?${q}` : ''}`
 
   // t.me?startapp= даёт BOT_INVALID, если Mini App не привязан в BotFather — не используем в группах.
   return { httpsUrl, telegramUrl: httpsUrl }
