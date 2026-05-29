@@ -601,7 +601,11 @@ export async function handleInuuSubTelegramCallback(
   if (parsed.action === 'score' && status !== 'approved') {
     return { alertText: 'Оценка доступна после публикации (✅ Опубликовать)', showAlert: false }
   }
-  if (!['pending', 'needs_revision'].includes(status) && parsed.action !== 'score') {
+  const needsRepublish =
+    status === 'approved'
+    && !(submission as any).published_entity_id
+
+  if (!['pending', 'needs_revision'].includes(status) && parsed.action !== 'score' && !needsRepublish) {
     return { alertText: `Заявка уже в статусе: ${status}`, showAlert: false }
   }
 
@@ -637,15 +641,15 @@ export async function handleInuuSubTelegramCallback(
   }
 
   if (parsed.action === 'approve') {
-    await client
-      .from('content_submissions')
-      .update({ status: 'approved', ...reviewedPatch })
-      .eq('id', parsed.submissionId)
     let publishLabel = 'Одобрено'
     let publishedEvent = false
     let publishPath: string | null = null
     try {
       const published = await publishContentSubmission(event, parsed.submissionId)
+      await client
+        .from('content_submissions')
+        .update({ ...reviewedPatch })
+        .eq('id', parsed.submissionId)
       if (published.entityType === 'event') {
         publishedEvent = true
         publishPath = `/events/${published.entitySlug}`
@@ -659,7 +663,12 @@ export async function handleInuuSubTelegramCallback(
       }
     } catch (err) {
       console.error('[inuuContentModeration] publish on approve:', err)
-      publishLabel = 'Одобрено, но публикация не удалась — проверьте дату/поля'
+      const errMsg = err && typeof err === 'object' && 'statusMessage' in err
+        ? String((err as { statusMessage?: string }).statusMessage)
+        : err instanceof Error ? err.message : ''
+      publishLabel = errMsg
+        ? `Публикация не удалась: ${errMsg}`
+        : 'Публикация не удалась — проверьте дату и обязательные поля'
     }
 
     if (publishedEvent) {

@@ -2,6 +2,7 @@ import { createError, type H3Event } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import type { EventParseResult } from '~/server/utils/ai/eventParseSchema'
 import { slugifyTaxonomy } from '~/server/utils/cityContentTaxonomy'
+import { resolveEventStartsAt } from '~/server/utils/eventStartsAt'
 
 function slugifyTitle(input: string): string {
   return slugifyTaxonomy(input).slice(0, 80) || `item-${Date.now()}`
@@ -11,24 +12,11 @@ function parsePayload(raw: unknown): EventParseResult & Record<string, unknown> 
   return (raw && typeof raw === 'object' ? raw : {}) as EventParseResult & Record<string, unknown>
 }
 
-function resolveStartsAt(payload: EventParseResult): string {
-  const dates = Array.isArray(payload.recurrence?.dates) ? payload.recurrence.dates : []
-  const parsed = dates
-    .map((d) => new Date(d))
-    .filter((d) => !Number.isNaN(d.getTime()))
-    .sort((a, b) => a.getTime() - b.getTime())
-
-  const now = Date.now()
-  const future = parsed.find((d) => d.getTime() > now)
-  if (future) return future.toISOString()
-
-  if (parsed.length) {
-    const bumped = new Date(parsed[parsed.length - 1].getTime() + 7 * 24 * 60 * 60 * 1000)
-    if (bumped.getTime() <= now) bumped.setTime(now + 7 * 24 * 60 * 60 * 1000)
-    return bumped.toISOString()
-  }
-
-  return new Date(now + 7 * 24 * 60 * 60 * 1000).toISOString()
+function isMissingEventsSourceColumnsError(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false
+  if (error.code === 'PGRST204') return true
+  const msg = String(error.message || '').toLowerCase()
+  return msg.includes('source_channel') || msg.includes('source_metadata')
 }
 
 export type PublishSubmissionResult = {
@@ -152,41 +140,63 @@ export async function publishContentSubmission(
     categoryId = category?.id ? String(category.id) : null
   }
 
-  const startsAt = resolveStartsAt(payload)
+  const cityTimezone = String((city as any)?.timezone || 'Asia/Irkutsk')
+  const startsAt = resolveEventStartsAt(payload, cityTimezone)
   const eventSlug = `${slugifyTitle(title)}-${String(submission.id).slice(0, 8)}`
   const priceRub = payload.is_free
     ? 0
     : Math.max(0, Math.round(Number(payload.price_from || 0)))
 
-  const { data: createdEvent, error: eventError } = await client
+  const eventCore = {
+    city_id: cityId,
+    shop_id: shopId,
+    category_id: categoryId,
+    slug: eventSlug,
+    title,
+    description: description || title,
+    starts_at: startsAt,
+    ends_at: null,
+    capacity: typeof payload.capacity === 'number' ? payload.capacity : null,
+    price: priceRub,
+    currency: 'RUB',
+    cover_media_url: null,
+    is_promoted: typeof (submission as any).editorial_score === 'number'
+      && (submission as any).editorial_score >= 4,
+    is_published: true,
+  }
+
+  const eventWithSource = {
+    ...eventCore,
+    source_channel: (submission as any).source_kind || payload.source?.kind || 'manual_editor',
+    source_metadata: {
+      content_submission_id: submission.id,
+      source_url: (submission as any).source_url || payload.source?.url || null,
+      topic_tags: payload.topic_tags || [],
+      registration_url: payload.registration_url || null,
+      city_slug: (city as any)?.slug || payload.city_slug || null,
+    },
+  }
+
+  let createdEvent: { id: string; slug: string; starts_at?: string } | null = null
+  let eventError: { code?: string; message?: string } | null = null
+
+  const fullInsert = await client
     .from('events')
-    .insert({
-      city_id: cityId,
-      shop_id: shopId,
-      category_id: categoryId,
-      slug: eventSlug,
-      title,
-      description: description || title,
-      starts_at: startsAt,
-      ends_at: null,
-      capacity: typeof payload.capacity === 'number' ? payload.capacity : null,
-      price: priceRub,
-      currency: 'RUB',
-      cover_media_url: null,
-      is_promoted: typeof (submission as any).editorial_score === 'number'
-        && (submission as any).editorial_score >= 4,
-      is_published: true,
-      source_channel: (submission as any).source_kind || payload.source?.kind || 'manual_editor',
-      source_metadata: {
-        content_submission_id: submission.id,
-        source_url: (submission as any).source_url || payload.source?.url || null,
-        topic_tags: payload.topic_tags || [],
-        registration_url: payload.registration_url || null,
-        city_slug: (city as any)?.slug || payload.city_slug || null,
-      },
-    } as any)
+    .insert(eventWithSource as any)
     .select('id,slug,starts_at')
     .maybeSingle()
+  createdEvent = fullInsert.data as typeof createdEvent
+  eventError = fullInsert.error
+
+  if (eventError && isMissingEventsSourceColumnsError(eventError)) {
+    const coreInsert = await client
+      .from('events')
+      .insert(eventCore as any)
+      .select('id,slug,starts_at')
+      .maybeSingle()
+    createdEvent = coreInsert.data as typeof createdEvent
+    eventError = coreInsert.error
+  }
 
   if (eventError || !createdEvent?.id) {
     throw createError({

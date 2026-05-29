@@ -11,6 +11,9 @@ type Body = {
   rejectComment?: string | null
 }
 
+const submissionSelect =
+  'id,status,editorial_score,reject_comment,updated_at,published_entity_type,published_entity_id'
+
 export default defineEventHandler(async (event) => {
   const slug = typeof event.context.params?.slug === 'string' ? event.context.params.slug : ''
   const scope = await resolveManagerCityScopeOrThrow(event, slug)
@@ -35,8 +38,45 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: 'Submission not found in manager city scope' })
   }
 
+  if (action === 'approve') {
+    const published = await publishContentSubmission(event, submissionId)
+    const { data: item } = await client
+      .from('content_submissions')
+      .select(submissionSelect)
+      .eq('id', submissionId)
+      .eq('city_id', scope.cityId)
+      .maybeSingle()
+
+    if (published.entityType === 'event') {
+      const config = useRuntimeConfig(event)
+      const botToken = String((event.context.tenant as any)?.telegramBotToken || config.botToken || '').trim()
+      if (botToken) {
+        const publicPath = `/${scope.citySlug}/events/${published.entitySlug}`
+        await showPostApproveScoreKeyboard(event, {
+          submissionId,
+          botToken,
+          publishPath: publicPath,
+        }).catch((err) => console.error('[content-queue] post-approve score UI:', err))
+      }
+    }
+
+    return {
+      ok: true as const,
+      item: item || null,
+      published: {
+        entityType: published.entityType,
+        entityId: published.entityId,
+        entitySlug: published.entitySlug,
+        alreadyPublished: published.alreadyPublished,
+        publicPath:
+          published.entityType === 'event'
+            ? `/${scope.citySlug}/events/${published.entitySlug}`
+            : null,
+      },
+    }
+  }
+
   const patch: Record<string, unknown> = {}
-  if (action === 'approve') patch.status = 'approved'
   if (action === 'reject') {
     patch.status = 'rejected'
     patch.reject_comment = body.rejectComment ? String(body.rejectComment).trim() : null
@@ -52,44 +92,16 @@ export default defineEventHandler(async (event) => {
     .update(patch as any)
     .eq('id', submissionId)
     .eq('city_id', scope.cityId)
-    .select('id,status,editorial_score,reject_comment,updated_at,published_entity_type,published_entity_id')
+    .select(submissionSelect)
     .maybeSingle()
 
   if (error) {
     throw createError({ statusCode: 500, statusMessage: error.message || 'Failed to apply queue action' })
   }
 
-  let published: Awaited<ReturnType<typeof publishContentSubmission>> | null = null
-  if (action === 'approve') {
-    published = await publishContentSubmission(event, submissionId)
-    if (published.entityType === 'event') {
-      const config = useRuntimeConfig(event)
-      const botToken = String((event.context.tenant as any)?.telegramBotToken || config.botToken || '').trim()
-      if (botToken) {
-        const publicPath = `/${scope.citySlug}/events/${published.entitySlug}`
-        await showPostApproveScoreKeyboard(event, {
-          submissionId,
-          botToken,
-          publishPath: publicPath,
-        }).catch((err) => console.error('[content-queue] post-approve score UI:', err))
-      }
-    }
-  }
-
   return {
     ok: true as const,
     item: data || null,
-    published: published
-      ? {
-          entityType: published.entityType,
-          entityId: published.entityId,
-          entitySlug: published.entitySlug,
-          alreadyPublished: published.alreadyPublished,
-          publicPath:
-            published.entityType === 'event'
-              ? `/${scope.citySlug}/events/${published.entitySlug}`
-              : null,
-        }
-      : null,
+    published: null,
   }
 })
