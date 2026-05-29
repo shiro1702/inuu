@@ -132,7 +132,8 @@ function formatIngestReply(result: Awaited<ReturnType<typeof runContentIngest>>)
     `Уверенность AI: ${Math.round(result.parse.confidence * 100)}%`,
     `Очередь: ${result.persisted.ok ? `#${shortId}` : 'не сохранено'}`,
   ]
-  if (result.persisted.warning) lines.push(`Примечание: ${result.persisted.warning}`)
+  if (result.persisted.resent) lines.push('Повторно отправлено на модерацию (обновлена карточка в чате менеджеров).')
+  else if (result.persisted.warning) lines.push(`Примечание: ${result.persisted.warning}`)
   if (dupCount > 0) lines.push(`⚠️ Похожих событий в афише: ${dupCount}`)
   if (result.parse.missing_fields.length) {
     lines.push(`Не хватает полей: ${result.parse.missing_fields.slice(0, 5).join(', ')}`)
@@ -185,6 +186,7 @@ export async function tryHandleInuuParserSourceTelegramMessage(
         submissionId: result.persisted.id,
         cityId: result.city.id,
         botToken: args.botToken,
+        force: result.persisted.resent === true,
       }).catch((err) => console.error('[inuuContentBot] moderation cards:', err))
     }
 

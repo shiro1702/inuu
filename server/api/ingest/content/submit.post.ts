@@ -51,6 +51,7 @@ export default defineEventHandler(async (event) => {
           submissionId: result.persisted.id,
           cityId: result.city.id,
           botToken,
+          force: result.persisted.resent === true,
         }).catch((err) => console.error('[ingest] telegram moderation cards:', err))
       }
     }

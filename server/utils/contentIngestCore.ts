@@ -64,7 +64,7 @@ export type ContentIngestResult = {
   parse: Awaited<ReturnType<typeof parseEventWithGroq>>['result']
   moderationStatus: 'pending' | 'needs_revision'
   duplicates: Awaited<ReturnType<typeof findEventDuplicates>>
-  persisted: { ok: boolean; id: string | null; warning: string | null }
+  persisted: { ok: boolean; id: string | null; warning: string | null; resent?: boolean }
   model: string
   latencyMs: number
 }
@@ -122,7 +122,11 @@ export async function runContentIngest(
   })
   const shouldPersist = input.persist === true
 
-  let persisted: { ok: boolean; id: string | null; warning: string | null } = { ok: false, id: null, warning: null }
+  let persisted: { ok: boolean; id: string | null; warning: string | null; resent?: boolean } = {
+    ok: false,
+    id: null,
+    warning: null,
+  }
   if (shouldPersist) {
     const client = await serverSupabaseServiceRole(event)
     const externalId = result.source.external_id || input.sourceExternalId || null
@@ -134,10 +138,39 @@ export async function runContentIngest(
         .eq('source_external_id', externalId)
         .maybeSingle()
       if (existing?.id) {
-        persisted = {
-          ok: true,
-          id: String(existing.id),
-          warning: `Already in queue (status: ${String((existing as any).status || 'unknown')})`,
+        const existingStatus = String((existing as any).status || '')
+        if (['needs_revision', 'pending'].includes(existingStatus)) {
+          const { error: updateError } = await client
+            .from('content_submissions')
+            .update({
+              status: moderationStatus,
+              payload: result,
+              source_kind: result.source.kind,
+              source_url: result.source.url,
+              updated_at: new Date().toISOString(),
+            } as any)
+            .eq('id', existing.id)
+
+          if (updateError) {
+            persisted = {
+              ok: false,
+              id: String(existing.id),
+              warning: `Update failed: ${updateError.message || 'content_submissions update failed'}`,
+            }
+          } else {
+            persisted = {
+              ok: true,
+              id: String(existing.id),
+              warning: null,
+              resent: true,
+            }
+          }
+        } else {
+          persisted = {
+            ok: true,
+            id: String(existing.id),
+            warning: `Already in queue (status: ${existingStatus || 'unknown'})`,
+          }
         }
       }
     }

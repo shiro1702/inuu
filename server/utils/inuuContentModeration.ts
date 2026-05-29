@@ -437,13 +437,18 @@ export async function notifyContentSubmissionTelegramChats(
   const client = await serverSupabaseServiceRole(event)
   const { data: existing } = await client
     .from('content_submissions')
-    .select('moderation_message_id,moderation_chat_id')
+    .select('moderation_message_id,moderation_chat_id,status')
     .eq('id', args.submissionId)
     .maybeSingle()
 
-  if (!args.force && (existing as any)?.moderation_message_id) return
+  const existingStatus = String((existing as any)?.status || '')
+  const hasModerationCard = !!(existing as any)?.moderation_message_id
+  const shouldRefreshCard =
+    args.force === true || ['needs_revision', 'pending'].includes(existingStatus)
 
-  if (args.force && (existing as any)?.moderation_message_id && (existing as any)?.moderation_chat_id) {
+  if (!shouldRefreshCard && hasModerationCard) return
+
+  if (shouldRefreshCard && hasModerationCard && (existing as any)?.moderation_chat_id) {
     await refreshContentSubmissionModerationCard(event, {
       submissionId: args.submissionId,
       botToken: args.botToken,
