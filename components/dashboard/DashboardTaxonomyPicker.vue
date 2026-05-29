@@ -72,12 +72,17 @@ const props = withDefaults(
     placeholder?: string
     hint?: string
     maxTags?: number
+    /** Мини-приложение модерации: taxonomy через /api/moderation/... */
+    moderationSubmissionId?: string
+    fetchHeaders?: Record<string, string>
   }>(),
   {
     label: '',
     placeholder: 'Поиск…',
     hint: '',
     maxTags: 8,
+    moderationSubmissionId: '',
+    fetchHeaders: undefined,
   },
 )
 
@@ -94,6 +99,9 @@ const loading = ref(false)
 const apiBase = computed(() => {
   const slug = props.citySlug.trim()
   if (!slug) return ''
+  if (props.moderationSubmissionId.trim()) {
+    return `/api/moderation/cities/${slug}/taxonomy`
+  }
   return props.kind === 'tags'
     ? `/api/dashboard/manager/cities/${slug}/content-tags`
     : `/api/dashboard/manager/cities/${slug}/event-categories`
@@ -134,7 +142,15 @@ async function loadOptions() {
   if (!apiBase.value) return
   loading.value = true
   try {
-    const res = await fetch(`${apiBase.value}?q=${encodeURIComponent(search.value.trim())}`)
+    const params = new URLSearchParams()
+    params.set('q', search.value.trim())
+    if (props.moderationSubmissionId.trim()) {
+      params.set('kind', props.kind)
+      params.set('submissionId', props.moderationSubmissionId.trim())
+    }
+    const res = await fetch(`${apiBase.value}?${params.toString()}`, {
+      headers: props.fetchHeaders,
+    })
     const payload = await res.json() as { ok?: boolean; items?: TaxonomyItem[] }
     if (payload?.items) options.value = payload.items
   } catch {

@@ -2,6 +2,7 @@ import { createError, defineEventHandler, readBody } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import { resolveManagerCityScopeOrThrow } from '~/server/utils/managerCityAccess'
 import { publishContentSubmission } from '~/server/utils/contentSubmissionPublish'
+import { showPostApproveScoreKeyboard } from '~/server/utils/inuuContentModeration'
 
 type Body = {
   submissionId?: string
@@ -61,6 +62,18 @@ export default defineEventHandler(async (event) => {
   let published: Awaited<ReturnType<typeof publishContentSubmission>> | null = null
   if (action === 'approve') {
     published = await publishContentSubmission(event, submissionId)
+    if (published.entityType === 'event') {
+      const config = useRuntimeConfig(event)
+      const botToken = String((event.context.tenant as any)?.telegramBotToken || config.botToken || '').trim()
+      if (botToken) {
+        const publicPath = `/${scope.citySlug}/events/${published.entitySlug}`
+        await showPostApproveScoreKeyboard(event, {
+          submissionId,
+          botToken,
+          publishPath: publicPath,
+        }).catch((err) => console.error('[content-queue] post-approve score UI:', err))
+      }
+    }
   }
 
   return {

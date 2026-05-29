@@ -2,6 +2,12 @@ import { createError, type H3Event } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import type { EventParseResult } from '~/server/utils/ai/eventParseSchema'
 import { publishContentSubmission } from '~/server/utils/contentSubmissionPublish'
+import { buildContentSubmissionEditUrl } from '~/server/utils/contentSubmissionEditUrl'
+import {
+  resolveMaxModerationChatIds,
+  type ContentOpsSettings,
+} from '~/server/utils/contentModerationAccess'
+import { sendMax } from '~/server/utils/serviceCalls'
 
 const TELEGRAM_API = (token: string) => `https://api.telegram.org/bot${token}`
 
@@ -87,16 +93,36 @@ export function formatContentSubmissionCard(args: {
   ].filter(Boolean).join('\n')
 }
 
-export function buildContentSubmissionMainKeyboard(submissionId: string) {
+/** Кнопки модерации до публикации (без оценки). */
+export function buildContentSubmissionMainKeyboard(submissionId: string, editUrl?: string | null) {
+  const rows: Array<Array<Record<string, string | { url: string }>>> = [
+    [
+      { text: '✅ Опубликовать', callback_data: `inuu:sub:approve:${submissionId}` },
+      { text: '✏️ На доработку', callback_data: `inuu:sub:revise:${submissionId}` },
+    ],
+    [
+      { text: '❌ Отклонить', callback_data: `inuu:sub:reject:${submissionId}` },
+    ],
+  ]
+  if (editUrl) {
+    rows.push([{ text: '🛠 Редактировать', web_app: { url: editUrl } }])
+  }
+  return { inline_keyboard: rows }
+}
+
+function buildMaxContentSubmissionAttachments(editUrl: string | null) {
+  const rows: Array<Array<Record<string, unknown>>> = []
+  if (editUrl) {
+    rows.push([{ type: 'link', text: '🛠 Редактировать', url: editUrl }])
+  }
+  if (!rows.length) return undefined
+  return [{ type: 'inline_keyboard', payload: { buttons: rows } }]
+}
+
+/** Оценка редакции — только после approve и публикации события. */
+export function buildContentSubmissionScoreKeyboard(submissionId: string) {
   return {
     inline_keyboard: [
-      [
-        { text: '✅ Опубликовать', callback_data: `inuu:sub:approve:${submissionId}` },
-        { text: '✏️ На доработку', callback_data: `inuu:sub:revise:${submissionId}` },
-      ],
-      [
-        { text: '❌ Отклонить', callback_data: `inuu:sub:reject:${submissionId}` },
-      ],
       [
         { text: '⭐1', callback_data: `inuu:sub:score:${submissionId}:1` },
         { text: '⭐2', callback_data: `inuu:sub:score:${submissionId}:2` },
@@ -167,7 +193,12 @@ export async function sendContentSubmissionModerationCards(
     payload: ((submission as any).payload || {}) as EventParseResult,
   })
 
-  const keyboard = buildContentSubmissionMainKeyboard(String(submission.id))
+  const citySlug = String((city as any)?.slug || '')
+  const editUrl = buildContentSubmissionEditUrl(event, {
+    submissionId: String(submission.id),
+    citySlug,
+  })
+  const keyboard = buildContentSubmissionMainKeyboard(String(submission.id), editUrl)
   const primaryChat = String(args.primaryChatId || uniqueChatIds[0] || '').trim()
   let primaryMessageId: number | null = null
   let sent = 0
@@ -204,6 +235,70 @@ export async function sendContentSubmissionModerationCards(
   return { sent, primaryMessageId }
 }
 
+/** После approve события — показать ⭐1–5 в чате модерации. */
+export async function showPostApproveScoreKeyboard(
+  event: H3Event,
+  args: {
+    submissionId: string
+    botToken: string
+    publishPath?: string | null
+    chatId?: string | null
+    messageId?: number | null
+  },
+): Promise<void> {
+  const client = await serverSupabaseServiceRole(event)
+  const { data: submission } = await client
+    .from('content_submissions')
+    .select('id,city_id,status,payload,source_kind,moderation_chat_id,moderation_message_id,published_entity_type')
+    .eq('id', args.submissionId)
+    .maybeSingle()
+
+  if (!submission?.id) return
+  if ((submission as any).published_entity_type !== 'event') return
+
+  const chatId = String(args.chatId || (submission as any).moderation_chat_id || '').trim()
+  const messageId = Number(
+    args.messageId ?? (submission as any).moderation_message_id,
+  )
+  if (!chatId || !Number.isFinite(messageId)) return
+
+  const { data: city } = await client
+    .from('cities')
+    .select('name,slug')
+    .eq('id', (submission as any).city_id)
+    .maybeSingle()
+
+  const suffix = args.publishPath
+    ? `\n\n✅ Опубликовано на сайте\n${args.publishPath}\n\nОцените приоритет в ленте:`
+    : '\n\n✅ Опубликовано\n\nОцените приоритет в ленте:'
+
+  const text = `${formatContentSubmissionCard({
+    submissionId: String(submission.id),
+    cityName: String((city as any)?.name || ''),
+    citySlug: String((city as any)?.slug || ''),
+    status: 'approved',
+    sourceKind: (submission as any).source_kind ? String((submission as any).source_kind) : null,
+    payload: ((submission as any).payload || {}) as EventParseResult,
+  })}${suffix}`
+
+  const keyboard = buildContentSubmissionScoreKeyboard(args.submissionId)
+
+  try {
+    await telegram(args.botToken, 'editMessageText', {
+      chat_id: chatId,
+      message_id: messageId,
+      text,
+      reply_markup: keyboard,
+    })
+  } catch {
+    await telegram(args.botToken, 'editMessageReplyMarkup', {
+      chat_id: chatId,
+      message_id: messageId,
+      reply_markup: keyboard,
+    }).catch((err) => console.error('[inuuContentModeration] score keyboard:', err))
+  }
+}
+
 export async function loadCityTelegramOpsSettings(
   event: H3Event,
   cityId: string,
@@ -215,6 +310,115 @@ export async function loadCityTelegramOpsSettings(
     .eq('id', cityId)
     .maybeSingle()
   return (((data as any)?.content_ops_settings || {}).telegram || {}) as ContentOpsTelegramSettings
+}
+
+export async function refreshContentSubmissionModerationCard(
+  event: H3Event,
+  args: { submissionId: string; botToken: string },
+): Promise<void> {
+  const client = await serverSupabaseServiceRole(event)
+  const { data: submission } = await client
+    .from('content_submissions')
+    .select('id,city_id,status,payload,source_kind,moderation_chat_id,moderation_message_id')
+    .eq('id', args.submissionId)
+    .maybeSingle()
+
+  if (!submission?.id) return
+  const chatId = String((submission as any).moderation_chat_id || '').trim()
+  const messageId = Number((submission as any).moderation_message_id)
+  if (!chatId || !Number.isFinite(messageId)) return
+
+  const { data: city } = await client
+    .from('cities')
+    .select('name,slug')
+    .eq('id', (submission as any).city_id)
+    .maybeSingle()
+
+  const citySlug = String((city as any)?.slug || '')
+  const editUrl = buildContentSubmissionEditUrl(event, {
+    submissionId: String(submission.id),
+    citySlug,
+  })
+  const text = formatContentSubmissionCard({
+    submissionId: String(submission.id),
+    cityName: String((city as any)?.name || ''),
+    citySlug,
+    status: String((submission as any).status || 'pending'),
+    sourceKind: (submission as any).source_kind ? String((submission as any).source_kind) : null,
+    payload: ((submission as any).payload || {}) as EventParseResult,
+  })
+  const keyboard = buildContentSubmissionMainKeyboard(String(submission.id), editUrl)
+
+  try {
+    await telegram(args.botToken, 'editMessageText', {
+      chat_id: chatId,
+      message_id: messageId,
+      text,
+      reply_markup: keyboard,
+    })
+  } catch {
+    await telegram(args.botToken, 'editMessageReplyMarkup', {
+      chat_id: chatId,
+      message_id: messageId,
+      reply_markup: keyboard,
+    }).catch((err) => console.error('[inuuContentModeration] refresh card:', err))
+  }
+}
+
+async function notifyContentSubmissionMaxChats(
+  event: H3Event,
+  args: { submissionId: string; cityId: string; force?: boolean },
+): Promise<void> {
+  const config = useRuntimeConfig(event)
+  const maxBaseUrl = String(config.maxApiBaseUrl || '').trim()
+  const maxToken = String(config.maxApiToken || '').trim()
+  if (!maxBaseUrl || !maxToken) return
+
+  const client = await serverSupabaseServiceRole(event)
+  const { data: submission } = await client
+    .from('content_submissions')
+    .select('id,city_id,kind,status,payload,source_kind')
+    .eq('id', args.submissionId)
+    .maybeSingle()
+  if (!submission?.id) return
+
+  const { data: city } = await client
+    .from('cities')
+    .select('name,slug,content_ops_settings')
+    .eq('id', args.cityId)
+    .maybeSingle()
+
+  const settings = (((city as any)?.content_ops_settings || {}) as ContentOpsSettings)
+  const chatIds = resolveMaxModerationChatIds(settings)
+  if (!chatIds.length) return
+
+  const citySlug = String((city as any)?.slug || '')
+  const editUrl = buildContentSubmissionEditUrl(event, {
+    submissionId: String(submission.id),
+    citySlug,
+  })
+  const text = formatContentSubmissionCard({
+    submissionId: String(submission.id),
+    cityName: String((city as any)?.name || citySlug),
+    citySlug,
+    status: String((submission as any).status || 'pending'),
+    sourceKind: (submission as any).source_kind ? String((submission as any).source_kind) : null,
+    payload: ((submission as any).payload || {}) as EventParseResult,
+  })
+  const attachments = buildMaxContentSubmissionAttachments(editUrl)
+  const hint = '\n\nМодерация: кнопки ✅/❌ в Telegram-чате или «Редактировать» для правок в мини-приложении.'
+
+  for (const conversationId of chatIds) {
+    try {
+      await sendMax(maxBaseUrl, maxToken, {
+        conversationId,
+        text: `${text}${hint}`,
+        attachments,
+      })
+    } catch (err) {
+      console.error(`[inuuContentModeration] MAX send to ${conversationId} failed:`, err)
+    }
+  }
 }
 
 export async function notifyContentSubmissionTelegramChats(
@@ -249,6 +453,11 @@ export async function notifyContentSubmissionTelegramChats(
     botToken: args.botToken,
     chatIds,
     primaryChatId: primary || null,
+  })
+  await notifyContentSubmissionMaxChats(event, {
+    submissionId: args.submissionId,
+    cityId: args.cityId,
+    force: args.force,
   })
 }
 
@@ -286,7 +495,7 @@ async function assertCanModerateInChat(
   const client = await serverSupabaseServiceRole(event)
   const { data: submission } = await client
     .from('content_submissions')
-    .select('id,city_id,status,payload,moderation_chat_id')
+    .select('id,city_id,status,payload,moderation_chat_id,published_entity_type,published_entity_id')
     .eq('id', args.submissionId)
     .maybeSingle()
 
@@ -341,6 +550,9 @@ export async function handleInuuSubTelegramCallback(
 
   const client = await serverSupabaseServiceRole(event)
   const status = String(submission.status || '')
+  if (parsed.action === 'score' && status !== 'approved') {
+    return { alertText: 'Оценка доступна после публикации (✅ Опубликовать)', showAlert: false }
+  }
   if (!['pending', 'needs_revision'].includes(status) && parsed.action !== 'score') {
     return { alertText: `Заявка уже в статусе: ${status}`, showAlert: false }
   }
@@ -355,10 +567,28 @@ export async function handleInuuSubTelegramCallback(
   }
 
   if (parsed.action === 'rej_cancel') {
+    const client = await serverSupabaseServiceRole(event)
+    const { data: subRow } = await client
+      .from('content_submissions')
+      .select('city_id')
+      .eq('id', parsed.submissionId)
+      .maybeSingle()
+    let editUrl: string | null = null
+    if (subRow?.city_id) {
+      const { data: cityRow } = await client
+        .from('cities')
+        .select('slug')
+        .eq('id', (subRow as any).city_id)
+        .maybeSingle()
+      editUrl = buildContentSubmissionEditUrl(event, {
+        submissionId: parsed.submissionId,
+        citySlug: String((cityRow as any)?.slug || ''),
+      })
+    }
     await telegram(args.botToken, 'editMessageReplyMarkup', {
       chat_id: args.chatId,
       message_id: args.messageId,
-      reply_markup: buildContentSubmissionMainKeyboard(parsed.submissionId),
+      reply_markup: buildContentSubmissionMainKeyboard(parsed.submissionId, editUrl),
     })
     return { alertText: 'Отменено', showAlert: false }
   }
@@ -376,21 +606,41 @@ export async function handleInuuSubTelegramCallback(
       .update({ status: 'approved', ...reviewedPatch })
       .eq('id', parsed.submissionId)
     let publishLabel = 'Одобрено'
+    let publishedEvent = false
+    let publishPath: string | null = null
     try {
       const published = await publishContentSubmission(event, parsed.submissionId)
-      publishLabel = published.entityType === 'event'
-        ? `Опубликовано: /events/${published.entitySlug}`
-        : 'Новость опубликована в editorial_posts'
-      if (published.alreadyPublished) publishLabel = 'Уже было опубликовано ранее'
+      if (published.entityType === 'event') {
+        publishedEvent = true
+        publishPath = `/events/${published.entitySlug}`
+        publishLabel = published.alreadyPublished
+          ? 'Уже опубликовано — оцените приоритет'
+          : `Опубликовано — оцените приоритет`
+      } else {
+        publishLabel = published.alreadyPublished
+          ? 'Новость уже была опубликована'
+          : 'Новость опубликована'
+      }
     } catch (err) {
       console.error('[inuuContentModeration] publish on approve:', err)
       publishLabel = 'Одобрено, но публикация не удалась — проверьте дату/поля'
     }
-    await telegram(args.botToken, 'editMessageReplyMarkup', {
-      chat_id: args.chatId,
-      message_id: args.messageId,
-      reply_markup: { inline_keyboard: [] },
-    })
+
+    if (publishedEvent) {
+      await showPostApproveScoreKeyboard(event, {
+        submissionId: parsed.submissionId,
+        botToken: args.botToken,
+        publishPath,
+        chatId: String(args.chatId),
+        messageId: args.messageId,
+      }).catch((err) => console.error('[inuuContentModeration] post-approve score UI:', err))
+    } else {
+      await telegram(args.botToken, 'editMessageReplyMarkup', {
+        chat_id: args.chatId,
+        message_id: args.messageId,
+        reply_markup: { inline_keyboard: [] },
+      })
+    }
     return { alertText: publishLabel, showAlert: false }
   }
 
@@ -434,6 +684,24 @@ export async function handleInuuSubTelegramCallback(
         updated_at: new Date().toISOString(),
       })
       .eq('id', parsed.submissionId)
+
+    const publishedEntityId = (submission as any).published_entity_id
+    const publishedEntityType = (submission as any).published_entity_type
+    if (publishedEntityType === 'event' && publishedEntityId) {
+      await client
+        .from('events')
+        .update({
+          is_promoted: parsed.score >= 4,
+          updated_at: new Date().toISOString(),
+        } as any)
+        .eq('id', String(publishedEntityId))
+    }
+
+    await telegram(args.botToken, 'editMessageReplyMarkup', {
+      chat_id: args.chatId,
+      message_id: args.messageId,
+      reply_markup: { inline_keyboard: [] },
+    })
     return { alertText: `Оценка ${parsed.score} сохранена`, showAlert: false }
   }
 
