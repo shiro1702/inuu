@@ -5,6 +5,9 @@ import { ensureCityContentTags, ensureCityEventCategory } from '~/server/utils/c
 export type ContentSubmissionPayloadPatch = {
   title?: string | null
   description?: string | null
+  descriptionShort?: string | null
+  descriptionFull?: string | null
+  coverMediaUrl?: string | null
   categorySlug?: string | null
   registrationUrl?: string | null
   topicTags?: string[]
@@ -29,7 +32,25 @@ export async function patchContentSubmissionRecord(
 
   const payload = { ...((current as any).payload || {}) } as Record<string, unknown>
   if (typeof args.body.title === 'string') payload.title = args.body.title.trim()
-  if (typeof args.body.description === 'string') payload.description = args.body.description.trim()
+  if (typeof args.body.descriptionFull === 'string') {
+    const full = args.body.descriptionFull.trim()
+    payload.description_full = full
+    payload.description = full
+    if (typeof args.body.descriptionShort !== 'string') {
+      const prevShort = String(payload.description_short || '').trim()
+      payload.description_short = prevShort || (full.length <= 280 ? full : `${full.slice(0, 279)}…`)
+    }
+  } else if (typeof args.body.description === 'string') {
+    const full = args.body.description.trim()
+    payload.description_full = full
+    payload.description = full
+  }
+  if (typeof args.body.descriptionShort === 'string') {
+    payload.description_short = args.body.descriptionShort.trim()
+  }
+  if (typeof args.body.coverMediaUrl === 'string') {
+    payload.cover_media_url = args.body.coverMediaUrl.trim() || null
+  }
   if (typeof args.body.categorySlug === 'string') {
     payload.category_slug = await ensureCityEventCategory(event, args.cityId, args.body.categorySlug.trim())
   }

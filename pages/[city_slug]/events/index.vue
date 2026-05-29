@@ -13,15 +13,22 @@
 <script setup lang="ts">
 definePageMeta({ layout: 'city' })
 
+const route = useRoute()
 const { slug, displayName } = useCity()
 const pending = ref(true)
 const items = ref<Array<Record<string, any>>>([])
 
-watch(slug, async () => {
+const categoryFilter = computed(() => {
+  const q = route.query.category
+  return typeof q === 'string' ? q : ''
+})
+
+watch([slug, categoryFilter], async () => {
   pending.value = true
   try {
+    const qs = categoryFilter.value ? `?category=${encodeURIComponent(categoryFilter.value)}` : ''
     const res = await $fetch<{ ok: boolean; items?: Array<Record<string, any>> }>(
-      `/api/cities/${slug.value}/events`,
+      `/api/cities/${slug.value}/events${qs}`,
     )
     items.value = res?.items ?? []
   } finally {

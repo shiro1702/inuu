@@ -19,8 +19,8 @@
       <h3 class="mt-1 text-lg font-semibold text-gray-900 group-hover:text-primary">
         {{ event.title }}
       </h3>
-      <p v-if="event.description" class="mt-2 line-clamp-2 text-sm text-gray-600">
-        {{ event.description }}
+      <p v-if="cardDescription" class="mt-2 line-clamp-2 text-sm text-gray-600">
+        {{ cardDescription }}
       </p>
       <p v-if="event.price > 0" class="mt-3 text-sm font-medium text-gray-900">
         от {{ event.price }} ₽
@@ -36,6 +36,7 @@ const props = defineProps<{
     slug: string
     title: string
     description?: string | null
+    excerpt?: string | null
     starts_at: string
     price?: number
     cover_media_url?: string | null
@@ -44,6 +45,10 @@ const props = defineProps<{
 }>()
 
 const { cityBasePath } = useCity()
+
+const cardDescription = computed(() =>
+  String(props.event.excerpt || props.event.description || '').trim(),
+)
 
 const seriesDateCount = computed(() => Math.max(1, Number(props.event.series_date_count) || 1))
 

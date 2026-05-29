@@ -2,6 +2,7 @@ import type { H3Event } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import { runContentIngest } from '~/server/utils/contentIngestCore'
 import { notifyContentSubmissionTelegramChats } from '~/server/utils/inuuContentModeration'
+import { ingestTelegramMessageCover } from '~/server/utils/telegramContentMedia'
 
 const TELEGRAM_API = (token: string) => `https://api.telegram.org/bot${token}`
 
@@ -38,6 +39,7 @@ export type InuuTelegramMessage = {
   message_id?: number
   text?: string
   caption?: string
+  photo?: Array<{ file_id?: string; width?: number; height?: number }>
   chat?: { id: number; type?: string; username?: string; title?: string }
   from?: { id?: number; username?: string }
   forward_origin?: {
@@ -162,6 +164,13 @@ export async function tryHandleInuuParserSourceTelegramMessage(
 
   const { sourceUrl, sourceExternalId } = buildSourceMeta(args.message, chatIdValue)
 
+  const coverMediaUrl = await ingestTelegramMessageCover(event, {
+    botToken: args.botToken,
+    message: args.message,
+    cityId: city.id,
+    sourceExternalId,
+  })
+
   await telegramSend(args.botToken, 'sendMessage', {
     chat_id: chatId,
     text: '⏳ Разбираю анонс через AI…',
@@ -176,6 +185,7 @@ export async function tryHandleInuuParserSourceTelegramMessage(
       sourceExternalId,
       citySlug: city.slug,
       timezone: city.timezone,
+      coverMediaUrl,
       persist: true,
     })
 

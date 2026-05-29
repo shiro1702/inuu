@@ -24,13 +24,31 @@
       </label>
 
       <label class="block space-y-1 text-sm">
-        <span class="font-medium text-gray-700">Описание</span>
+        <span class="font-medium text-gray-700">Краткое описание (карточка)</span>
         <textarea
-          v-model="form.description"
-          rows="5"
+          v-model="form.descriptionShort"
+          rows="3"
           class="w-full rounded-lg border border-gray-300 px-3 py-2"
         />
       </label>
+
+      <label class="block space-y-1 text-sm">
+        <span class="font-medium text-gray-700">Полное описание (страница)</span>
+        <textarea
+          v-model="form.descriptionFull"
+          rows="6"
+          class="w-full rounded-lg border border-gray-300 px-3 py-2"
+        />
+      </label>
+
+      <div v-if="form.coverMediaUrl" class="space-y-2">
+        <p class="text-sm font-medium text-gray-700">Обложка</p>
+        <img
+          :src="form.coverMediaUrl"
+          alt="Обложка события"
+          class="max-h-48 w-full rounded-lg border border-gray-200 object-cover"
+        />
+      </div>
 
       <DashboardTaxonomyPicker
         v-if="citySlug"
@@ -124,7 +142,9 @@ const saveOk = ref(false)
 
 const form = reactive({
   title: '',
-  description: '',
+  descriptionShort: '',
+  descriptionFull: '',
+  coverMediaUrl: '',
   categorySlug: '',
   registrationUrl: '',
   topicTags: [] as string[],
@@ -174,7 +194,9 @@ async function loadSubmission() {
 
     const p = payload?.item?.payload || {}
     form.title = String(p.title || '')
-    form.description = String(p.description || '')
+    form.descriptionShort = String(p.description_short || p.description || '').slice(0, 280)
+    form.descriptionFull = String(p.description_full || p.description || '')
+    form.coverMediaUrl = String(p.cover_media_url || '')
     form.categorySlug = String(p.category_slug || '')
     form.registrationUrl = String(p.registration_url || '')
     form.topicTags = Array.isArray(p.topic_tags)
@@ -202,7 +224,8 @@ async function save() {
       },
       body: JSON.stringify({
         title: form.title,
-        description: form.description,
+        descriptionShort: form.descriptionShort,
+        descriptionFull: form.descriptionFull,
         categorySlug: form.categorySlug || null,
         registrationUrl: form.registrationUrl,
         topicTags: form.topicTags,

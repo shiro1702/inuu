@@ -12,9 +12,21 @@ const nullableTrimmedString = z
   .nullable()
   .default(null)
 
+const nullableUrl = z
+  .string()
+  .trim()
+  .url()
+  .max(2000)
+  .nullable()
+  .default(null)
+
 export const eventParseResultSchema = z.object({
   title: z.string().trim().min(3).max(160),
+  description_short: z.string().trim().min(10).max(280),
+  description_full: z.string().trim().min(10).max(10_000),
+  /** @deprecated synced with description_full */
   description: z.string().trim().min(10).max(10_000),
+  cover_media_url: nullableUrl,
   city_slug: nullableTrimmedString,
   event_kind: z.enum(EVENT_KINDS).default('event'),
   category_slug: nullableTrimmedString,
@@ -52,6 +64,7 @@ export type EventParseInput = {
   sourceExternalId?: string | null
   citySlug?: string | null
   timezone?: string | null
+  coverMediaUrl?: string | null
   hints?: {
     categorySlug?: string | null
     topicTags?: string[]

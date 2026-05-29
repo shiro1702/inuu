@@ -5,6 +5,9 @@ import { patchContentSubmissionRecord } from '~/server/utils/contentSubmissionPa
 type Body = {
   title?: string | null
   description?: string | null
+  descriptionShort?: string | null
+  descriptionFull?: string | null
+  coverMediaUrl?: string | null
   categorySlug?: string | null
   registrationUrl?: string | null
   topicTags?: string[]

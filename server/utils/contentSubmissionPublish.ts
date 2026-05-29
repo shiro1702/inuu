@@ -3,9 +3,11 @@ import { serverSupabaseServiceRole } from '#supabase/server'
 import type { EventParseResult } from '~/server/utils/ai/eventParseSchema'
 import { slugifyTaxonomy } from '~/server/utils/cityContentTaxonomy'
 import { listEventStartsAtFromPayload } from '~/server/utils/eventStartsAt'
+import { resolveSubmissionDescriptions } from '~/server/utils/eventParseDescriptions'
 import {
   buildEventSeriesSlug,
   buildEventSessionSlug,
+  isMissingEventsExcerptColumnError,
   isMissingEventsSeriesSlugColumnError,
 } from '~/server/utils/eventSeries'
 
@@ -35,7 +37,7 @@ export type PublishSubmissionResult = {
 
 function stripEventRowFields(
   row: Record<string, unknown>,
-  fields: Array<'source_channel' | 'source_metadata' | 'series_slug'>,
+  fields: Array<'source_channel' | 'source_metadata' | 'series_slug' | 'excerpt'>,
 ): Record<string, unknown> {
   const next = { ...row }
   for (const field of fields) delete next[field]
@@ -49,7 +51,8 @@ async function insertEventRow(args: {
   const variants: Record<string, unknown>[] = [args.row]
   variants.push(stripEventRowFields(args.row, ['source_channel', 'source_metadata']))
   variants.push(stripEventRowFields(args.row, ['series_slug']))
-  variants.push(stripEventRowFields(args.row, ['source_channel', 'source_metadata', 'series_slug']))
+  variants.push(stripEventRowFields(args.row, ['excerpt']))
+  variants.push(stripEventRowFields(args.row, ['source_channel', 'source_metadata', 'series_slug', 'excerpt']))
 
   let lastError: { message?: string } | null = null
   for (const row of variants) {
@@ -66,6 +69,7 @@ async function insertEventRow(args: {
     lastError = attempt.error
     const retryable = isMissingEventsSourceColumnsError(attempt.error)
       || isMissingEventsSeriesSlugColumnError(attempt.error)
+      || isMissingEventsExcerptColumnError(attempt.error)
     if (!retryable) break
   }
 
@@ -129,10 +133,17 @@ export async function publishContentSubmission(
 
   const shopId = (editorialShop as any)?.id ? String((editorialShop as any).id) : null
   const title = String(payload.title || '').trim()
-  const description = String(payload.description || '').trim()
+  const { descriptionShort, descriptionFull } = resolveSubmissionDescriptions(payload)
   if (title.length < 3) {
     throw createError({ statusCode: 400, statusMessage: 'Submission title is too short to publish' })
   }
+  if (descriptionFull.length < 10) {
+    throw createError({ statusCode: 400, statusMessage: 'Submission description is too short to publish' })
+  }
+
+  const coverMediaUrl = typeof payload.cover_media_url === 'string'
+    ? payload.cover_media_url.trim() || null
+    : null
 
   if (eventKind === 'news') {
     const postSlug = `${slugifyTitle(title)}-${String(submission.id).slice(0, 8)}`
@@ -144,8 +155,9 @@ export async function publishContentSubmission(
         shop_id: shopId,
         slug: postSlug,
         title,
-        body: description.length >= 20 ? description : `${description}\n\n${title}`,
-        excerpt: description.slice(0, 280) || null,
+        body: descriptionFull.length >= 20 ? descriptionFull : `${descriptionFull}\n\n${title}`,
+        excerpt: descriptionShort.slice(0, 280) || null,
+        cover_media_url: coverMediaUrl,
         topic_tags: topicTags,
         category_slug: payload.category_slug || null,
         is_published: true,
@@ -197,11 +209,20 @@ export async function publishContentSubmission(
     ? 0
     : Math.max(0, Math.round(Number(payload.price_from || 0)))
 
+  const mediaUrls = [
+    ...(coverMediaUrl ? [coverMediaUrl] : []),
+    ...(Array.isArray((payload as any).media_urls)
+      ? (payload as any).media_urls.map((x: unknown) => String(x || '').trim()).filter(Boolean)
+      : []),
+  ].filter((url, i, arr) => arr.indexOf(url) === i)
+
   const sourceMeta = {
     content_submission_id: submission.id,
     source_url: (submission as any).source_url || payload.source?.url || null,
     topic_tags: payload.topic_tags || [],
     registration_url: payload.registration_url || null,
+    organization_name: payload.organization?.name || null,
+    media_urls: mediaUrls,
     city_slug: (city as any)?.slug || payload.city_slug || null,
     series_dates_count: startsAtList.length,
   }
@@ -216,13 +237,14 @@ export async function publishContentSubmission(
       category_id: categoryId,
       slug: eventSlug,
       title,
-      description: description || title,
+      description: descriptionFull || title,
+      excerpt: descriptionShort || null,
       starts_at: startsAt,
       ends_at: null,
       capacity: typeof payload.capacity === 'number' ? payload.capacity : null,
       price: priceRub,
       currency: 'RUB',
-      cover_media_url: null,
+      cover_media_url: coverMediaUrl,
       is_promoted: typeof (submission as any).editorial_score === 'number'
         && (submission as any).editorial_score >= 4,
       is_published: true,

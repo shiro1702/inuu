@@ -1,6 +1,7 @@
 import { createError, type H3Event } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import type { EventParseResult } from '~/server/utils/ai/eventParseSchema'
+import { formatDescriptionsForModeration } from '~/server/utils/eventParseDescriptions'
 import { publishContentSubmission } from '~/server/utils/contentSubmissionPublish'
 import { buildContentSubmissionEditLinks } from '~/server/utils/contentSubmissionEditUrl'
 import {
@@ -93,8 +94,40 @@ export function formatContentSubmissionCard(args: {
     `🏷 ${tags}`,
     p.source?.url ? `🔗 ${p.source.url}` : null,
     '────────────────',
-    String(p.description || '').slice(0, 500),
+    ...formatDescriptionsForModeration(p as unknown as Record<string, unknown>),
   ].filter(Boolean).join('\n')
+}
+
+function submissionCoverUrl(payload: Record<string, unknown>): string | null {
+  const url = typeof payload.cover_media_url === 'string' ? payload.cover_media_url.trim() : ''
+  return url || null
+}
+
+async function sendModerationCardMessage(args: {
+  botToken: string
+  chatId: string
+  text: string
+  keyboard: ReturnType<typeof buildContentSubmissionMainKeyboard>
+  coverUrl: string | null
+}): Promise<number | null> {
+  const caption = args.text.length <= 1024 ? args.text : `${args.text.slice(0, 1020)}…`
+  if (args.coverUrl) {
+    const res = await telegram(args.botToken, 'sendPhoto', {
+      chat_id: args.chatId,
+      photo: args.coverUrl,
+      caption,
+      reply_markup: args.keyboard,
+    })
+    const msgId = Number(res?.result?.message_id)
+    return Number.isFinite(msgId) ? msgId : null
+  }
+  const res = await telegram(args.botToken, 'sendMessage', {
+    chat_id: args.chatId,
+    text: args.text,
+    reply_markup: args.keyboard,
+  })
+  const msgId = Number(res?.result?.message_id)
+  return Number.isFinite(msgId) ? msgId : null
 }
 
 /** Кнопки модерации до публикации (без оценки). */
@@ -201,25 +234,45 @@ export async function sendContentSubmissionModerationCards(
   })
 
   const keyboard = buildContentSubmissionMainKeyboard(String(submission.id))
+  const coverUrl = submissionCoverUrl(((submission as any).payload || {}) as Record<string, unknown>)
   const primaryChat = String(args.primaryChatId || uniqueChatIds[0] || '').trim()
   let primaryMessageId: number | null = null
   let sent = 0
 
   for (const chatId of uniqueChatIds) {
     try {
-      const res = await telegram(args.botToken, 'sendMessage', {
-        chat_id: chatId,
+      const msgId = await sendModerationCardMessage({
+        botToken: args.botToken,
+        chatId,
         text,
-        reply_markup: keyboard,
+        keyboard,
+        coverUrl,
       })
-      const msgId = Number(res?.result?.message_id)
-      if (Number.isFinite(msgId)) {
+      if (msgId) {
         sent += 1
         if (chatId === primaryChat) primaryMessageId = msgId
         if (!primaryMessageId) primaryMessageId = msgId
       }
     } catch (err) {
       console.error(`[inuuContentModeration] send to ${chatId} failed:`, err)
+      if (coverUrl) {
+        try {
+          const msgId = await sendModerationCardMessage({
+            botToken: args.botToken,
+            chatId,
+            text,
+            keyboard,
+            coverUrl: null,
+          })
+          if (msgId) {
+            sent += 1
+            if (chatId === primaryChat) primaryMessageId = msgId
+            if (!primaryMessageId) primaryMessageId = msgId
+          }
+        } catch (fallbackErr) {
+          console.error(`[inuuContentModeration] fallback send to ${chatId} failed:`, fallbackErr)
+        }
+      }
     }
   }
 

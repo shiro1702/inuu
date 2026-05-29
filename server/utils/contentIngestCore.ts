@@ -118,6 +118,9 @@ export async function runContentIngest(
 
   const parseOutput = await parseEventWithGroq({ ...input, hints: taxonomyHints })
   let result = parseOutput.result
+  if (input.coverMediaUrl) {
+    result = { ...result, cover_media_url: input.coverMediaUrl }
+  }
   const lastUsage = [...parseOutput.attempts].reverse().find((x) => x.ok && x.usage)?.usage
   const citySlug = result.city_slug || input.citySlug
   if (!citySlug) {

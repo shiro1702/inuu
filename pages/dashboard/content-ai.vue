@@ -228,6 +228,18 @@
                 <p class="text-sm font-medium">{{ item.payload?.title || 'Без заголовка' }}</p>
                 <p class="font-mono text-xs text-gray-500">{{ item.id }}</p>
                 <p class="text-xs text-gray-600">status: {{ item.status }} · score: {{ item.editorialScore ?? '—' }} · source: {{ item.sourceKind ?? '—' }}</p>
+                <p v-if="item.payload?.description_short" class="mt-1 text-xs text-gray-600">
+                  <span class="font-medium">Кратко:</span> {{ item.payload.description_short }}
+                </p>
+                <p v-if="item.payload?.description_full" class="mt-1 text-xs text-gray-500 line-clamp-3">
+                  <span class="font-medium">Полностью:</span> {{ item.payload.description_full }}
+                </p>
+                <img
+                  v-if="item.payload?.cover_media_url"
+                  :src="item.payload.cover_media_url"
+                  alt=""
+                  class="mt-2 max-h-24 rounded border border-gray-200 object-cover"
+                />
               </div>
               <div class="flex flex-wrap gap-2">
                 <button class="rounded border border-green-300 px-2 py-1 text-xs text-green-700 hover:bg-green-50" @click="queueAction(item.id, 'approve')">Approve</button>
@@ -258,8 +270,12 @@
                 />
               </div>
               <label class="space-y-1 text-xs md:col-span-2">
-                <span class="font-medium text-gray-700">Description</span>
-                <textarea v-model="queueEdits[item.id].description" rows="3" class="w-full rounded border border-gray-300 px-2 py-1 text-sm" />
+                <span class="font-medium text-gray-700">Краткое описание</span>
+                <textarea v-model="queueEdits[item.id].descriptionShort" rows="2" class="w-full rounded border border-gray-300 px-2 py-1 text-sm" />
+              </label>
+              <label class="space-y-1 text-xs md:col-span-2">
+                <span class="font-medium text-gray-700">Полное описание</span>
+                <textarea v-model="queueEdits[item.id].descriptionFull" rows="4" class="w-full rounded border border-gray-300 px-2 py-1 text-sm" />
               </label>
               <label class="space-y-1 text-xs">
                 <span class="font-medium text-gray-700">Registration URL</span>
@@ -347,7 +363,8 @@ const queueItems = ref<any[]>([])
 const queueMessage = ref('')
 const queueEdits = reactive<Record<string, {
   title: string
-  description: string
+  descriptionShort: string
+  descriptionFull: string
   categorySlug: string
   registrationUrl: string
   topicTags: string[]
@@ -554,9 +571,11 @@ async function createNews() {
 }
 
 function hydrateQueueEdit(item: any) {
+  const p = item?.payload || {}
   queueEdits[item.id] = {
-    title: String(item?.payload?.title || ''),
-    description: String(item?.payload?.description || ''),
+    title: String(p.title || ''),
+    descriptionShort: String(p.description_short || p.description || '').slice(0, 280),
+    descriptionFull: String(p.description_full || p.description || ''),
     categorySlug: String(item?.payload?.category_slug || ''),
     registrationUrl: String(item?.payload?.registration_url || ''),
     topicTags: Array.isArray(item?.payload?.topic_tags)
@@ -660,7 +679,8 @@ async function saveQueueEdit(submissionId: string) {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         title: edit.title,
-        description: edit.description,
+        descriptionShort: edit.descriptionShort,
+        descriptionFull: edit.descriptionFull,
         categorySlug: edit.categorySlug,
         registrationUrl: edit.registrationUrl,
         topicTags: edit.topicTags,

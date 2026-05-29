@@ -15,6 +15,15 @@ export function buildEventSessionSlug(seriesSlug: string, startsAtIso: string): 
   return `${seriesSlug}-${y}${m}${day}`.slice(0, 100)
 }
 
+export function isMissingEventsExcerptColumnError(
+  error: { code?: string; message?: string } | null,
+): boolean {
+  if (!error) return false
+  if (error.code === 'PGRST204') return true
+  const msg = String(error.message || '').toLowerCase()
+  return msg.includes('excerpt')
+}
+
 export function isMissingEventsSeriesSlugColumnError(
   error: { code?: string; message?: string } | null,
 ): boolean {

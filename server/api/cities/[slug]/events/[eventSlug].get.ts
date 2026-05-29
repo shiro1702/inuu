@@ -1,6 +1,13 @@
 import { createError, defineEventHandler, setResponseHeader } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import { resolveCityBySlug } from '~/server/utils/inuuCity'
+import {
+  buildEventMediaGallery,
+  loadSimilarPublishedEvents,
+  parseSourceMetadata,
+  resolveCityTagLabels,
+  type PublicEventSession,
+} from '~/server/utils/eventPublicDetail'
 
 export default defineEventHandler(async (event) => {
   setResponseHeader(event, 'Cache-Control', 'public, max-age=60, s-maxage=120')
@@ -26,7 +33,25 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: 'Event not found' })
   }
 
-  let seriesSessions: Array<{ slug: string; starts_at: string }> = []
+  const meta = parseSourceMetadata((data as any).source_metadata)
+  const topicTags = meta.topic_tags || []
+  const tags = await resolveCityTagLabels(client, city.id, topicTags)
+
+  let category: { slug: string; name: string } | null = null
+  if ((data as any).category_id) {
+    const { data: cat } = await client
+      .from('event_categories')
+      .select('slug,name')
+      .eq('id', (data as any).category_id)
+      .maybeSingle()
+    if (cat?.slug) {
+      category = { slug: String(cat.slug), name: String(cat.name) }
+    }
+  }
+
+  const mediaGallery = buildEventMediaGallery(data as any)
+
+  let seriesSessions: PublicEventSession[] = []
   const seriesSlug = (data as any).series_slug
   if (seriesSlug) {
     const nowIso = new Date().toISOString()
@@ -42,8 +67,31 @@ export default defineEventHandler(async (event) => {
     seriesSessions = (siblings ?? []).map((row: any) => ({
       slug: String(row.slug),
       starts_at: String(row.starts_at),
+      isCurrent: String(row.slug) === eventSlug,
     }))
   }
 
-  return { ok: true, event: data, seriesSessions }
+  const similarEvents = await loadSimilarPublishedEvents(client, {
+    cityId: city.id,
+    excludeSlug: eventSlug,
+    topicTags,
+    categoryId: (data as any).category_id ? String((data as any).category_id) : null,
+    shopId: (data as any).shop_id ? String((data as any).shop_id) : null,
+    limit: 6,
+  })
+
+  return {
+    ok: true,
+    event: data,
+    mediaGallery,
+    tags,
+    category,
+    links: {
+      registrationUrl: meta.registration_url || null,
+      sourceUrl: meta.source_url || null,
+    },
+    organizationName: meta.organization_name || null,
+    seriesSessions,
+    similarEvents,
+  }
 })

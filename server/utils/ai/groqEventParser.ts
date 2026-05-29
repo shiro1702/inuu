@@ -7,6 +7,10 @@ import {
   type EventParseResult,
 } from '~/server/utils/ai/eventParseSchema'
 import { slugifyTaxonomy } from '~/server/utils/cityContentTaxonomy'
+import {
+  coerceEventParsePayload,
+  normalizeEventParseDescriptions,
+} from '~/server/utils/eventParseDescriptions'
 
 type ParseAttempt = {
   ok: boolean
@@ -44,6 +48,8 @@ function buildSystemPrompt(input: EventParseInput) {
     'Если в тексте несколько дат одного и того же мероприятия — все даты в recurrence.dates, не дроби на разные события.',
     'confidence: число от 0 до 1.',
     'missing_fields: список недостающих полей для модератора.',
+    'description_short: 1–2 предложения для карточки в списке (до 280 символов), без выдумок.',
+    'description_full: полный текст для страницы события (все факты из поста).',
   ].join('\n')
 }
 
@@ -64,7 +70,9 @@ function buildUserPrompt(input: EventParseInput) {
     'Верни JSON строго по этой форме:',
     JSON.stringify({
       title: 'string',
-      description: 'string',
+      description_short: 'string',
+      description_full: 'string',
+      cover_media_url: 'string|null',
       city_slug: 'string|null',
       event_kind: 'event|masterclass|news',
       category_slug: 'string|null',
@@ -126,7 +134,7 @@ function normalizeResult(result: EventParseResult): EventParseResult {
     ),
   ).slice(0, 8)
 
-  return {
+  return normalizeEventParseDescriptions({
     ...result,
     topic_tags: normalizedTags,
     category_slug: result.category_slug ? slugifyTaxonomy(result.category_slug) : null,
@@ -135,7 +143,7 @@ function normalizeResult(result: EventParseResult): EventParseResult {
       url: result.source.url || null,
       external_id: result.source.external_id || null,
     },
-  }
+  })
 }
 
 async function runSingleAttempt(args: {
@@ -160,7 +168,7 @@ async function runSingleAttempt(args: {
 
   const raw = completion.choices[0]?.message?.content || ''
   const json = extractJsonObject(raw)
-  const parsed = eventParseResultSchema.parse(json)
+  const parsed = eventParseResultSchema.parse(coerceEventParsePayload(json))
   const usage = completion.usage
   return {
     parsed: normalizeResult(parsed),
