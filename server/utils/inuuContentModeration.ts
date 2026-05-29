@@ -2,7 +2,7 @@ import { createError, type H3Event } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import type { EventParseResult } from '~/server/utils/ai/eventParseSchema'
 import { publishContentSubmission } from '~/server/utils/contentSubmissionPublish'
-import { buildContentSubmissionEditUrl } from '~/server/utils/contentSubmissionEditUrl'
+import { buildContentSubmissionEditLinks } from '~/server/utils/contentSubmissionEditUrl'
 import {
   resolveMaxModerationChatIds,
   type ContentOpsSettings,
@@ -94,8 +94,11 @@ export function formatContentSubmissionCard(args: {
 }
 
 /** Кнопки модерации до публикации (без оценки). */
-export function buildContentSubmissionMainKeyboard(submissionId: string, editUrl?: string | null) {
-  const rows: Array<Array<Record<string, string | { url: string }>>> = [
+export function buildContentSubmissionMainKeyboard(
+  submissionId: string,
+  editLinks?: { telegramUrl: string | null; httpsUrl: string | null } | null,
+) {
+  const rows: Array<Array<Record<string, string>>> = [
     [
       { text: '✅ Опубликовать', callback_data: `inuu:sub:approve:${submissionId}` },
       { text: '✏️ На доработку', callback_data: `inuu:sub:revise:${submissionId}` },
@@ -104,14 +107,17 @@ export function buildContentSubmissionMainKeyboard(submissionId: string, editUrl
       { text: '❌ Отклонить', callback_data: `inuu:sub:reject:${submissionId}` },
     ],
   ]
+  // web_app в inline-клавиатуре работает только в личке с ботом; в группе менеджеров — url / t.me startapp.
+  const editUrl = editLinks?.telegramUrl || editLinks?.httpsUrl
   if (editUrl) {
-    rows.push([{ text: '🛠 Редактировать', web_app: { url: editUrl } }])
+    rows.push([{ text: '🛠 Редактировать', url: editUrl }])
   }
   return { inline_keyboard: rows }
 }
 
-function buildMaxContentSubmissionAttachments(editUrl: string | null) {
+function buildMaxContentSubmissionAttachments(editLinks: { httpsUrl: string | null; telegramUrl: string | null } | null) {
   const rows: Array<Array<Record<string, unknown>>> = []
+  const editUrl = editLinks?.httpsUrl || editLinks?.telegramUrl
   if (editUrl) {
     rows.push([{ type: 'link', text: '🛠 Редактировать', url: editUrl }])
   }
@@ -194,11 +200,14 @@ export async function sendContentSubmissionModerationCards(
   })
 
   const citySlug = String((city as any)?.slug || '')
-  const editUrl = buildContentSubmissionEditUrl(event, {
+  const editLinks = buildContentSubmissionEditLinks(event, {
     submissionId: String(submission.id),
     citySlug,
   })
-  const keyboard = buildContentSubmissionMainKeyboard(String(submission.id), editUrl)
+  if (!editLinks.telegramUrl && !editLinks.httpsUrl) {
+    console.warn('[inuuContentModeration] edit link skipped: set NUXT_APP_URL or telegram bot name')
+  }
+  const keyboard = buildContentSubmissionMainKeyboard(String(submission.id), editLinks)
   const primaryChat = String(args.primaryChatId || uniqueChatIds[0] || '').trim()
   let primaryMessageId: number | null = null
   let sent = 0
@@ -335,7 +344,7 @@ export async function refreshContentSubmissionModerationCard(
     .maybeSingle()
 
   const citySlug = String((city as any)?.slug || '')
-  const editUrl = buildContentSubmissionEditUrl(event, {
+  const editLinks = buildContentSubmissionEditLinks(event, {
     submissionId: String(submission.id),
     citySlug,
   })
@@ -347,7 +356,7 @@ export async function refreshContentSubmissionModerationCard(
     sourceKind: (submission as any).source_kind ? String((submission as any).source_kind) : null,
     payload: ((submission as any).payload || {}) as EventParseResult,
   })
-  const keyboard = buildContentSubmissionMainKeyboard(String(submission.id), editUrl)
+  const keyboard = buildContentSubmissionMainKeyboard(String(submission.id), editLinks)
 
   try {
     await telegram(args.botToken, 'editMessageText', {
@@ -393,7 +402,7 @@ async function notifyContentSubmissionMaxChats(
   if (!chatIds.length) return
 
   const citySlug = String((city as any)?.slug || '')
-  const editUrl = buildContentSubmissionEditUrl(event, {
+  const editLinks = buildContentSubmissionEditLinks(event, {
     submissionId: String(submission.id),
     citySlug,
   })
@@ -405,7 +414,7 @@ async function notifyContentSubmissionMaxChats(
     sourceKind: (submission as any).source_kind ? String((submission as any).source_kind) : null,
     payload: ((submission as any).payload || {}) as EventParseResult,
   })
-  const attachments = buildMaxContentSubmissionAttachments(editUrl)
+  const attachments = buildMaxContentSubmissionAttachments(editLinks)
   const hint = '\n\nМодерация: кнопки ✅/❌ в Telegram-чате или «Редактировать» для правок в мини-приложении.'
 
   for (const conversationId of chatIds) {
@@ -426,13 +435,25 @@ export async function notifyContentSubmissionTelegramChats(
   args: { submissionId: string; cityId: string; botToken: string; force?: boolean },
 ): Promise<void> {
   const client = await serverSupabaseServiceRole(event)
-  if (!args.force) {
-    const { data: existing } = await client
-      .from('content_submissions')
-      .select('moderation_message_id')
-      .eq('id', args.submissionId)
-      .maybeSingle()
-    if ((existing as any)?.moderation_message_id) return
+  const { data: existing } = await client
+    .from('content_submissions')
+    .select('moderation_message_id,moderation_chat_id')
+    .eq('id', args.submissionId)
+    .maybeSingle()
+
+  if (!args.force && (existing as any)?.moderation_message_id) return
+
+  if (args.force && (existing as any)?.moderation_message_id && (existing as any)?.moderation_chat_id) {
+    await refreshContentSubmissionModerationCard(event, {
+      submissionId: args.submissionId,
+      botToken: args.botToken,
+    }).catch((err) => console.error('[inuuContentModeration] refresh existing card:', err))
+    await notifyContentSubmissionMaxChats(event, {
+      submissionId: args.submissionId,
+      cityId: args.cityId,
+      force: args.force,
+    })
+    return
   }
 
   const settings = await loadCityTelegramOpsSettings(event, args.cityId)
@@ -573,14 +594,14 @@ export async function handleInuuSubTelegramCallback(
       .select('city_id')
       .eq('id', parsed.submissionId)
       .maybeSingle()
-    let editUrl: string | null = null
+    let editLinks: { telegramUrl: string | null; httpsUrl: string | null } | null = null
     if (subRow?.city_id) {
       const { data: cityRow } = await client
         .from('cities')
         .select('slug')
         .eq('id', (subRow as any).city_id)
         .maybeSingle()
-      editUrl = buildContentSubmissionEditUrl(event, {
+      editLinks = buildContentSubmissionEditLinks(event, {
         submissionId: parsed.submissionId,
         citySlug: String((cityRow as any)?.slug || ''),
       })
@@ -588,7 +609,7 @@ export async function handleInuuSubTelegramCallback(
     await telegram(args.botToken, 'editMessageReplyMarkup', {
       chat_id: args.chatId,
       message_id: args.messageId,
-      reply_markup: buildContentSubmissionMainKeyboard(parsed.submissionId, editUrl),
+      reply_markup: buildContentSubmissionMainKeyboard(parsed.submissionId, editLinks),
     })
     return { alertText: 'Отменено', showAlert: false }
   }
