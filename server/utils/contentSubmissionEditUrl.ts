@@ -34,16 +34,8 @@ export function buildContentSubmissionEditLinks(
   const q = params.toString()
   const httpsUrl = `${base}/moderation/content-submission/${encodeURIComponent(submissionId)}${q ? `?${q}` : ''}`
 
-  const config = useRuntimeConfig(event)
-  const botName = String(config.public?.telegramBotName || process.env.NUXT_TELEGRAM_BOT_NAME || '')
-    .trim()
-    .replace(/^@/, '')
-  const startapp = `cedit_${submissionId}`
-  const telegramUrl = botName
-    ? `https://t.me/${botName}?startapp=${encodeURIComponent(startapp)}`
-    : httpsUrl
-
-  return { httpsUrl, telegramUrl }
+  // t.me?startapp= даёт BOT_INVALID, если Mini App не привязан в BotFather — не используем в группах.
+  return { httpsUrl, telegramUrl: httpsUrl }
 }
 
 /** @deprecated Используйте buildContentSubmissionEditLinks */

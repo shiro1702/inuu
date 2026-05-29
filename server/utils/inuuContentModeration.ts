@@ -94,25 +94,22 @@ export function formatContentSubmissionCard(args: {
 }
 
 /** Кнопки модерации до публикации (без оценки). */
-export function buildContentSubmissionMainKeyboard(
-  submissionId: string,
-  editLinks?: { telegramUrl: string | null; httpsUrl: string | null } | null,
-) {
-  const rows: Array<Array<Record<string, string>>> = [
-    [
-      { text: '✅ Опубликовать', callback_data: `inuu:sub:approve:${submissionId}` },
-      { text: '✏️ На доработку', callback_data: `inuu:sub:revise:${submissionId}` },
+export function buildContentSubmissionMainKeyboard(submissionId: string) {
+  return {
+    inline_keyboard: [
+      [
+        { text: '✅ Опубликовать', callback_data: `inuu:sub:approve:${submissionId}` },
+        { text: '✏️ На доработку', callback_data: `inuu:sub:revise:${submissionId}` },
+      ],
+      [
+        { text: '❌ Отклонить', callback_data: `inuu:sub:reject:${submissionId}` },
+      ],
+      [
+        // web_app и t.me?startapp= в группах не работают → callback → личка с web_app
+        { text: '🛠 Редактировать', callback_data: `inuu:sub:edit:${submissionId}` },
+      ],
     ],
-    [
-      { text: '❌ Отклонить', callback_data: `inuu:sub:reject:${submissionId}` },
-    ],
-  ]
-  // web_app в inline-клавиатуре работает только в личке с ботом; в группе менеджеров — url / t.me startapp.
-  const editUrl = editLinks?.telegramUrl || editLinks?.httpsUrl
-  if (editUrl) {
-    rows.push([{ text: '🛠 Редактировать', url: editUrl }])
   }
-  return { inline_keyboard: rows }
 }
 
 function buildMaxContentSubmissionAttachments(editLinks: { httpsUrl: string | null; telegramUrl: string | null } | null) {
@@ -199,15 +196,7 @@ export async function sendContentSubmissionModerationCards(
     payload: ((submission as any).payload || {}) as EventParseResult,
   })
 
-  const citySlug = String((city as any)?.slug || '')
-  const editLinks = buildContentSubmissionEditLinks(event, {
-    submissionId: String(submission.id),
-    citySlug,
-  })
-  if (!editLinks.telegramUrl && !editLinks.httpsUrl) {
-    console.warn('[inuuContentModeration] edit link skipped: set NUXT_APP_URL or telegram bot name')
-  }
-  const keyboard = buildContentSubmissionMainKeyboard(String(submission.id), editLinks)
+  const keyboard = buildContentSubmissionMainKeyboard(String(submission.id))
   const primaryChat = String(args.primaryChatId || uniqueChatIds[0] || '').trim()
   let primaryMessageId: number | null = null
   let sent = 0
@@ -343,20 +332,15 @@ export async function refreshContentSubmissionModerationCard(
     .eq('id', (submission as any).city_id)
     .maybeSingle()
 
-  const citySlug = String((city as any)?.slug || '')
-  const editLinks = buildContentSubmissionEditLinks(event, {
-    submissionId: String(submission.id),
-    citySlug,
-  })
   const text = formatContentSubmissionCard({
     submissionId: String(submission.id),
     cityName: String((city as any)?.name || ''),
-    citySlug,
+    citySlug: String((city as any)?.slug || ''),
     status: String((submission as any).status || 'pending'),
     sourceKind: (submission as any).source_kind ? String((submission as any).source_kind) : null,
     payload: ((submission as any).payload || {}) as EventParseResult,
   })
-  const keyboard = buildContentSubmissionMainKeyboard(String(submission.id), editLinks)
+  const keyboard = buildContentSubmissionMainKeyboard(String(submission.id))
 
   try {
     await telegram(args.botToken, 'editMessageText', {
@@ -488,7 +472,7 @@ export async function notifyContentSubmissionTelegramChats(
 }
 
 export function parseInuuSubCallback(data: string): {
-  action: 'approve' | 'revise' | 'reject' | 'rej' | 'rej_cancel' | 'score'
+  action: 'approve' | 'revise' | 'reject' | 'rej' | 'rej_cancel' | 'score' | 'edit'
   submissionId: string
   rejectCode?: string
   score?: number
@@ -499,7 +483,7 @@ export function parseInuuSubCallback(data: string): {
   const submissionId = parts[3]?.trim()
   if (!submissionId) return null
 
-  if (action === 'approve' || action === 'revise' || action === 'reject' || action === 'rej_cancel') {
+  if (action === 'approve' || action === 'revise' || action === 'reject' || action === 'rej_cancel' || action === 'edit') {
     return { action, submissionId }
   }
   if (action === 'rej' && parts[4]) {
@@ -576,6 +560,44 @@ export async function handleInuuSubTelegramCallback(
 
   const client = await serverSupabaseServiceRole(event)
   const status = String(submission.status || '')
+
+  if (parsed.action === 'edit') {
+    if (status === 'rejected') {
+      return { alertText: 'Заявка отклонена, редактирование недоступно', showAlert: false }
+    }
+    const { data: cityRow } = await client
+      .from('cities')
+      .select('slug')
+      .eq('id', String((submission as any).city_id))
+      .maybeSingle()
+    const editLinks = buildContentSubmissionEditLinks(event, {
+      submissionId: parsed.submissionId,
+      citySlug: String((cityRow as any)?.slug || ''),
+    })
+    if (!editLinks.httpsUrl) {
+      return { alertText: 'Не настроен NUXT_APP_URL на сервере', showAlert: true }
+    }
+    try {
+      await telegram(args.botToken, 'sendMessage', {
+        chat_id: args.fromId,
+        text: [
+          `✏️ Редактирование заявки #${parsed.submissionId.slice(0, 8)}`,
+          'Нажмите кнопку ниже — откроется форма в Mini App.',
+        ].join('\n'),
+        reply_markup: {
+          inline_keyboard: [[{ text: '🛠 Открыть редактор', web_app: { url: editLinks.httpsUrl } }]],
+        },
+      })
+      return { alertText: 'Форма отправлена вам в личку с ботом', showAlert: false }
+    } catch (err) {
+      console.error('[inuuContentModeration] edit DM failed:', err)
+      return {
+        alertText: 'Не удалось написать вам в личку. Откройте бота и отправьте /start, затем нажмите снова.',
+        showAlert: true,
+      }
+    }
+  }
+
   if (parsed.action === 'score' && status !== 'approved') {
     return { alertText: 'Оценка доступна после публикации (✅ Опубликовать)', showAlert: false }
   }
@@ -599,22 +621,10 @@ export async function handleInuuSubTelegramCallback(
       .select('city_id')
       .eq('id', parsed.submissionId)
       .maybeSingle()
-    let editLinks: { telegramUrl: string | null; httpsUrl: string | null } | null = null
-    if (subRow?.city_id) {
-      const { data: cityRow } = await client
-        .from('cities')
-        .select('slug')
-        .eq('id', (subRow as any).city_id)
-        .maybeSingle()
-      editLinks = buildContentSubmissionEditLinks(event, {
-        submissionId: parsed.submissionId,
-        citySlug: String((cityRow as any)?.slug || ''),
-      })
-    }
     await telegram(args.botToken, 'editMessageReplyMarkup', {
       chat_id: args.chatId,
       message_id: args.messageId,
-      reply_markup: buildContentSubmissionMainKeyboard(parsed.submissionId, editLinks),
+      reply_markup: buildContentSubmissionMainKeyboard(parsed.submissionId),
     })
     return { alertText: 'Отменено', showAlert: false }
   }
