@@ -1,7 +1,8 @@
 import { createError, defineEventHandler, readBody } from 'h3'
 import { eventParseInputSchema } from '~/server/utils/ai/eventParseSchema'
-import { parseEventWithGroq } from '~/server/utils/ai/groqEventParser'
+import { parseEventsWithGroq } from '~/server/utils/ai/groqEventParser'
 import { writeAiParseLog } from '~/server/utils/ai/aiParseLogs'
+import { enrichRawTextWithUrls } from '~/server/utils/contentUrlEnricher'
 import { loadCityParseTaxonomy, resolveParsedTaxonomy } from '~/server/utils/cityContentTaxonomy'
 import { resolveCityBySlug } from '~/server/utils/inuuCity'
 
@@ -25,16 +26,22 @@ export default defineEventHandler(async (event) => {
     hints = { ...hints, availableTags: taxonomy.tags, availableCategories: taxonomy.categories }
   }
 
-  const output = await parseEventWithGroq({ ...parsedInput.data, hints })
-  let result = output.result
-  const resolvedCitySlug = result.city_slug || citySlug
+  const enriched = await enrichRawTextWithUrls(parsedInput.data.rawText)
+  const output = await parseEventsWithGroq({ ...parsedInput.data, rawText: enriched.rawText, hints })
+
+  let events = [...output.result.events]
+  const resolvedCitySlug = events[0]?.city_slug || citySlug
   if (resolvedCitySlug) {
     const city = await resolveCityBySlug(event, resolvedCitySlug)
-    const resolved = await resolveParsedTaxonomy(event, city.id, {
-      topicTags: result.topic_tags,
-      categorySlug: result.category_slug,
-    })
-    result = { ...result, topic_tags: resolved.topicTags, category_slug: resolved.categorySlug }
+    events = await Promise.all(
+      events.map(async (ev) => {
+        const resolved = await resolveParsedTaxonomy(event, city.id, {
+          topicTags: ev.topic_tags,
+          categorySlug: ev.category_slug,
+        })
+        return { ...ev, topic_tags: resolved.topicTags, category_slug: resolved.categorySlug }
+      }),
+    )
   }
 
   const lastUsage = [...output.attempts].reverse().find((x) => x.ok && x.usage)?.usage
@@ -42,26 +49,32 @@ export default defineEventHandler(async (event) => {
     sourceKind: parsedInput.data.sourceKind,
     sourceUrl: parsedInput.data.sourceUrl ?? null,
     sourceExternalId: parsedInput.data.sourceExternalId ?? null,
-    citySlug: result.city_slug ?? parsedInput.data.citySlug ?? null,
+    citySlug: events[0]?.city_slug ?? parsedInput.data.citySlug ?? null,
     model: output.model,
     status: 'success',
     latencyMs: output.latencyMs,
     promptTokens: lastUsage?.promptTokens ?? null,
     completionTokens: lastUsage?.completionTokens ?? null,
     totalTokens: lastUsage?.totalTokens ?? null,
-    confidence: result.confidence,
-    missingFieldsCount: result.missing_fields.length,
+    confidence: events[0]?.confidence ?? 0,
+    missingFieldsCount: events[0]?.missing_fields.length ?? 0,
     parseAttempts: output.attempts.length,
     payload: {
       mode: 'parse-only',
-      hasDates: result.recurrence.dates.length > 0,
-      eventKind: result.event_kind,
+      parseKind: output.result.parse_kind,
+      eventsCount: events.length,
+      hasDates: events.some((e) => e.recurrence.dates.length > 0),
+      enrichedUrlCount: enriched.enrichedUrls.length,
     },
   })
 
   return {
     ok: true as const,
-    result,
+    parseKind: output.result.parse_kind,
+    eventsCount: events.length,
+    digest: output.result.digest,
+    result: events[0],
+    events,
     attempts: output.attempts.map((x) => ({
       ok: x.ok,
       attempt: x.attempt,
@@ -69,5 +82,6 @@ export default defineEventHandler(async (event) => {
     })),
     model: output.model,
     latencyMs: output.latencyMs,
+    enrichedUrls: enriched.enrichedUrls,
   }
 })

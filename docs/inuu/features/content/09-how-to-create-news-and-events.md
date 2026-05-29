@@ -48,9 +48,21 @@ curl -X POST http://localhost:3000/api/ai/parse-event \
 
 Что возвращает:
 
-- `result` — нормализованный JSON,
-- `attempts` — попытки парсинга,
-- `model`, `latencyMs`.
+- `parseKind` — `single` | `digest`
+- `eventsCount` — число распознанных событий
+- `digest` — метаданные периода (для digest)
+- `result` — первое событие (backward compat)
+- `events` — массив всех событий
+- `enrichedUrls` — URL, по которым подтянут текст страницы
+- `attempts`, `model`, `latencyMs`
+
+Пример digest-текста:
+
+```
+Афиша недели в Улан-Удэ:
+1. Джаз на крыше — 15 июня 19:00, Art-kvartal
+2. Детский спектакль — 16 июня 11:00, театр
+```
 
 ---
 
@@ -92,6 +104,14 @@ curl -X POST http://localhost:3000/api/ingest/content/submit \
    - `needs_revision`
 5. При `persist=true` пытается писать в `content_submissions`.
 6. Пишет лог в `ai_parse_logs`.
+
+При digest (`parseKind=digest`) дополнительно:
+
+- `batchId` — id parent-заявки
+- `items[]` — per-event submission ids и dedupe
+- В moderation chat — **batch card** (см. [11-digest-parsing-and-curated-picks.md](./11-digest-parsing-and-curated-picks.md))
+
+Сообщения **только со ссылкой** (без 10 символов текста) принимаются, если URL валиден — контент подтягивается URL enricher на API.
 
 ---
 

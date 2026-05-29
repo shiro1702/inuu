@@ -15,6 +15,8 @@
 
 Идеи по лимитам и «сэндвичу» дайджеста — в [brainstorm: рассылки и теги](../../../content/brainstorm/aggregator/01-rassylki-bonusy-dajdzhesty-tegi-produkt.md). Поведенческие теги для персонализации — [AGGREGATOR_EVENTS_TAGS_ANALYTICS_RU.md](../../../platform/AGGREGATOR_EVENTS_TAGS_ANALYTICS_RU.md).
 
+**Связь с ingestion (реализовано):** при `approve_all` digest-пакета создаётся/обновляется `curated_lists` slug `week-YYYY-wNN` или `month-YYYY-MM` — см. [11-digest-parsing-and-curated-picks.md](./11-digest-parsing-and-curated-picks.md). Подписка на конкретный slug (`list:week-...`) — **R2**, не MVP.
+
 ---
 
 ## Два слоя персонализации

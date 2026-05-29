@@ -3,6 +3,8 @@ import { z } from 'zod'
 export const SOURCE_KINDS = ['bot_submit', 'telegram_parse', 'manual_editor'] as const
 export const EVENT_KINDS = ['event', 'masterclass', 'news'] as const
 export const RECURRENCE_RULES = ['none', 'daily', 'weekly', 'monthly', 'custom'] as const
+export const PARSE_KINDS = ['single', 'digest'] as const
+export const DIGEST_PERIODS = ['week', 'month'] as const
 
 const nullableTrimmedString = z
   .string()
@@ -57,6 +59,23 @@ export const eventParseResultSchema = z.object({
 
 export type EventParseResult = z.infer<typeof eventParseResultSchema>
 
+export const eventDigestMetaSchema = z.object({
+  title: z.string().trim().min(3).max(160).nullable().default(null),
+  period: z.enum(DIGEST_PERIODS).nullable().default(null),
+  period_start: z.string().trim().max(64).nullable().default(null),
+  period_end: z.string().trim().max(64).nullable().default(null),
+})
+
+export type EventDigestMeta = z.infer<typeof eventDigestMetaSchema>
+
+export const eventDigestParseResultSchema = z.object({
+  parse_kind: z.enum(PARSE_KINDS),
+  digest: eventDigestMetaSchema.nullable().default(null),
+  events: z.array(eventParseResultSchema).min(1).max(20),
+})
+
+export type EventDigestParseResult = z.infer<typeof eventDigestParseResultSchema>
+
 export type EventParseInput = {
   rawText: string
   sourceKind: (typeof SOURCE_KINDS)[number]
@@ -68,33 +87,83 @@ export type EventParseInput = {
   hints?: {
     categorySlug?: string | null
     topicTags?: string[]
+    preferDigest?: boolean
     availableTags?: Array<{ slug: string; name: string }>
     availableCategories?: Array<{ slug: string; name: string }>
   }
 }
 
-export const eventParseInputSchema = z.object({
-  rawText: z.string().trim().min(10).max(30_000),
-  sourceKind: z.enum(SOURCE_KINDS),
-  sourceUrl: z.string().trim().max(500).nullable().optional(),
-  sourceExternalId: z.string().trim().max(120).nullable().optional(),
-  citySlug: z.string().trim().max(64).nullable().optional(),
-  timezone: z.string().trim().max(60).nullable().optional(),
-  hints: z
-    .object({
-      categorySlug: z.string().trim().max(64).nullable().optional(),
-      topicTags: z.array(z.string().trim().min(2).max(40)).max(10).optional(),
-      availableTags: z
-        .array(z.object({ slug: z.string(), name: z.string() }))
-        .max(100)
-        .optional(),
-      availableCategories: z
-        .array(z.object({ slug: z.string(), name: z.string() }))
-        .max(100)
-        .optional(),
-    })
-    .optional(),
-})
+const eventParseHintsSchema = z
+  .object({
+    categorySlug: z.string().trim().max(64).nullable().optional(),
+    topicTags: z.array(z.string().trim().min(2).max(40)).max(10).optional(),
+    preferDigest: z.boolean().optional(),
+    availableTags: z
+      .array(z.object({ slug: z.string(), name: z.string() }))
+      .max(100)
+      .optional(),
+    availableCategories: z
+      .array(z.object({ slug: z.string(), name: z.string() }))
+      .max(100)
+      .optional(),
+  })
+  .optional()
+
+export const eventParseInputSchema = z
+  .object({
+    rawText: z.string().trim().max(30_000),
+    sourceKind: z.enum(SOURCE_KINDS),
+    sourceUrl: z.string().trim().max(500).nullable().optional(),
+    sourceExternalId: z.string().trim().max(120).nullable().optional(),
+    citySlug: z.string().trim().max(64).nullable().optional(),
+    timezone: z.string().trim().max(60).nullable().optional(),
+    hints: eventParseHintsSchema,
+  })
+  .superRefine((data, ctx) => {
+    const textLen = data.rawText.trim().length
+    const hasSourceUrl = !!(data.sourceUrl && data.sourceUrl.trim())
+    const hasUrlInText = /https?:\/\//i.test(data.rawText)
+    if (textLen < 1 && !hasSourceUrl && !hasUrlInText) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'rawText or URL is required',
+        path: ['rawText'],
+      })
+      return
+    }
+    if (textLen < 10 && !hasSourceUrl && !hasUrlInText) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'rawText must be at least 10 characters when no URL is provided',
+        path: ['rawText'],
+      })
+    }
+  })
+
+const DIGEST_KEYWORDS = [
+  'афиша',
+  'на неделю',
+  'на месяц',
+  'главное',
+  'подборка',
+  'дайджест',
+  'digest',
+  'что посетить',
+  'куда сходить',
+]
+
+/** Heuristic: message likely lists multiple distinct events. */
+export function detectPreferDigest(rawText: string): boolean {
+  const text = rawText.toLowerCase()
+  if (DIGEST_KEYWORDS.some((kw) => text.includes(kw))) return true
+  const dateLikeLines = rawText
+    .split(/\n+/)
+    .filter((line) => /\d{1,2}[./]\d{1,2}|\d{1,2}\s+(январ|феврал|март|апрел|ма[йя]|июн|июл|август|сентябр|октябр|ноябр|декабр)/i.test(line))
+  if (dateLikeLines.length >= 3) return true
+  const numberedItems = rawText.match(/^\s*\d+[.)]\s+/gm)
+  if (numberedItems && numberedItems.length >= 3) return true
+  return false
+}
 
 export const EVENT_PARSE_TAGS = [
   'food',

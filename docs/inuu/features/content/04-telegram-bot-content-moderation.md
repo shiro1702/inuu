@@ -26,7 +26,25 @@
 | Модерация UGC | `server/utils/festivalUgcModeration.ts` | Сообщение + `inline_keyboard` + callbacks |
 | Профили | `profiles.telegram_id` | Связь модератора с аккаунтом (если есть) |
 
-Новый код: **`server/utils/inuuContentBot.ts`** + тонкий роутинг `inuu:sub:*` в webhook.
+Новый код: **`server/utils/inuuContentBot.ts`** + роутинг `inuu:sub:*`, `inuu:digest:*`, `inuu:pick:*` в webhook.
+
+### Digest-пакеты (реализовано)
+
+См. [11-digest-parsing-and-curated-picks.md](./11-digest-parsing-and-curated-picks.md).
+
+- **Batch card** в moderation chat: список N событий, кнопки `✅ Одобрить все`, `📋 По одному`, `❌ Отклонить пакет`
+- Callbacks: `inuu:digest:approve_all|split|reject:{batchId}`
+
+### Подборки `/pick` (реализовано)
+
+Только в **moderation/manager chat** города:
+
+| Команда | Действие |
+|---------|----------|
+| `/pick week` | Inline-выбор событий → `curated_lists` slug `week-YYYY-wNN` |
+| `/pick month` | Подборка месяца |
+| `/pick list week` | Просмотр текущей подборки |
+| Reply + `/pick` | Добавить опубликованное событие из карточки |
 
 ---
 

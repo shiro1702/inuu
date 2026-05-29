@@ -810,3 +810,366 @@ export async function handleInuuSubTelegramCallback(
   void cityTelegram
   return { alertText: 'Действие не поддерживается', showAlert: true }
 }
+
+// --- Digest batch moderation ---
+
+export function formatDigestBatchCard(args: {
+  batchId: string
+  cityName: string
+  citySlug: string
+  status: string
+  payload: Record<string, unknown>
+  itemCount: number
+}): string {
+  const p = args.payload
+  const digest = (p.digest || {}) as Record<string, unknown>
+  const digestTitle = String(digest.title || 'Афиша / digest')
+  const period = digest.period ? String(digest.period) : '—'
+  const events = Array.isArray(p.events) ? p.events : []
+  const lines = events.slice(0, 12).map((ev: any, i: number) => {
+    const dates = Array.isArray(ev?.recurrence?.dates) ? ev.recurrence.dates : []
+    const dateStr = dates[0] ? String(dates[0]).slice(0, 16) : 'дата ?'
+    return `${i + 1}. ${String(ev?.title || '—')} · ${dateStr}`
+  })
+  const more = events.length > 12 ? `\n… ещё ${events.length - 12}` : ''
+
+  return [
+    `📦 Пакет #${args.batchId.slice(0, 8)}`,
+    `Город: ${args.cityName} (${args.citySlug})`,
+    `Статус: ${args.status}`,
+    `📅 ${digestTitle} (${period})`,
+    `Событий: ${args.itemCount}`,
+    '────────────────',
+    ...lines,
+    more,
+    '────────────────',
+    p.source && typeof p.source === 'object' && (p.source as any).url
+      ? `🔗 ${(p.source as any).url}`
+      : null,
+  ].filter(Boolean).join('\n')
+}
+
+export function buildDigestBatchKeyboard(batchId: string) {
+  return {
+    inline_keyboard: [
+      [
+        { text: '✅ Одобрить все', callback_data: `inuu:digest:approve_all:${batchId}` },
+        { text: '📋 По одному', callback_data: `inuu:digest:split:${batchId}` },
+      ],
+      [
+        { text: '❌ Отклонить пакет', callback_data: `inuu:digest:reject:${batchId}` },
+      ],
+    ],
+  }
+}
+
+export async function sendDigestBatchModerationCards(
+  event: H3Event,
+  args: {
+    batchId: string
+    botToken: string
+    chatIds: string[]
+    primaryChatId?: string | null
+  },
+): Promise<{ sent: number; primaryMessageId: number | null }> {
+  const uniqueChatIds = [...new Set(args.chatIds.map((x) => String(x).trim()).filter(Boolean))]
+  if (!uniqueChatIds.length) return { sent: 0, primaryMessageId: null }
+
+  const client = await serverSupabaseServiceRole(event)
+  const { data: batch, error } = await client
+    .from('content_submissions')
+    .select('id,city_id,status,payload,batch_role')
+    .eq('id', args.batchId)
+    .maybeSingle()
+
+  if (error || !batch?.id || (batch as any).batch_role !== 'batch') {
+    throw createError({ statusCode: 404, statusMessage: 'Digest batch not found' })
+  }
+
+  const { data: items } = await client
+    .from('content_submissions')
+    .select('id')
+    .eq('batch_id', args.batchId)
+    .eq('batch_role', 'item')
+
+  const { data: city } = await client
+    .from('cities')
+    .select('name,slug,timezone')
+    .eq('id', (batch as any).city_id)
+    .maybeSingle()
+
+  const text = formatDigestBatchCard({
+    batchId: String(batch.id),
+    cityName: String((city as any)?.name || ''),
+    citySlug: String((city as any)?.slug || ''),
+    status: String((batch as any).status || 'pending'),
+    payload: ((batch as any).payload || {}) as Record<string, unknown>,
+    itemCount: (items ?? []).length,
+  })
+
+  const keyboard = buildDigestBatchKeyboard(String(batch.id))
+  const primaryChat = String(args.primaryChatId || uniqueChatIds[0] || '').trim()
+  let primaryMessageId: number | null = null
+  let sent = 0
+
+  for (const chatId of uniqueChatIds) {
+    try {
+      const msgId = await sendModerationCardMessage({
+        botToken: args.botToken,
+        chatId,
+        text,
+        keyboard: keyboard as any,
+        coverUrl: null,
+      })
+      if (msgId) {
+        sent += 1
+        if (chatId === primaryChat) primaryMessageId = msgId
+        if (!primaryMessageId) primaryMessageId = msgId
+      }
+    } catch (err) {
+      console.error(`[inuuContentModeration] digest batch send to ${chatId} failed:`, err)
+    }
+  }
+
+  if (primaryMessageId && primaryChat) {
+    await client
+      .from('content_submissions')
+      .update({
+        moderation_chat_id: primaryChat,
+        moderation_message_id: primaryMessageId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', args.batchId)
+  }
+
+  return { sent, primaryMessageId }
+}
+
+export async function notifyContentIngestModeration(
+  event: H3Event,
+  args: {
+    ingestResult: {
+      parseKind: 'single' | 'digest'
+      persisted: { ok: boolean; id: string | null; resent?: boolean }
+      items: Array<{ submissionId: string | null }>
+    }
+    cityId: string
+    botToken: string
+    force?: boolean
+  },
+): Promise<void> {
+  if (!args.ingestResult.persisted.ok || !args.ingestResult.persisted.id) return
+
+  if (args.ingestResult.parseKind === 'digest') {
+    const settings = await loadCityTelegramOpsSettings(event, args.cityId)
+    let chatIds = resolveTelegramModerationChatIds(settings)
+    if (!chatIds.length) {
+      const config = useRuntimeConfig(event)
+      const fallback = String((config as any).inuuEditorialModerationChatId || process.env.NUXT_INUU_EDITORIAL_MODERATION_CHAT_ID || '').trim()
+      if (fallback) chatIds = [fallback]
+    }
+    if (!chatIds.length) return
+    const primary = String(settings.moderation_chat_id || settings.manager_chat_id || chatIds[0] || '').trim()
+    await sendDigestBatchModerationCards(event, {
+      batchId: args.ingestResult.persisted.id,
+      botToken: args.botToken,
+      chatIds,
+      primaryChatId: primary || null,
+    })
+    return
+  }
+
+  const firstItemId = args.ingestResult.items[0]?.submissionId || args.ingestResult.persisted.id
+  if (!firstItemId) return
+  await notifyContentSubmissionTelegramChats(event, {
+    submissionId: firstItemId,
+    cityId: args.cityId,
+    botToken: args.botToken,
+    force: args.force ?? args.ingestResult.persisted.resent === true,
+  })
+}
+
+export function parseInuuDigestCallback(data: string): {
+  action: 'approve_all' | 'split' | 'reject'
+  batchId: string
+} | null {
+  const parts = data.split(':')
+  if (parts.length < 4 || parts[0] !== 'inuu' || parts[1] !== 'digest') return null
+  const action = parts[2]
+  const batchId = parts[3]?.trim()
+  if (!batchId) return null
+  if (action === 'approve_all' || action === 'split' || action === 'reject') {
+    return { action, batchId }
+  }
+  return null
+}
+
+export async function handleInuuDigestTelegramCallback(
+  event: H3Event,
+  args: {
+    botToken: string
+    data: string
+    chatId: number
+    messageId: number
+    fromId: number
+    fromUsername?: string | null
+  },
+): Promise<{ alertText: string; showAlert: boolean }> {
+  const parsed = parseInuuDigestCallback(args.data)
+  if (!parsed) {
+    return { alertText: 'Некорректный callback', showAlert: true }
+  }
+
+  await assertCanModerateInChat(event, {
+    botToken: args.botToken,
+    chatId: String(args.chatId),
+    userId: args.fromId,
+    submissionId: parsed.batchId,
+  })
+
+  const client = await serverSupabaseServiceRole(event)
+  const { data: batch } = await client
+    .from('content_submissions')
+    .select('id,city_id,status,payload,batch_role')
+    .eq('id', parsed.batchId)
+    .maybeSingle()
+
+  if (!batch?.id || (batch as any).batch_role !== 'batch') {
+    return { alertText: 'Пакет не найден', showAlert: true }
+  }
+
+  const status = String((batch as any).status || '')
+  if (status === 'rejected') {
+    return { alertText: 'Пакет уже отклонён', showAlert: false }
+  }
+
+  const reviewedPatch = {
+    reviewed_by_telegram_id: args.fromId,
+    reviewed_by_username: args.fromUsername ? String(args.fromUsername) : null,
+    reviewed_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }
+
+  const { data: city } = await client
+    .from('cities')
+    .select('slug,timezone')
+    .eq('id', (batch as any).city_id)
+    .maybeSingle()
+
+  if (parsed.action === 'reject') {
+    await client
+      .from('content_submissions')
+      .update({ status: 'rejected', reject_reason_code: 'off_topic', ...reviewedPatch })
+      .eq('batch_id', parsed.batchId)
+    await client
+      .from('content_submissions')
+      .update({ status: 'rejected', reject_reason_code: 'off_topic', ...reviewedPatch })
+      .eq('id', parsed.batchId)
+    await telegram(args.botToken, 'editMessageReplyMarkup', {
+      chat_id: args.chatId,
+      message_id: args.messageId,
+      reply_markup: { inline_keyboard: [] },
+    })
+    return { alertText: 'Пакет отклонён', showAlert: false }
+  }
+
+  if (parsed.action === 'split') {
+    const settings = await loadCityTelegramOpsSettings(event, String((batch as any).city_id))
+    let chatIds = resolveTelegramModerationChatIds(settings)
+    if (!chatIds.length) chatIds = [String(args.chatId)]
+
+    const { data: items } = await client
+      .from('content_submissions')
+      .select('id')
+      .eq('batch_id', parsed.batchId)
+      .eq('batch_role', 'item')
+      .order('batch_index', { ascending: true })
+
+    for (const item of items ?? []) {
+      await notifyContentSubmissionTelegramChats(event, {
+        submissionId: String(item.id),
+        cityId: String((batch as any).city_id),
+        botToken: args.botToken,
+        force: true,
+      }).catch((err) => console.error('[digest split] item card:', err))
+    }
+
+    return { alertText: `Отправлено ${(items ?? []).length} карточек`, showAlert: false }
+  }
+
+  if (parsed.action === 'approve_all') {
+    if (status === 'approved') {
+      return { alertText: 'Пакет уже опубликован', showAlert: false }
+    }
+
+    const { data: items } = await client
+      .from('content_submissions')
+      .select('id,status,batch_index')
+      .eq('batch_id', parsed.batchId)
+      .eq('batch_role', 'item')
+      .in('status', ['pending', 'needs_revision'])
+      .order('batch_index', { ascending: true })
+
+    const publishedItems: Array<{ eventId: string; batchIndex: number }> = []
+    let failCount = 0
+
+    for (const item of items ?? []) {
+      try {
+        const result = await publishContentSubmission(event, String(item.id))
+        if (result.entityType === 'event' && result.entityId) {
+          publishedItems.push({
+            eventId: result.entityId,
+            batchIndex: Number((item as any).batch_index) || 0,
+          })
+        }
+      } catch (err) {
+        failCount += 1
+        console.error('[digest approve_all] item publish:', err)
+      }
+    }
+
+    const batchPayload = ((batch as any).payload || {}) as Record<string, unknown>
+    const digest = batchPayload.digest as import('~/server/utils/ai/eventParseSchema').EventDigestMeta | null
+
+    let listSlug: string | null = null
+    if (publishedItems.length) {
+      const { syncDigestEventsToCuratedList } = await import('~/server/utils/curatedListPeriod')
+      const synced = await syncDigestEventsToCuratedList(event, {
+        cityId: String((batch as any).city_id),
+        timeZone: String((city as any)?.timezone || 'Asia/Irkutsk'),
+        digest,
+        batchId: parsed.batchId,
+        publishedItems,
+      }).catch((err) => {
+        console.error('[digest approve_all] curated list:', err)
+        return null
+      })
+      listSlug = synced?.listSlug || null
+    }
+
+    await client
+      .from('content_submissions')
+      .update({ status: 'approved', ...reviewedPatch })
+      .eq('id', parsed.batchId)
+
+    await telegram(args.botToken, 'editMessageReplyMarkup', {
+      chat_id: args.chatId,
+      message_id: args.messageId,
+      reply_markup: { inline_keyboard: [] },
+    })
+
+    const listHint = listSlug ? ` · подборка /lists/${listSlug}` : ''
+    if (failCount > 0) {
+      return {
+        alertText: `Опубликовано ${publishedItems.length}, ошибок: ${failCount}${listHint}`,
+        showAlert: true,
+      }
+    }
+    return {
+      alertText: `Опубликовано ${publishedItems.length} событий${listHint}`,
+      showAlert: false,
+    }
+  }
+
+  return { alertText: 'Действие не поддерживается', showAlert: true }
+}

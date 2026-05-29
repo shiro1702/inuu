@@ -7,8 +7,8 @@
 | Сущность | Таблица | Публичное API | UI создания |
 |----------|---------|---------------|-------------|
 | Новости / обзоры | `editorial_posts` | **нет** (только read через будущие страницы) | нет |
-| Подборки | `curated_lists`, `curated_list_items` | `GET /api/cities/[slug]/lists/[listSlug]` | нет |
-| События (в т.ч. МК) | `events`, `event_categories` (`masterclass`) | `GET /api/cities/[slug]/events` | нет |
+| Подборки | `curated_lists`, `curated_list_items` | `GET /api/cities/[slug]/lists/[listSlug]` | TG `/pick`, авто при digest approve |
+| События (в т.ч. МК) | `events`, `event_categories` | `GET /api/cities/[slug]/events` | parser chat + digest batch |
 | Stories редакции | `story_campaigns` | stories API | частично: dashboard stories (legacy shop) |
 
 Seed: `supabase/migrations/019_inuu_seed_ulan_ude.sql`. Редакция как `shop` с `org_type = editorial`.
@@ -24,6 +24,7 @@ Seed: `supabase/migrations/019_inuu_seed_ulan_ude.sql`. Редакция как 
 | [05-bot-news-dialog-script.md](./05-bot-news-dialog-script.md) | Скрипт диалога `/news` и `/submit` → новость |
 | [06-bot-digest-subscriptions.md](./06-bot-digest-subscriptions.md) | **Рассылка подборок** в боте и **подписки по темам/тегам** |
 | [07-paid-news-publication.md](./07-paid-news-publication.md) | **Оплата** за публикацию партнёрских новостей (варианты, SKU, БД) |
+| [11-digest-parsing-and-curated-picks.md](./11-digest-parsing-and-curated-picks.md) | **Digest-парсинг**, URL enricher, подборки недели/месяца |
 
 ## Связанные спеки
 

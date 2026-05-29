@@ -24,8 +24,8 @@ import {
 import { isShopFeatureEnabled } from '~/server/utils/features'
 import { applyReviewPromptTelegramCallback, processDueReviewPrompts } from '~/server/utils/reviewPromptFlow'
 import { parseReviewTokenCallback } from '~/server/utils/reviewPromptParse'
-import { tryHandleInuuParserSourceTelegramMessage, type InuuTelegramMessage } from '~/server/utils/inuuContentBot'
-import { handleInuuSubTelegramCallback } from '~/server/utils/inuuContentModeration'
+import { tryHandleInuuParserSourceTelegramMessage, tryHandleInuuPickTelegramMessage, handleInuuPickTelegramCallback, type InuuTelegramMessage } from '~/server/utils/inuuContentBot'
+import { handleInuuSubTelegramCallback, handleInuuDigestTelegramCallback } from '~/server/utils/inuuContentModeration'
 
 const TELEGRAM_API = (token: string) => `https://api.telegram.org/bot${token}`
 
@@ -876,10 +876,28 @@ export default defineEventHandler(async (event) => {
     })
     if (parserHandledInText) return { ok: true }
 
+    const pickHandled = await tryHandleInuuPickTelegramMessage(event, {
+      botToken,
+      message: body.message as InuuTelegramMessage,
+    }).catch((err) => {
+      console.error('[webhook] pick command:', err)
+      return false
+    })
+    if (pickHandled) return { ok: true }
+
     return { ok: true }
   }
 
   if (body.message?.chat?.id !== undefined) {
+    const pickHandled = await tryHandleInuuPickTelegramMessage(event, {
+      botToken,
+      message: body.message as InuuTelegramMessage,
+    }).catch((err) => {
+      console.error('[webhook] pick command:', err)
+      return false
+    })
+    if (pickHandled) return { ok: true }
+
     const parserHandled = await tryHandleInuuParserSourceTelegramMessage(event, {
       botToken,
       message: body.message as InuuTelegramMessage,
@@ -951,6 +969,77 @@ export default defineEventHandler(async (event) => {
         callback_query_id: query.id,
         text: 'Не удалось сохранить оценку',
         show_alert: false,
+      })
+    }
+    return { ok: true }
+  }
+
+  if (query.data.startsWith('inuu:digest:')) {
+    const chatId = Number(query.message.chat.id)
+    const messageId = Number(query.message.message_id)
+    const fromId = Number(query.from?.id)
+    if (!Number.isFinite(chatId) || !Number.isFinite(messageId) || !Number.isFinite(fromId)) {
+      await telegram(botToken, 'answerCallbackQuery', {
+        callback_query_id: query.id,
+        text: 'Некорректный запрос',
+        show_alert: false,
+      })
+      return { ok: true }
+    }
+    try {
+      const result = await handleInuuDigestTelegramCallback(event, {
+        botToken,
+        data: String(query.data),
+        chatId,
+        messageId,
+        fromId,
+        fromUsername: query.from?.username || null,
+      })
+      await telegram(botToken, 'answerCallbackQuery', {
+        callback_query_id: query.id,
+        text: result.alertText,
+        show_alert: result.showAlert,
+      })
+    } catch (err) {
+      console.error('webhook inuu:digest moderation failed:', err)
+      await telegram(botToken, 'answerCallbackQuery', {
+        callback_query_id: query.id,
+        text: 'Не удалось применить действие',
+        show_alert: true,
+      })
+    }
+    return { ok: true }
+  }
+
+  if (query.data.startsWith('inuu:pick:')) {
+    const chatId = Number(query.message.chat.id)
+    const fromId = Number(query.from?.id)
+    if (!Number.isFinite(chatId) || !Number.isFinite(fromId)) {
+      await telegram(botToken, 'answerCallbackQuery', {
+        callback_query_id: query.id,
+        text: 'Некорректный запрос',
+        show_alert: false,
+      })
+      return { ok: true }
+    }
+    try {
+      const result = await handleInuuPickTelegramCallback(event, {
+        botToken,
+        data: String(query.data),
+        chatId,
+        fromId,
+      })
+      await telegram(botToken, 'answerCallbackQuery', {
+        callback_query_id: query.id,
+        text: result.alertText,
+        show_alert: result.showAlert,
+      })
+    } catch (err) {
+      console.error('webhook inuu:pick failed:', err)
+      await telegram(botToken, 'answerCallbackQuery', {
+        callback_query_id: query.id,
+        text: 'Не удалось обновить подборку',
+        show_alert: true,
       })
     }
     return { ok: true }

@@ -94,6 +94,10 @@ export async function publishContentSubmission(
     throw createError({ statusCode: 404, statusMessage: 'Submission not found' })
   }
 
+  if ((submission as any).batch_role === 'batch') {
+    throw createError({ statusCode: 400, statusMessage: 'Cannot publish batch parent directly — use digest approve or publish items' })
+  }
+
   const publishedId = (submission as any).published_entity_id
   const publishedType = (submission as any).published_entity_type
   if (publishedId && publishedType) {

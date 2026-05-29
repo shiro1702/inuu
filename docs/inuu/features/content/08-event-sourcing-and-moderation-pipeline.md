@@ -108,6 +108,14 @@
 3. Создается `event` со ссылкой на source и тегами.
 4. Если событие повторяющееся, создаются сессии (`event_sessions`) или N событий по fallback-стратегии.
 
+### Ветка digest (реализовано)
+
+Подробно: [11-digest-parsing-and-curated-picks.md](./11-digest-parsing-and-curated-picks.md).
+
+- Parent `kind=event_digest`, `batch_role=batch`; items `batch_role=item`
+- Модерация: batch card → `approve_all` | `split` | `reject`
+- После `approve_all` — N events + auto `curated_lists` (`week-...` / `month-...`)
+
 Принцип MVP:
 
 - На старте допускается fallback `N events` для повторов.

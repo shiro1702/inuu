@@ -63,6 +63,8 @@ Telegram Bot API читает только те чаты/каналы, где б
 
 - `sourceExternalId` делать детерминированным (`channel_id:message_id`) для антидублей.
 - Всегда передавать `sourceUrl`, если она доступна.
+- **Digest-посты** (афиша недели): один `sourceExternalId` на parent; items получают `{parent}#item-{index}` — см. [11-digest-parsing-and-curated-picks.md](./11-digest-parsing-and-curated-picks.md).
+- **Ссылки без текста**: API сам fetch-ит HTML (`contentUrlEnricher`); userbot может слать короткий `rawText` + URL.
 
 ---
 

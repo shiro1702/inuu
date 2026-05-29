@@ -1,7 +1,7 @@
 import { createError, defineEventHandler, readBody } from 'h3'
 import { eventParseInputSchema } from '~/server/utils/ai/eventParseSchema'
 import { runContentIngest } from '~/server/utils/contentIngestCore'
-import { notifyContentSubmissionTelegramChats } from '~/server/utils/inuuContentModeration'
+import { notifyContentIngestModeration } from '~/server/utils/inuuContentModeration'
 
 type IngestBody = {
   rawText?: string
@@ -47,8 +47,8 @@ export default defineEventHandler(async (event) => {
       const config = useRuntimeConfig(event)
       const botToken = String((event.context.tenant as any)?.telegramBotToken || config.botToken || '').trim()
       if (botToken) {
-        await notifyContentSubmissionTelegramChats(event, {
-          submissionId: result.persisted.id,
+        await notifyContentIngestModeration(event, {
+          ingestResult: result,
           cityId: result.city.id,
           botToken,
           force: result.persisted.resent === true,
@@ -59,12 +59,25 @@ export default defineEventHandler(async (event) => {
     return {
       ok: true as const,
       city: result.city,
+      parseKind: result.parseKind,
+      eventsCount: result.events.length,
+      batchId: result.batchId,
+      digest: result.digest,
       parse: result.parse,
+      events: result.events,
+      items: result.items.map((i) => ({
+        batchIndex: i.batchIndex,
+        submissionId: i.submissionId,
+        moderationStatus: i.moderationStatus,
+        title: i.parse.title,
+        duplicates: i.duplicates,
+      })),
       moderationStatus: result.moderationStatus,
       duplicates: result.duplicates,
       persisted: result.persisted,
       model: result.model,
       latencyMs: result.latencyMs,
+      enrichedUrls: result.enrichedUrls,
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Ingest failed'

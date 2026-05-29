@@ -73,6 +73,15 @@
 
 См. **[06-bot-digest-subscriptions.md](./06-bot-digest-subscriptions.md)** — полная спека; для первого релиза — раздел **MVP-набор**: 3 темы (`digest`, `events`, `news`), 5 тегов интересов, 2 пресета в `/start`.
 
+### Фаза 1e — «Digest-парсинг и подборки» (**реализовано**)
+
+См. **[11-digest-parsing-and-curated-picks.md](./11-digest-parsing-and-curated-picks.md)**.
+
+- Multi-event digest из одного поста (`parse_kind=digest`)
+- URL enricher для ссылок в чате
+- Batch-модерация + auto `curated_lists` при approve_all
+- `/pick week|month` в moderation chat
+
 ### Фаза 3 — «Каналы»
 
 - Автопост в TG при publish  

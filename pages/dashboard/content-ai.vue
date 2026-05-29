@@ -214,6 +214,11 @@
               <option value="rejected">rejected</option>
               <option value="all">all</option>
             </select>
+            <select v-model="queueKind" class="rounded-lg border border-gray-300 px-2 py-1 text-sm" @change="loadQueue">
+              <option value="">все типы</option>
+              <option value="event">события</option>
+              <option value="event_digest">digest-пакеты</option>
+            </select>
             <button class="rounded border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50" @click="loadQueue">Обновить</button>
           </div>
         </div>
@@ -225,9 +230,21 @@
           <article v-for="item in queueItems" :key="item.id" class="rounded border border-gray-200 p-3">
             <div class="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <p class="text-sm font-medium">{{ item.payload?.title || 'Без заголовка' }}</p>
+                <p class="text-sm font-medium">
+                  <span v-if="item.kind === 'event_digest' || item.batchRole === 'batch'" class="mr-1 rounded bg-violet-100 px-1.5 py-0.5 text-xs text-violet-800">digest</span>
+                  {{ item.payload?.title || item.payload?.digest?.title || (item.eventsCount ? `Пакет · ${item.eventsCount} событий` : 'Без заголовка') }}
+                </p>
                 <p class="font-mono text-xs text-gray-500">{{ item.id }}</p>
-                <p class="text-xs text-gray-600">status: {{ item.status }} · score: {{ item.editorialScore ?? '—' }} · source: {{ item.sourceKind ?? '—' }}</p>
+                <p class="text-xs text-gray-600">
+                  status: {{ item.status }} · kind: {{ item.kind }} · score: {{ item.editorialScore ?? '—' }} · source: {{ item.sourceKind ?? '—' }}
+                  <span v-if="item.batchRole"> · batch: {{ item.batchRole }}<span v-if="item.batchIndex != null"> #{{ item.batchIndex }}</span></span>
+                </p>
+                <ul v-if="item.batchRole === 'batch' && Array.isArray(item.payload?.events)" class="mt-2 space-y-0.5 text-xs text-gray-600">
+                  <li v-for="(ev, idx) in item.payload.events.slice(0, 8)" :key="idx">
+                    {{ idx + 1 }}. {{ ev.title }} · {{ (ev.recurrence?.dates?.[0] || '—').slice(0, 16) }}
+                  </li>
+                  <li v-if="item.payload.events.length > 8" class="text-gray-400">… ещё {{ item.payload.events.length - 8 }}</li>
+                </ul>
                 <p v-if="item.payload?.description_short" class="mt-1 text-xs text-gray-600">
                   <span class="font-medium">Кратко:</span> {{ item.payload.description_short }}
                 </p>
@@ -255,7 +272,7 @@
                 </button>
               </div>
             </div>
-            <div class="mt-3 grid gap-2 md:grid-cols-2">
+            <div v-if="item.batchRole !== 'batch'" class="mt-3 grid gap-2 md:grid-cols-2">
               <label class="space-y-1 text-xs">
                 <span class="font-medium text-gray-700">Title</span>
                 <input v-model="queueEdits[item.id].title" class="w-full rounded border border-gray-300 px-2 py-1 text-sm" />
@@ -359,6 +376,7 @@ const newsForm = reactive({
 })
 
 const queueStatus = ref('pending')
+const queueKind = ref('')
 const queueItems = ref<any[]>([])
 const queueMessage = ref('')
 const queueEdits = reactive<Record<string, {
@@ -588,7 +606,8 @@ async function loadQueue() {
   if (!selectedCitySlug.value) return
   queueMessage.value = ''
   try {
-    const res = await fetch(`/api/dashboard/manager/cities/${selectedCitySlug.value}/content-queue?status=${encodeURIComponent(queueStatus.value)}&limit=50`)
+    const kindQuery = queueKind.value ? `&kind=${encodeURIComponent(queueKind.value)}` : ''
+    const res = await fetch(`/api/dashboard/manager/cities/${selectedCitySlug.value}/content-queue?status=${encodeURIComponent(queueStatus.value)}&limit=50${kindQuery}`)
     const payload = await res.json() as any
     queueItems.value = payload?.ok ? payload.items || [] : []
     for (const item of queueItems.value) hydrateQueueEdit(item)
