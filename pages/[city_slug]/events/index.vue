@@ -68,8 +68,14 @@
             <span v-else-if="subscribedToSelection">Вы подписаны на эти теги</span>
             <span v-else>Получать подборку в боте</span>
           </button>
-          <p v-if="subscribeMessage" class="text-sm text-emerald-700">{{ subscribeMessage }}</p>
-          <p v-else-if="subscribeError" class="text-sm text-red-600">{{ subscribeError }}</p>
+          <NuxtLink
+            v-if="subscribedToSelection"
+            :to="`${cityBasePath}/subscriptions`"
+            class="text-sm text-primary hover:underline"
+          >
+            Настроить подписки
+          </NuxtLink>
+          <p v-if="subscribeError" class="text-sm text-red-600">{{ subscribeError }}</p>
         </div>
       </div>
     </div>
@@ -98,15 +104,16 @@ type DatePresetId = 'all' | 'today' | 'tomorrow' | 'week'
 const route = useRoute()
 const router = useRouter()
 const user = useSupabaseUser()
-const { slug, displayName, city } = useCity()
-const { messengerInitData, buildMessengerAuthHeaders, isMessengerMiniApp } = useTelegram()
+const { slug, displayName, city, cityBasePath } = useCity()
+const { messengerInitData, buildMessengerAuthHeaders } = useTelegram()
+const { pushToast } = useAppToast()
+const config = useRuntimeConfig()
 
 const pending = ref(true)
 const items = ref<Array<Record<string, any>>>([])
 const tags = ref<TagItem[]>([])
 const subscribedToSelection = ref(false)
 const subscribePending = ref(false)
-const subscribeMessage = ref('')
 const subscribeError = ref('')
 
 const categoryFilter = computed(() => {
@@ -172,7 +179,6 @@ function isTagActive(slug: string) {
 }
 
 function toggleTag(slug: string) {
-  subscribeMessage.value = ''
   subscribeError.value = ''
   const nextTags = isTagActive(slug)
     ? tagFilters.value.filter((t) => t !== slug)
@@ -184,7 +190,6 @@ function toggleTag(slug: string) {
 }
 
 function clearTagFilters() {
-  subscribeMessage.value = ''
   subscribeError.value = ''
   void router.replace({ query: routeQueryBase() })
 }
@@ -253,7 +258,6 @@ async function loadSubscriptionState() {
 }
 
 async function onSubscribeClick() {
-  subscribeMessage.value = ''
   subscribeError.value = ''
 
   if (!tagFilters.value.length) return
@@ -269,19 +273,30 @@ async function onSubscribeClick() {
       ok: boolean
       message?: string
       subscribedToSelection?: boolean
+      messengerLinked?: boolean
     }>(`/api/cities/${slug.value}/subscriptions/tags`, {
       method: 'POST',
       body: { tags: tagFilters.value },
       headers: buildMessengerAuthHeaders(),
     })
     subscribedToSelection.value = !!res?.subscribedToSelection
-    subscribeMessage.value = res?.message || 'Подписка сохранена'
+    if (res?.messengerLinked) {
+      pushToast(res?.message || 'Подписка сохранена. Уведомления придут в бот.', 'ok')
+    } else {
+      const botName = String(config.public.telegramBotName || 'inuu_bot').replace(/^@/, '')
+      pushToast(
+        `Интересы сохранены. Чтобы получать пуши, откройте афишу в Telegram-боте @${botName} или настройте подписки.`,
+        'info',
+        9000,
+      )
+    }
   } catch (e: unknown) {
     const err = e as { data?: { statusMessage?: string }; statusMessage?: string; message?: string }
     subscribeError.value = err?.data?.statusMessage
       || err?.statusMessage
       || (e instanceof Error ? e.message : '')
       || 'Не удалось сохранить подписку'
+    pushToast(subscribeError.value, 'error')
   } finally {
     subscribePending.value = false
   }

@@ -11,6 +11,7 @@
       :privacy-path="`${cityBasePath}/legal/privacy`"
       :cookies-path="`${cityBasePath}/legal/cookies`"
     />
+    <AppToastStack />
     <footer
       v-if="isStorefrontRoute"
       class="mt-12 border-t border-gray-200 bg-white/95"

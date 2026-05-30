@@ -1,6 +1,7 @@
 import { createError, defineEventHandler, readBody, setResponseHeader } from 'h3'
 import { resolveCustomerProfileId } from '~/server/utils/customerProfile'
 import { resolveCityBySlug } from '~/server/utils/inuuCity'
+import { notifyTelegramUserAboutTagSubscription, resolveProfileTelegramId } from '~/server/utils/cityNotifySubscriptions'
 import {
   detectSubscriptionChannel,
   subscribeToCityEventTags,
@@ -9,6 +10,7 @@ import { tagsCoverSelection } from '~/utils/cityTagSubscriptions'
 
 export default defineEventHandler(async (event) => {
   setResponseHeader(event, 'Cache-Control', 'private, no-store')
+  const config = useRuntimeConfig()
   const slug = typeof event.context.params?.slug === 'string' ? event.context.params.slug : ''
   const city = await resolveCityBySlug(event, slug)
 
@@ -34,6 +36,26 @@ export default defineEventHandler(async (event) => {
     tags,
     channel,
   })
+
+  const botToken = String(config.botToken || '')
+  const appUrlBase = String(config.appUrl || '').replace(/\/$/, '')
+  const telegramId = await resolveProfileTelegramId(event, userId)
+  if (botToken && telegramId) {
+    try {
+      await notifyTelegramUserAboutTagSubscription({
+        event,
+        botToken,
+        userId,
+        cityId: city.id,
+        citySlug: city.slug,
+        cityName: city.name,
+        appUrlBase,
+        addedTags: tags,
+      })
+    } catch (err) {
+      console.error('[subscriptions/tags.post] telegram notify failed:', err)
+    }
+  }
 
   return {
     ok: true,

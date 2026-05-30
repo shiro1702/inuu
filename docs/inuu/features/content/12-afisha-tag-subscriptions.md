@@ -43,7 +43,41 @@
 | Уже подписан на этот набор | **«Вы подписаны на эти теги»** (disabled) |
 | Не авторизован | Redirect → `/login?redirect=…` (или initData в Mini App) |
 
-После успешного сохранения — короткое сообщение под кнопкой.
+После успешного сохранения — **toast** (не inline-текст):
+
+| Сценарий | Toast |
+|----------|-------|
+| Mini App / привязан Telegram | «Подписка сохранена. Уведомления придут в бот.» + сообщение в Telegram с меню |
+| Веб без бота | info-toast: «Интересы сохранены. Чтобы получать пуши, откройте афишу в Telegram-боте…» |
+
+Страница настроек: `/[city_slug]/subscriptions` (ссылка из профиля и после подписки).
+
+---
+
+## Страница «Мои подписки» (реализовано)
+
+`GET/PUT /api/cities/[slug]/subscriptions`
+
+- темы: digest / events / news (checkbox)
+- теги интересов (chips + «Все»)
+- «Только записи и билеты» (marketing opt-out)
+- сохранение через toast
+
+---
+
+## Бот: `/subscribe` и callbacks `inuu:notify:*` (реализовано)
+
+| Команда / callback | Действие |
+|--------------------|----------|
+| `/subscribe` | Меню подписок с inline-кнопками |
+| `inuu:notify:toggle:topic:events:{city}` | Вкл/выкл тему |
+| `inuu:notify:toggle:tag:food:{city}` | Вкл/выкл тег |
+| `inuu:notify:optout:{city}` | Marketing opt-out toggle |
+| Кнопка «⚙️ Настроить на сайте» | Web → `/subscriptions` |
+
+После подписки с афиши (если есть `telegram_id`) бот присылает подтверждение **с тем же меню** для отмены/настройки.
+
+> Префикс `inuu:notify:` — отдельно от `inuu:sub:` (модерация контента).
 
 ---
 
@@ -227,9 +261,8 @@
 
 | Фаза | Что |
 |------|-----|
-| **R1a (сейчас)** | Фильтр OR на афише; кнопка подписки; API GET/POST tags; запись в `user_city_preferences` + `city_subscriptions` из Mini App |
-| **R1b** | Webhook бота: `inuu:sub:toggle:tag:*`; `/subscribe` читает те же таблицы |
-| **R1c** | `dispatchNotificationEvent(EVENT_PUBLISHED)` при publish event |
+| **R1a (сейчас)** | Фильтр OR на афише; кнопка подписки; toast; API; `/subscriptions`; `/subscribe` + `inuu:notify:*` в боте |
+| **R1b** | `dispatchNotificationEvent(EVENT_PUBLISHED)` при publish event |
 | **R2** | Экран «Мои подписки» в Mini App; отписка с афиши; напоминания по избранным событиям |
 | **R3** | Персональный блок в weekly digest по поведению + явным тегам |
 
@@ -264,7 +297,9 @@
 | `pages/[city_slug]/events/index.vue` | UI фильтров + кнопка |
 | `server/api/cities/[slug]/subscriptions/tags.get.ts` | Статус подписки |
 | `server/api/cities/[slug]/subscriptions/tags.post.ts` | Сохранение |
-| `server/utils/cityTagSubscriptions.ts` | Бизнес-логика |
+| `pages/[city_slug]/subscriptions.vue` | Страница настроек |
+| `server/utils/cityNotifySubscriptions.ts` | Бот, CRUD, меню |
+| `composables/useAppToast.ts` | Toast UI |
 | `server/utils/customerProfile.ts` | `ensureCustomerProfileRow` — создаёт `profiles`, если web-login без строки |
 | `utils/eventListDisplay.ts` | OR-фильтр, parse query |
 | [06-bot-digest-subscriptions.md](./06-bot-digest-subscriptions.md) | Общая модель рассылок |

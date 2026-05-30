@@ -90,6 +90,19 @@
 
     <template v-if="user">
       <div class="card">
+        <h2>Уведомления и подписки</h2>
+        <p class="hint">
+          Темы афиши, теги интересов и отключение маркетинговых рассылок.
+        </p>
+        <NuxtLink
+          :to="`/${defaultCitySlug}/subscriptions`"
+          class="mt-4 inline-flex rounded-lg border border-primary bg-white px-4 py-2 text-sm font-medium text-primary hover:bg-primary/5"
+        >
+          Настроить подписки
+        </NuxtLink>
+      </div>
+
+      <div class="card">
         <h2>Мои записи</h2>
         <p class="hint">
           История записей и билетов появится в следующем обновлении INUU. Пока сохраняйте избранное и подписки через Telegram / MAX.

@@ -26,6 +26,7 @@ import { applyReviewPromptTelegramCallback, processDueReviewPrompts } from '~/se
 import { parseReviewTokenCallback } from '~/server/utils/reviewPromptParse'
 import { tryHandleInuuParserSourceTelegramMessage, tryHandleInuuPickTelegramMessage, handleInuuPickTelegramCallback, type InuuTelegramMessage } from '~/server/utils/inuuContentBot'
 import { handleInuuSubTelegramCallback, handleInuuDigestTelegramCallback } from '~/server/utils/inuuContentModeration'
+import { handleInuuNotifyTelegramCallback, handleSubscribeCommand } from '~/server/utils/cityNotifySubscriptions'
 
 const TELEGRAM_API = (token: string) => `https://api.telegram.org/bot${token}`
 
@@ -636,6 +637,30 @@ export default defineEventHandler(async (event) => {
       })
       return { ok: true }
     }
+
+    const isSubscribe = commandRaw === '/subscribe' || commandRaw.startsWith('/subscribe@')
+    if (isSubscribe) {
+      const fromId = body.message.from?.id
+      if (!fromId) return { ok: true }
+      try {
+        await handleSubscribeCommand({
+          event,
+          botToken,
+          chatId,
+          fromId,
+          appUrlBase,
+          defaultCitySlug,
+        })
+      } catch (err) {
+        console.error('webhook /subscribe failed:', err)
+        await telegram(botToken, 'sendMessage', {
+          chat_id: chatId,
+          text: 'Не удалось открыть настройки подписок. Попробуйте позже.',
+        })
+      }
+      return { ok: true }
+    }
+
     const bindToken = parseBindToken(text)
     if (bindToken) {
       const fromId = body.message.from?.id
@@ -969,6 +994,44 @@ export default defineEventHandler(async (event) => {
         callback_query_id: query.id,
         text: 'Не удалось сохранить оценку',
         show_alert: false,
+      })
+    }
+    return { ok: true }
+  }
+
+  if (query.data.startsWith('inuu:notify:')) {
+    const chatId = Number(query.message.chat.id)
+    const messageId = Number(query.message.message_id)
+    const fromId = Number(query.from?.id)
+    if (!Number.isFinite(chatId) || !Number.isFinite(messageId) || !Number.isFinite(fromId)) {
+      await telegram(botToken, 'answerCallbackQuery', {
+        callback_query_id: query.id,
+        text: 'Некорректный запрос',
+        show_alert: false,
+      })
+      return { ok: true }
+    }
+    try {
+      const result = await handleInuuNotifyTelegramCallback(event, {
+        botToken,
+        data: String(query.data),
+        chatId,
+        messageId,
+        fromId,
+        appUrlBase,
+        defaultCitySlug,
+      })
+      await telegram(botToken, 'answerCallbackQuery', {
+        callback_query_id: query.id,
+        text: result.alertText,
+        show_alert: result.showAlert,
+      })
+    } catch (err) {
+      console.error('webhook inuu:notify failed:', err)
+      await telegram(botToken, 'answerCallbackQuery', {
+        callback_query_id: query.id,
+        text: 'Не удалось обновить подписки',
+        show_alert: true,
       })
     }
     return { ok: true }
