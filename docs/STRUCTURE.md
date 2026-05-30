@@ -44,10 +44,11 @@ docs/
 | Спека одной фичи | `features/` |
 | Платежи | `payments/` |
 | План работ до реализации | `backlog/` |
+| Матрица фич INUU (чеклисты) | **`inuu/tracker/`** |
 | Ops (деплой, SSH, relay) | `runbooks/` |
 | Внешняя интеграция | `integrations/` |
 | Фестиваль | `verticals/festival/` |
-| Черновик, рилс, стратегия без решения | `content/brainstorm/` |
+| Черновик, рилс, стратегия без решения | `fix/brainstorm/` (индекс → `inuu/`) |
 | Лендинг / карусели | `marketing/`, `content/instagram-carousels/` |
 | Процесс (GSD, UI) | `meta/` |
 

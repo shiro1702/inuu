@@ -16,10 +16,16 @@
 
 ### Карточка события
 
-- Описание, организатор, **место проведения** (`venue_id`).
+Спека UX и серий дат: **[features/content/15-event-detail-series-venues.md](../features/content/15-event-detail-series-venues.md)**.
+
+- Описание, организатор, **место проведения** (`venue_id`) — клик → страница venue + афиша площадки.
+- **Серии:** одна карточка parent, chips дат / мини-календарь; `series_slug` + `recurrence`.
+- Похожие события по `topic_tags` / категории.
+- «Позвать друга», избранное + push за сутки.
 - Слоты записи / места (как в салоне).
-- **Оплата билета** на платформе.
-- CTA: «Иду!» / «Купить билет».
+- **Оплата билета** на платформе — [18-ticketing-full-flow.md](../features/content/18-ticketing-full-flow.md).
+- CTA: «Иду!» / «Купить билет»; для `parsed` — внешняя ссылка.
+- Ссылка на источник (`source_url`); плашки ОТМЕНЕНО / SOLD OUT.
 - Ссылка из Instagram stories с UTM.
 
 ### Запись

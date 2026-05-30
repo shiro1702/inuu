@@ -23,9 +23,24 @@ Seed: `supabase/migrations/019_inuu_seed_ulan_ude.sql`. Редакция как 
 | [04-telegram-bot-content-moderation.md](./04-telegram-bot-content-moderation.md) | **TG-бот:** приём контента + approve/reject для менеджеров |
 | [05-bot-news-dialog-script.md](./05-bot-news-dialog-script.md) | Скрипт диалога `/news` и `/submit` → новость |
 | [06-bot-digest-subscriptions.md](./06-bot-digest-subscriptions.md) | **Рассылка подборок** в боте и **подписки по темам/тегам** |
-| [12-afisha-tag-subscriptions.md](./12-afisha-tag-subscriptions.md) | **Подписка на теги с афиши** (Mini App + бот, OR-фильтр, API) |
 | [07-paid-news-publication.md](./07-paid-news-publication.md) | **Оплата** за публикацию партнёрских новостей (варианты, SKU, БД) |
 | [11-digest-parsing-and-curated-picks.md](./11-digest-parsing-and-curated-picks.md) | **Digest-парсинг**, URL enricher, подборки недели/месяца |
+| [12-afisha-tag-subscriptions.md](./12-afisha-tag-subscriptions.md) | Подписка на теги афиши (Mini App + бот) |
+
+### Из брейншторма 30.05.2026
+
+| Файл | Тема |
+|------|------|
+| [13-ai-content-horizon.md](./13-ai-content-horizon.md) | AI: консьерж, рерайт, вайбы, стратегия «Дерево» |
+| [14-digests-curated-admin-smm.md](./14-digests-curated-admin-smm.md) | Подборки: admin-тиндер, cron, Stories, SMM export |
+| [15-event-detail-series-venues.md](./15-event-detail-series-venues.md) | Карточка события, серии дат, места, источники |
+| [16-parsing-pipeline-extensions.md](./16-parsing-pipeline-extensions.md) | Userbot, пре-фильтр, post_type, vision |
+| [17-ingest-sources-context.md](./17-ingest-sources-context.md) | Web-cron, native/parsed, теневые org |
+| [18-ticketing-full-flow.md](./18-ticketing-full-flow.md) | Билеты, волны цен, QR, возвраты |
+| [19-organizer-lk-monetization.md](./19-organizer-lk-monetization.md) | ЛК организатора, шаблоны афиш, B2B upsell |
+| [20-bot-engagement-backlog.md](./20-bot-engagement-backlog.md) | Backlog: матч друзей, радар, квесты |
+
+Индекс сырого лога: [fix/brainstorm/30.05.2026.md](../../../fix/brainstorm/30.05.2026.md).
 
 ## Связанные спеки
 

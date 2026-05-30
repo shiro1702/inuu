@@ -1,6 +1,8 @@
 # Конвейер наполнения: бот + парсер + AI + модерация
 
-Документ фиксирует рабочий контур быстрого наполнения афиши, согласованный из брейншторма `28.05.2026.md`, но приведенный к текущей архитектуре `Nuxt 3 + Supabase + Telegram Mini App`.
+Документ фиксирует рабочий контур быстрого наполнения афиши, согласованный из брейнштормов `28.05.2026.md` и `30.05.2026.md` (индекс: [fix/brainstorm/30.05.2026.md](../../../fix/brainstorm/30.05.2026.md)), приведённый к архитектуре `Nuxt 3 + Supabase + Telegram Mini App`.
+
+Расширения (userbot, пре-фильтр, `post_type`, vision): **[16-parsing-pipeline-extensions.md](./16-parsing-pipeline-extensions.md)**. Источники и web-cron: **[17-ingest-sources-context.md](./17-ingest-sources-context.md)**.
 
 ---
 

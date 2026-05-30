@@ -46,6 +46,14 @@
 |----------|------------|
 | [runbooks/MANAGER_CONTENT_RUNBOOK_RU.md](./runbooks/MANAGER_CONTENT_RUNBOOK_RU.md) | Ежедневная инструкция менеджера: ingestion, модерация, мониторинг |
 
+### Трекер фич
+
+| Документ | Содержание |
+|----------|------------|
+| [tracker/FEATURE_MATRIX.md](./tracker/FEATURE_MATRIX.md) | Все фичи по группам: сложность, важность, чекбоксы, ссылки на спеки |
+| [tracker/ACTIVE_TASKS.md](./tracker/ACTIVE_TASKS.md) | Активная очередь (≤3 задачи на чат) — scope, спеки, in/out |
+| [tracker/README.md](./tracker/README.md) | Как пользоваться матрицей и очередью |
+
 ### Контент: как добавлять новости и МК
 
 | Документ | Содержание |
@@ -61,6 +69,11 @@
 | [features/content/08-event-sourcing-and-moderation-pipeline.md](./features/content/08-event-sourcing-and-moderation-pipeline.md) | Конвейер наполнения: бот + парсер + AI + модерация |
 | [features/content/09-how-to-create-news-and-events.md](./features/content/09-how-to-create-news-and-events.md) | Практическая инструкция: как создавать новости/события через новый backend |
 | [features/content/10-telegram-sources-without-bot-access.md](./features/content/10-telegram-sources-without-bot-access.md) | Как подключать TG-источники, куда нельзя добавить бота |
+| [features/content/11-digest-parsing-and-curated-picks.md](./features/content/11-digest-parsing-and-curated-picks.md) | Digest-парсинг, подборки недели/месяца |
+| [features/content/12-afisha-tag-subscriptions.md](./features/content/12-afisha-tag-subscriptions.md) | Подписки на теги афиши |
+| [features/content/README.md](./features/content/README.md) | Обзор + **13–20** из брейншторма 30.05.2026 |
+
+Брейншторм 30.05 (индекс → спеки): [fix/brainstorm/30.05.2026.md](../fix/brainstorm/30.05.2026.md).
 
 ### Вертикали
 

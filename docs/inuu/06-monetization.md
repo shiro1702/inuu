@@ -7,6 +7,8 @@
 
 Подписка для мастеров — **не в MVP**, возможна после product-market fit.
 
+**Брейншторм 30.05.2026:** детали бустов, EventPass B2C, ЛК организатора — [features/content/19-organizer-lk-monetization.md](./features/content/19-organizer-lk-monetization.md), [18-ticketing-full-flow.md](./features/content/18-ticketing-full-flow.md). Индекс: [fix/brainstorm/30.05.2026.md](../fix/brainstorm/30.05.2026.md).
+
 ---
 
 ## Потоки дохода
@@ -23,6 +25,14 @@
 | «Аренда полки» брендов | Локальные производители | Этап 5 |
 | Платные рассылки по сегментам | B2B | При базе >5k пользователей |
 | Премиум: приоритет в листе ожидания | Клиент (опционально) | Позже |
+| Комиссия с билета (сплит ЮKassa) | Организатор | Волна C (~4%) |
+| EventPass B2C (без сервисного сбора, скидка волны) | Пользователь | После билетов |
+| Буст события / таргет-push B2B | Организатор | При базе бота 1k+ |
+| PRO ЛК: афиши-шаблоны, аналитика, промоутеры | Организатор | После claim parsed |
+
+**Снято с roadmap:** бронь столов, интеграция такси (брейншторм 30.05).
+
+**Parsed-события:** монетизация через CPA / claim → native, не через нашу кассу — [17-ingest-sources-context.md](./features/content/17-ingest-sources-context.md).
 
 ---
 

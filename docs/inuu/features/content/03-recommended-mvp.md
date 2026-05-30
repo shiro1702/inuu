@@ -82,6 +82,20 @@
 - Batch-модерация + auto `curated_lists` при approve_all
 - `/pick week|month` в moderation chat
 
+### Фаза 1f — «Расширения из брейншторма 30.05» (план)
+
+Индекс: [fix/brainstorm/30.05.2026.md](../../../fix/brainstorm/30.05.2026.md).
+
+| Приоритет | Тема | Спека |
+|-----------|------|--------|
+| P0 | Пре-фильтр + `post_type` + vision cross-check | [16](./16-parsing-pipeline-extensions.md) |
+| P0 | Серии дат в UI + schedule в парсере | [15](./15-event-detail-series-venues.md) |
+| P1 | Admin-сборка подборок, cron-черновики | [14](./14-digests-curated-admin-smm.md) |
+| P1 | Контекст sources, web-cron, claim org | [17](./17-ingest-sources-context.md) |
+| P2 | Билеты + волны цен | [18](./18-ticketing-full-flow.md) |
+| P2 | ЛК организатора + шаблоны афиш | [19](./19-organizer-lk-monetization.md) |
+| P3 | AI-консьерж, нишевые каналы | [13](./13-ai-content-horizon.md) |
+
 ### Фаза 3 — «Каналы»
 
 - Автопост в TG при publish  
