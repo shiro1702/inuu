@@ -50,62 +50,9 @@
 
 ## Активные задачи
 
-> **Очередь:** 2 задачи — TASK-001…002 после закрытия userbot и TASK-003.
+> **Очередь:** 0 задач — TASK-001…002 закрыты 31.05.2026.
 
-### TASK-001 · Пре-фильтр и контекст источника в Groq-парсере
-
-- **Статус:** `todo`
-- **Матрица:** §4 · «Пре-фильтр ключевых слов до Groq» · §4 · «Контекст источника в промпте»
-- **Цель:** Больше событий в очередь при тех же затратах Groq — отсечь мусор до LLM и точнее парсить по типу площадки (театр / клуб / стендап).
-- **Спеки:**
-  - [16-parsing-pipeline-extensions.md](../features/content/16-parsing-pipeline-extensions.md) — пре-фильтр, один промпт
-  - [17-ingest-sources-context.md](../features/content/17-ingest-sources-context.md) — `context_type` в system prompt
-  - [08-event-sourcing-and-moderation-pipeline.md](../features/content/08-event-sourcing-and-moderation-pipeline.md) — цепочка submit
-- **In scope:**
-  - Модуль пре-фильтра (regex дат/цен + ключевые слова: афиша, билет, отмена, перенос…) **до** вызова Groq; лог «skipped by prefilter» в `ai_parse_logs`
-  - Поле `context_type` на источнике (или fallback из parser chat metadata) → подстановка в system prompt
-  - Подстановка словаря `city_content_tags` в промпт (1 категория + 1–5 тегов из БД)
-  - Unit/интеграционная проверка на 5–10 реальных постах из moderation/parser чата
-- **Out of scope:** Vision cross-check, `post_type` cancellation/update, userbot (TASK-000), dashboard CRUD источников, AI sanitizer / TL;DR (TASK-004)
-- **Ключевые файлы:**
-  - `server/utils/` — groq parser, ingest submit
-  - `server/api/ingest/content/submit.post.ts`
-  - `server/api/ai/parse-event.post.ts`
-- **Критерии готовности:**
-  - [ ] ≥50% явного мусора (реклама без даты, поздравления) не доходит до Groq
-  - [ ] Пост из «театрального» источника не галлюцинирует line-up / dress code
-  - [ ] Теги в JSON только из словаря города
-  - [ ] FEATURE_MATRIX: две строки → `[x]`
-
----
-
-### TASK-002 · Web CRON парсинг + теневые профили организаций
-
-- **Статус:** `todo`
-- **Матрица:** §4 · «Web CRON парсинг сайтов» · §3 · «Теневые профили org из парсера + claim»
-- **Цель:** Автоматически подтягивать афиши с сайтов организаторов Улан-Удэ и создавать черновые страницы org для связи событий.
-- **Спеки:**
-  - [17-ingest-sources-context.md](../features/content/17-ingest-sources-context.md) — web-cron, shadow org, dedupe
-  - [10-telegram-sources-without-bot-access.md](../features/content/10-telegram-sources-without-bot-access.md) — тот же `POST /api/ingest/content/submit`
-  - [15-event-detail-series-venues.md](../features/content/15-event-detail-series-venues.md) — `source_url`, `organization_id`
-  - [24-mvp-launch-checklist-ulan-ude.md](../features/content/24-mvp-launch-checklist-ulan-ude.md) — WebP, один город
-- **In scope:**
-  - Миграция/расширение `sources` (или аналог): `url`, `context_type`, `organization_id`, `cron_enabled`
-  - Cron route (Vercel cron / `server/api/cron/…`): обход 2–3 whitelist-сайтов Улан-Удэ
-  - Fetch страницы → существующий URL enricher + Groq → `content_submissions` (как TG ingest)
-  - При первом событии с нового домена/@channel: создать `organizations` с `is_claimed=false`, привязать `source`
-  - Dedupe по `source_url` / fingerprint — skip если уже в БД
-- **Out of scope:** Puppeteer/Cloudflare bypass, полный claim-flow в UI, VK ingest, dashboard «регистрация источника»
-- **Ключевые файлы:**
-  - `supabase/migrations/` — sources / organizations
-  - `server/api/cron/` (новый)
-  - `server/api/ingest/content/submit.post.ts`
-  - `vercel.json` — cron schedule
-- **Критерии готовности:**
-  - [ ] Cron по расписанию создаёт `content_submissions` с минимум одного whitelist-сайта
-  - [ ] Новый источник → запись `organizations` (shadow) + link в submission payload
-  - [ ] Повторный crawl того же URL не плодит дубликаты
-  - [ ] FEATURE_MATRIX: две строки → `[x]` (или `[~]`→`[x]` если claim только частично — тогда claim в TASK-003)
+_Нет активных задач. Следующая волна — см. таблицу ниже._
 
 ---
 
@@ -133,7 +80,9 @@
 |----|----------|---------|-------------|
 | TASK-000 | Userbot: подписка на TG-каналы → ingest | 31.05.2026 | `workers/telegram-userbot/`, `035_city_telegram_sources.sql` |
 | TASK-003 | Публичные org/venue и афиша на витрине | 31.05.2026 | [TASK-003-public-org-venue-storefront.md](./TASK-003-public-org-venue-storefront.md) — saleMode/CTA, org page, venue grid, stories |
+| TASK-001 | Пре-фильтр + context_type + strict tags в Groq | 31.05.2026 | `contentPrefilter.ts`, `eventParsePrompt.ts`, `036_city_ingest_sources.sql` |
+| TASK-002 | Web CRON + shadow org | 31.05.2026 | `web-sources-crawl.post.ts`, `ingestShadowOrg.ts`, `vercel.json` |
 
 ---
 
-**Последнее обновление:** 31.05.2026 · активных: **2** · in_progress: **0**
+**Последнее обновление:** 31.05.2026 · активных: **0** · in_progress: **0**

@@ -53,7 +53,7 @@
 | [x] | Каталог venues API + страницы | 2 | P1 | — | [verticals/events-and-venues.md](../verticals/events-and-venues.md) |
 | [x] | Афиша всех событий на странице venue | 2 | P1 | сред | [15-event-detail-series-venues.md](../features/content/15-event-detail-series-venues.md) |
 | [x] | Страница организатора / источника + подписка | 3 | P1 | сред | [15-event-detail-series-venues.md](../features/content/15-event-detail-series-venues.md) |
-| [ ] | Теневые профили org из парсера + claim | 4 | P1 | выс | [17-ingest-sources-context.md](../features/content/17-ingest-sources-context.md) |
+| [x] | Теневые профили org из парсера + claim | 4 | P1 | выс | [17-ingest-sources-context.md](../features/content/17-ingest-sources-context.md) |
 | [ ] | Вайб-фильтры («для свидания», «с ноутбуком») | 3 | P2 | — | [verticals/events-and-venues.md](../verticals/events-and-venues.md) |
 
 ---
@@ -71,11 +71,11 @@
 | [x] | Batch `content_submission_batches` (digest pack) | 2 | P0 | — | [11-digest-parsing-and-curated-picks.md](../features/content/11-digest-parsing-and-curated-picks.md) |
 | [x] | Ingest из parser source chats (пересылка / пост в чат) | 3 | P0 | — | [10-telegram-sources-without-bot-access.md](../features/content/10-telegram-sources-without-bot-access.md) |
 | [x] | Userbot worker (Telethon/Pyrogram) вне репо | 4 | P1 | — | [10-telegram-sources-without-bot-access.md](../features/content/10-telegram-sources-without-bot-access.md) |
-| [ ] | Пре-фильтр ключевых слов до Groq | 2 | P1 | — | [16-parsing-pipeline-extensions.md](../features/content/16-parsing-pipeline-extensions.md) |
+| [x] | Пре-фильтр ключевых слов до Groq | 2 | P1 | — | [16-parsing-pipeline-extensions.md](../features/content/16-parsing-pipeline-extensions.md) |
 | [ ] | `post_type`: new / cancellation / update / trash | 3 | P1 | — | [16-parsing-pipeline-extensions.md](../features/content/16-parsing-pipeline-extensions.md) |
 | [ ] | Vision: сверка текст ↔ афиша (`conflict_alert`) | 3 | P1 | — | [16-parsing-pipeline-extensions.md](../features/content/16-parsing-pipeline-extensions.md) |
-| [ ] | Web CRON парсинг сайтов | 4 | P1 | сред | [17-ingest-sources-context.md](../features/content/17-ingest-sources-context.md) |
-| [ ] | Контекст источника в промпте (театр / клуб / …) | 2 | P1 | — | [17-ingest-sources-context.md](../features/content/17-ingest-sources-context.md) |
+| [x] | Web CRON парсинг сайтов | 4 | P1 | сред | [17-ingest-sources-context.md](../features/content/17-ingest-sources-context.md) |
+| [x] | Контекст источника в промпте (театр / клуб / …) | 2 | P1 | — | [17-ingest-sources-context.md](../features/content/17-ingest-sources-context.md) |
 | [ ] | AI-санитар парсинга (title, price, category, vibe) | 2 | P1 | — | [22-ai-bot-concierge-and-intent.md](../features/content/22-ai-bot-concierge-and-intent.md), [16-parsing-pipeline-extensions.md](../features/content/16-parsing-pipeline-extensions.md) |
 | [ ] | TL;DR + vibe emoji на карточке события | 2 | P1 | — | [22-ai-bot-concierge-and-intent.md](../features/content/22-ai-bot-concierge-and-intent.md), [13-ai-content-horizon.md](../features/content/13-ai-content-horizon.md) |
 | [ ] | Сжатие афиш WebP при ingest | 2 | P1 | — | [24-mvp-launch-checklist-ulan-ude.md](../features/content/24-mvp-launch-checklist-ulan-ude.md) |
@@ -234,9 +234,9 @@
 | | Кол-во |
 |---|--------|
 | Всего строк | 130 |
-| `[x]` сделано | 47 |
+| `[x]` сделано | 51 |
 | `[~]` в работе | 0 |
-| `[ ]` в плане | 83 |
+| `[ ]` в плане | 79 |
 
 > **Примечание:** `[x]` = есть рабочий код или MVP закрыт по спеке; `[~]` = идёт реализация; `[ ]` = не начато или только спека. Строки «снято» (§11) не входят в «в плане». При расхождении с кодом — править здесь первым делом.
 
