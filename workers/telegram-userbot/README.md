@@ -72,7 +72,12 @@ cp .env.example .env
 
 ### Сессия Telethon
 
+Нужны **`TELEGRAM_API_ID`** и **`TELEGRAM_API_HASH`** с [my.telegram.org/apps](https://my.telegram.org/apps) — это **не** `NUXT_BOT_TOKEN` от @BotFather.
+
+Пара `api_id` + `api_hash` должна быть из **одной** записи приложения на my.telegram.org. Если Telegram пишет `ApiIdInvalidError` — пара неверная или устарела: создайте новое приложение и обновите `.env`.
+
 ```bash
+# положите креды в workers/telegram-userbot/.env (рекомендуется) или в корневой .env
 python scripts/create_session.py
 # войти по номеру телефона; скопировать TELEGRAM_SESSION_STRING в .env
 ```

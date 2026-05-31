@@ -43,9 +43,34 @@ class Config:
     smoke_message_id: int | None
 
 
-def load_config() -> Config:
-    load_dotenv(ROOT / ".env")
+def _load_env_files() -> None:
+    """Корневой .env — база; workers/telegram-userbot/.env перекрывает."""
     load_dotenv(ROOT.parent.parent / ".env")
+    load_dotenv(ROOT / ".env", override=True)
+
+
+def load_telegram_api_credentials() -> tuple[int, str]:
+    """Только api_id + api_hash — для scripts/create_session.py."""
+    _load_env_files()
+    api_id_raw = _require("TELEGRAM_API_ID")
+    api_hash = _require("TELEGRAM_API_HASH")
+    try:
+        api_id = int(api_id_raw)
+    except ValueError as err:
+        raise SystemExit(
+            f"TELEGRAM_API_ID должен быть числом (из my.telegram.org), сейчас: {api_id_raw!r}"
+        ) from err
+    if api_id <= 0:
+        raise SystemExit("TELEGRAM_API_ID должен быть положительным числом")
+    if len(api_hash) < 20:
+        raise SystemExit(
+            "TELEGRAM_API_HASH слишком короткий — скопируйте полностью с my.telegram.org/apps"
+        )
+    return api_id, api_hash
+
+
+def load_config() -> Config:
+    _load_env_files()
 
     smoke_key = os.environ.get("SMOKE_SOURCE_KEY", "").strip() or None
     smoke_id_raw = os.environ.get("SMOKE_MESSAGE_ID", "").strip()

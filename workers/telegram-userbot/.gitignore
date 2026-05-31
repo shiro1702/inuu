@@ -1,0 +1,33 @@
+# Локальные секреты (шаблон — .env.example)
+.env
+.env.*
+!.env.example
+
+# Python venv
+.venv/
+venv/
+env/
+
+# Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Telethon: file-based session (если не StringSession)
+*.session
+*.session-journal
+
+# Тесты / линтеры
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Логи воркера
+*.log
+
+# OS
+.DS_Store
