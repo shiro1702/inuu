@@ -48,6 +48,8 @@
 
 ## Активные задачи
 
+> **Очередь:** 3 задачи — TASK-001…003 после закрытия userbot.
+
 ### TASK-001 · Пре-фильтр и контекст источника в Groq-парсере
 
 - **Статус:** `todo`
@@ -62,7 +64,7 @@
   - Поле `context_type` на источнике (или fallback из parser chat metadata) → подстановка в system prompt
   - Подстановка словаря `city_content_tags` в промпт (1 категория + 1–5 тегов из БД)
   - Unit/интеграционная проверка на 5–10 реальных постах из moderation/parser чата
-- **Out of scope:** Vision cross-check, `post_type` cancellation/update, userbot worker, dashboard CRUD источников
+- **Out of scope:** Vision cross-check, `post_type` cancellation/update, userbot (TASK-000), dashboard CRUD источников
 - **Ключевые файлы:**
   - `server/utils/` — groq parser, ingest submit
   - `server/api/ingest/content/submit.post.ts`
@@ -138,7 +140,7 @@
 
 ## Следующая волна (не активно)
 
-Появятся здесь после закрытия TASK-001…003:
+Появятся здесь после закрытия TASK-000…003:
 
 | Тема | Матрица | Спека |
 |------|---------|-------|
@@ -152,8 +154,8 @@
 
 | ID | Название | Закрыто | Коммит / PR |
 |----|----------|---------|-------------|
-| — | *(пусто)* | — | — |
+| TASK-000 | Userbot: подписка на TG-каналы → ingest | 31.05.2026 | `workers/telegram-userbot/`, `035_city_telegram_sources.sql` |
 
 ---
 
-**Последнее обновление:** 30.05.2026 · активных: **3** · in_progress: **0**
+**Последнее обновление:** 31.05.2026 · активных: **3** · in_progress: **0**

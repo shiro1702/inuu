@@ -34,6 +34,8 @@ export default defineNuxtConfig({
     reviewPromptDelayMinutes: Number(process.env.NUXT_REVIEW_PROMPT_DELAY_MIN ?? '45'),
     /** Secret for POST /api/cron/review-prompts (header x-cron-secret). */
     cronReviewPromptsSecret: process.env.NUXT_CRON_REVIEW_PROMPTS_SECRET ?? '',
+    /** Optional secret for POST /api/ingest/content/submit (header x-ingest-secret). */
+    ingestSecret: process.env.NUXT_INGEST_SECRET ?? '',
     vkIdClientSecret: process.env.NUXT_VK_ID_CLIENT_SECRET ?? '',
     /** Must match redirect URL in VK ID app settings (e.g. https://your.app/api/auth/vk-id/callback) */
     vkIdRedirectUri: process.env.NUXT_VK_ID_REDIRECT_URI ?? '',

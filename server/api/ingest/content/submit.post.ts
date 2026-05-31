@@ -1,4 +1,4 @@
-import { createError, defineEventHandler, readBody } from 'h3'
+import { createError, defineEventHandler, getHeader, readBody } from 'h3'
 import { eventParseInputSchema } from '~/server/utils/ai/eventParseSchema'
 import { runContentIngest } from '~/server/utils/contentIngestCore'
 import { notifyContentIngestModeration } from '~/server/utils/inuuContentModeration'
@@ -18,6 +18,15 @@ type IngestBody = {
 }
 
 export default defineEventHandler(async (event) => {
+  const config = useRuntimeConfig(event)
+  const ingestSecret = String((config as any).ingestSecret || '').trim()
+  if (ingestSecret) {
+    const header = String(getHeader(event, 'x-ingest-secret') || '').trim()
+    if (header !== ingestSecret) {
+      throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+    }
+  }
+
   const body = await readBody<IngestBody>(event).catch(() => ({}))
   const parsedInput = eventParseInputSchema.safeParse({
     rawText: body.rawText,
@@ -44,7 +53,6 @@ export default defineEventHandler(async (event) => {
     })
 
     if (body.persist === true && result.persisted.ok && result.persisted.id) {
-      const config = useRuntimeConfig(event)
       const botToken = String((event.context.tenant as any)?.telegramBotToken || config.botToken || '').trim()
       if (botToken) {
         await notifyContentIngestModeration(event, {

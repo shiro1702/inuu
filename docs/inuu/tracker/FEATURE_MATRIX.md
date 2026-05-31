@@ -66,7 +66,7 @@
 | [x] | Несколько дат в одном событии (`recurrence.dates`) | 2 | P1 | — | [11-digest-parsing-and-curated-picks.md](../features/content/11-digest-parsing-and-curated-picks.md) |
 | [x] | Batch `content_submission_batches` (digest pack) | 2 | P0 | — | [11-digest-parsing-and-curated-picks.md](../features/content/11-digest-parsing-and-curated-picks.md) |
 | [x] | Ingest из parser source chats (пересылка / пост в чат) | 3 | P0 | — | [10-telegram-sources-without-bot-access.md](../features/content/10-telegram-sources-without-bot-access.md) |
-| [ ] | Userbot worker (Telethon/Pyrogram) вне репо | 4 | P1 | — | [10-telegram-sources-without-bot-access.md](../features/content/10-telegram-sources-without-bot-access.md) |
+| [x] | Userbot worker (Telethon/Pyrogram) вне репо | 4 | P1 | — | [10-telegram-sources-without-bot-access.md](../features/content/10-telegram-sources-without-bot-access.md) |
 | [ ] | Пре-фильтр ключевых слов до Groq | 2 | P1 | — | [16-parsing-pipeline-extensions.md](../features/content/16-parsing-pipeline-extensions.md) |
 | [ ] | `post_type`: new / cancellation / update / trash | 3 | P1 | — | [16-parsing-pipeline-extensions.md](../features/content/16-parsing-pipeline-extensions.md) |
 | [ ] | Vision: сверка текст ↔ афиша (`conflict_alert`) | 3 | P1 | — | [16-parsing-pipeline-extensions.md](../features/content/16-parsing-pipeline-extensions.md) |
@@ -217,9 +217,9 @@
 | | Кол-во |
 |---|--------|
 | Всего строк | 95 |
-| `[x]` сделано | 42 |
+| `[x]` сделано | 43 |
 | `[~]` в работе | 0 |
-| `[ ]` в плане | 53 |
+| `[ ]` в плане | 52 |
 
 > **Примечание:** `[x]` = есть рабочий код или MVP закрыт по спеке; `[~]` = идёт реализация; `[ ]` = не начато или только спека. При расхождении с кодом — править здесь первым делом.
 
