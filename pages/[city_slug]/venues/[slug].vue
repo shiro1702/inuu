@@ -1,7 +1,7 @@
 <template>
   <div v-if="pending" class="text-sm text-gray-500">Загрузка…</div>
   <div v-else-if="!venue" class="text-sm text-gray-500">Место не найдено.</div>
-  <article v-else class="space-y-4">
+  <article v-else class="space-y-8">
     <NuxtLink :to="`${cityBasePath}/venues`" class="text-sm text-primary hover:underline">← Места</NuxtLink>
     <h1 class="text-2xl font-bold text-gray-900">{{ venue.title }}</h1>
     <p v-if="venue.address" class="text-sm text-gray-600">{{ venue.address }}</p>
@@ -14,21 +14,41 @@
     >
       Позвонить
     </a>
-    <section v-if="upcomingEvents.length" class="pt-4">
+
+    <section>
       <h2 class="text-lg font-semibold text-gray-900">События здесь</h2>
-      <ul class="mt-2 space-y-2">
-        <li v-for="ev in upcomingEvents" :key="ev.id">
-          <NuxtLink :to="`${cityBasePath}/events/${ev.slug}`" class="text-primary hover:underline">
-            {{ ev.title }}
-          </NuxtLink>
-        </li>
-      </ul>
+      <div v-if="upcomingEvents.length" class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <CityEventCard
+          v-for="ev in upcomingEvents"
+          :key="ev.id"
+          :event="ev"
+          :sale-mode="ev.saleMode"
+          :cta="ev.cta"
+        />
+      </div>
+      <p v-else class="mt-4 text-sm text-gray-500">Пока нет предстоящих событий в этом месте.</p>
     </section>
   </article>
 </template>
 
 <script setup lang="ts">
+import type { EventCta, EventSaleMode } from '~/types/storefront'
+
 definePageMeta({ layout: 'city' })
+
+type UpcomingEvent = {
+  id: string
+  slug: string
+  title: string
+  starts_at: string
+  price?: number
+  description?: string | null
+  excerpt?: string | null
+  cover_media_url?: string | null
+  series_date_count?: number
+  saleMode?: EventSaleMode
+  cta?: EventCta
+}
 
 const route = useRoute()
 const { slug: citySlug, cityBasePath } = useCity()
@@ -36,7 +56,7 @@ const venueSlug = computed(() => String(route.params.slug || ''))
 
 const pending = ref(true)
 const venue = ref<Record<string, any> | null>(null)
-const upcomingEvents = ref<Array<Record<string, any>>>([])
+const upcomingEvents = ref<UpcomingEvent[]>([])
 
 watch([citySlug, venueSlug], async () => {
   pending.value = true
@@ -44,7 +64,7 @@ watch([citySlug, venueSlug], async () => {
     const res = await $fetch<{
       ok: boolean
       venue?: Record<string, any>
-      upcomingEvents?: Array<Record<string, any>>
+      upcomingEvents?: UpcomingEvent[]
     }>(`/api/cities/${citySlug.value}/venues/${venueSlug.value}`)
     venue.value = res?.venue ?? null
     upcomingEvents.value = res?.upcomingEvents ?? []

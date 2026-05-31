@@ -82,7 +82,13 @@
 
     <div v-if="pending" class="mt-8 text-sm text-gray-500">Загрузка…</div>
     <div v-else-if="items.length" class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      <CityEventCard v-for="event in items" :key="event.id" :event="event" />
+      <CityEventCard
+        v-for="event in items"
+        :key="event.id"
+        :event="event"
+        :sale-mode="event.saleMode"
+        :cta="event.cta"
+      />
     </div>
     <p v-else class="mt-8 text-sm text-gray-500">Пока нет событий по выбранным фильтрам.</p>
   </div>

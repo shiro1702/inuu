@@ -29,11 +29,38 @@
 
       <p class="text-base text-gray-600">{{ formattedMainDate }}</p>
 
-      <p v-if="venueLine" class="text-sm text-gray-500">
-        📍 {{ venueLine }}
+      <p v-if="venue" class="text-sm text-gray-500">
+        📍
+        <NuxtLink
+          :to="`${cityBasePath}/venues/${venue.slug}`"
+          class="font-medium text-primary hover:underline"
+        >
+          {{ venue.title }}
+        </NuxtLink>
+        <span v-if="venue.address"> · {{ venue.address }}</span>
       </p>
-      <p v-if="organizationName" class="text-sm text-gray-500">
-        Организатор: {{ organizationName }}
+
+      <p v-if="organization" class="text-sm text-gray-500">
+        Организатор:
+        <NuxtLink
+          :to="`${cityBasePath}/organizations/${organization.slug}`"
+          class="font-medium text-primary hover:underline"
+        >
+          {{ organization.name }}
+        </NuxtLink>
+      </p>
+      <p v-else-if="sourceDisplay" class="text-sm text-gray-500">
+        Источник:
+        <a
+          v-if="sourceDisplay.url"
+          :href="sourceDisplay.url"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="font-medium text-primary hover:underline"
+        >
+          {{ sourceDisplay.label }}
+        </a>
+        <span v-else>{{ sourceDisplay.label }}</span>
       </p>
 
       <p class="text-lg font-semibold" :class="event.price > 0 ? 'text-gray-900' : 'text-emerald-700'">
@@ -43,24 +70,15 @@
 
     <EventSeriesDatePicker v-if="seriesSessions.length > 1" :sessions="seriesSessions" />
 
-    <div v-if="hasActionLinks" class="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+    <div v-if="cta?.url" class="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
       <a
-        v-if="links.registrationUrl"
-        :href="links.registrationUrl"
+        :href="cta.url"
         target="_blank"
         rel="noopener noreferrer"
-        class="inline-flex items-center justify-center rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow-sm hover:opacity-90"
+        class="inline-flex items-center justify-center rounded-xl px-5 py-3 text-sm font-semibold shadow-sm transition"
+        :class="ctaButtonClass"
       >
-        {{ registrationCta }}
-      </a>
-      <a
-        v-if="links.sourceUrl"
-        :href="links.sourceUrl"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="inline-flex items-center justify-center rounded-xl border border-gray-300 bg-white px-5 py-3 text-sm font-semibold text-gray-800 hover:bg-gray-50"
-      >
-        Подробнее у организатора
+        {{ cta.emoji }} {{ cta.label }}
       </a>
     </div>
 
@@ -76,6 +94,8 @@
           v-for="item in similarEvents"
           :key="item.id"
           :event="item"
+          :sale-mode="item.saleMode"
+          :cta="item.cta"
         />
       </div>
     </section>
@@ -83,12 +103,26 @@
 </template>
 
 <script setup lang="ts">
+import type { EventCta, EventSaleMode, SourceDisplay, StorefrontOrganization, StorefrontVenue } from '~/types/storefront'
+
 definePageMeta({ layout: 'city' })
 
 type SeriesSession = {
   slug: string
   starts_at: string
   isCurrent: boolean
+}
+
+type SimilarEvent = {
+  id: string
+  slug: string
+  title: string
+  starts_at: string
+  price?: number
+  cover_media_url?: string | null
+  excerpt?: string | null
+  saleMode?: EventSaleMode
+  cta?: EventCta
 }
 
 const route = useRoute()
@@ -100,22 +134,15 @@ const event = ref<Record<string, any> | null>(null)
 const mediaGallery = ref<string[]>([])
 const tags = ref<Array<{ slug: string; name: string }>>([])
 const category = ref<{ slug: string; name: string } | null>(null)
-const links = ref<{ registrationUrl: string | null; sourceUrl: string | null }>({
-  registrationUrl: null,
-  sourceUrl: null,
-})
 const seriesSessions = ref<SeriesSession[]>([])
-const similarEvents = ref<Array<Record<string, any>>>([])
-const organizationName = ref<string | null>(null)
+const similarEvents = ref<SimilarEvent[]>([])
+const organization = ref<StorefrontOrganization | null>(null)
+const venue = ref<StorefrontVenue | null>(null)
+const sourceDisplay = ref<SourceDisplay | null>(null)
+const saleMode = ref<EventSaleMode>('native')
+const cta = ref<EventCta | null>(null)
 
 const formattedMainDate = computed(() => formatDateTime(event.value?.starts_at))
-
-const venueLine = computed(() => {
-  const v = event.value?.venues
-  if (!v) return ''
-  const parts = [v.title, v.address].filter(Boolean)
-  return parts.join(' · ')
-})
 
 const fullDescription = computed(() => String(event.value?.description || '').trim())
 
@@ -124,13 +151,12 @@ const priceLabel = computed(() => {
   return event.value.price > 0 ? `от ${event.value.price} ₽` : 'Вход бесплатный'
 })
 
-const registrationCta = computed(() =>
-  event.value?.price > 0 ? 'Купить билет' : 'Записаться',
-)
-
-const hasActionLinks = computed(() =>
-  Boolean(links.value.registrationUrl || links.value.sourceUrl),
-)
+const ctaButtonClass = computed(() => {
+  if (saleMode.value === 'parsed') {
+    return 'border border-gray-300 bg-white text-gray-800 hover:bg-gray-50'
+  }
+  return 'bg-primary text-white hover:opacity-90'
+})
 
 function formatDateTime(value: string | undefined | null) {
   if (!value) return ''
@@ -153,23 +179,26 @@ watch([citySlug, eventSlug], async () => {
       mediaGallery?: string[]
       tags?: Array<{ slug: string; name: string }>
       category?: { slug: string; name: string } | null
-      links?: { registrationUrl: string | null; sourceUrl: string | null }
       seriesSessions?: SeriesSession[]
-      similarEvents?: Array<Record<string, any>>
-      organizationName?: string | null
+      similarEvents?: SimilarEvent[]
+      organization?: StorefrontOrganization | null
+      venue?: StorefrontVenue | null
+      sourceDisplay?: SourceDisplay | null
+      saleMode?: EventSaleMode
+      cta?: EventCta
     }>(`/api/cities/${citySlug.value}/events/${eventSlug.value}`)
 
     event.value = res?.event ?? null
     mediaGallery.value = res?.mediaGallery ?? []
     tags.value = res?.tags ?? []
     category.value = res?.category ?? null
-    links.value = {
-      registrationUrl: res?.links?.registrationUrl ?? null,
-      sourceUrl: res?.links?.sourceUrl ?? null,
-    }
     seriesSessions.value = res?.seriesSessions ?? []
     similarEvents.value = res?.similarEvents ?? []
-    organizationName.value = res?.organizationName ?? null
+    organization.value = res?.organization ?? null
+    venue.value = res?.venue ?? null
+    sourceDisplay.value = res?.sourceDisplay ?? null
+    saleMode.value = res?.saleMode ?? 'native'
+    cta.value = res?.cta ?? null
   } catch {
     event.value = null
     mediaGallery.value = []
@@ -177,7 +206,10 @@ watch([citySlug, eventSlug], async () => {
     category.value = null
     seriesSessions.value = []
     similarEvents.value = []
-    organizationName.value = null
+    organization.value = null
+    venue.value = null
+    sourceDisplay.value = null
+    cta.value = null
   } finally {
     pending.value = false
   }

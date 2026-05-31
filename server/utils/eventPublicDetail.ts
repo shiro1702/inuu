@@ -1,4 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { resolveEventCta, resolveEventSaleMode } from '~/server/utils/eventSaleMode'
+import type { EventCta, EventSaleMode } from '~/types/storefront'
 
 export type EventSourceMetadata = {
   topic_tags?: string[]
@@ -24,6 +26,10 @@ export type PublicSimilarEvent = {
   cover_media_url: string | null
   excerpt: string | null
   price: number
+  shop_id?: string | null
+  venue_id?: string | null
+  source_channel?: string | null
+  source_metadata?: unknown
 }
 
 function parseSourceMetadata(raw: unknown): EventSourceMetadata {
@@ -90,7 +96,7 @@ export async function loadSimilarPublishedEvents(
 
   const { data: rows } = await client
     .from('events')
-    .select('id,slug,title,starts_at,cover_media_url,price,excerpt,description,source_metadata,category_id,shop_id,series_slug')
+    .select('id,slug,title,starts_at,cover_media_url,price,excerpt,description,source_metadata,category_id,shop_id,venue_id,source_channel,series_slug')
     .eq('city_id', args.cityId)
     .eq('is_published', true)
     .gte('starts_at', nowIso)
@@ -140,10 +146,71 @@ export async function loadSimilarPublishedEvents(
       cover_media_url: row.cover_media_url ? String(row.cover_media_url) : null,
       excerpt: row.excerpt ? String(row.excerpt) : null,
       price: Number(row.price) || 0,
+      shop_id: row.shop_id ? String(row.shop_id) : null,
+      venue_id: row.venue_id ? String(row.venue_id) : null,
+      source_channel: row.source_channel ? String(row.source_channel) : null,
+      source_metadata: row.source_metadata ?? null,
     })
     if (out.length >= limit) break
   }
   return out
+}
+
+export type EventSourceDisplay = {
+  label: string
+  url: string | null
+}
+
+export type EventDisplayLinks = {
+  saleMode: EventSaleMode
+  cta: EventCta
+  sourceLabel: string | null
+  sourceUrl: string | null
+}
+
+const SOURCE_CHANNEL_LABELS: Record<string, string> = {
+  telegram_parse: 'Telegram',
+  web_cron: 'Сайт организатора',
+  vk_parse: 'ВКонтакте',
+  bot_submit: 'Партнёр',
+  manual_editor: 'Редакция INUU',
+}
+
+function resolveSourceLabel(row: {
+  source_channel?: string | null
+  source_metadata?: unknown
+}): string | null {
+  const meta = parseSourceMetadata(row.source_metadata)
+  if (meta.organization_name) return String(meta.organization_name).trim() || null
+
+  const channel = String(row.source_channel || '').trim()
+  if (!channel) return null
+
+  const sourceUrl = meta.source_url || ''
+  const tgMatch = sourceUrl.match(/(?:t\.me|telegram\.me)\/([a-zA-Z0-9_]+)/i)
+  if (tgMatch?.[1]) return `@${tgMatch[1]}`
+
+  return SOURCE_CHANNEL_LABELS[channel] || channel
+}
+
+export function resolveEventDisplayLinks(row: {
+  source_channel?: string | null
+  source_metadata?: unknown
+  shop_id?: string | null
+}): EventDisplayLinks {
+  const meta = parseSourceMetadata(row.source_metadata)
+  const saleMode = resolveEventSaleMode(row)
+  const sourceUrl = meta.source_url || meta.registration_url || null
+  return {
+    saleMode,
+    cta: resolveEventCta({
+      saleMode,
+      registrationUrl: meta.registration_url,
+      sourceUrl: meta.source_url,
+    }),
+    sourceLabel: resolveSourceLabel(row),
+    sourceUrl,
+  }
 }
 
 export { parseSourceMetadata }

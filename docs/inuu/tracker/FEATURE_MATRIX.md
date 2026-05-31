@@ -32,7 +32,7 @@
 | [x] | Серии событий (`series_slug`) + picker дат в UI | 3 | P1 | — | [15-event-detail-series-venues.md](../features/content/15-event-detail-series-venues.md) |
 | [x] | CTA «Запись / билеты» → внешняя ссылка | 1 | P0 | — | [15-event-detail-series-venues.md](../features/content/15-event-detail-series-venues.md) |
 | [x] | `source_url` / метаданные источника на событии | 2 | P1 | — | [08-event-sourcing-and-moderation-pipeline.md](../features/content/08-event-sourcing-and-moderation-pipeline.md) |
-| [ ] | CTA native 🎟 vs parsed 🌐 на карточках | 2 | P0 | — | [21-mini-app-and-web-wireframes.md](../features/content/21-mini-app-and-web-wireframes.md), [17-ingest-sources-context.md](../features/content/17-ingest-sources-context.md) |
+| [x] | CTA native 🎟 vs parsed 🌐 на карточках | 2 | P0 | — | [21-mini-app-and-web-wireframes.md](../features/content/21-mini-app-and-web-wireframes.md), [17-ingest-sources-context.md](../features/content/17-ingest-sources-context.md) |
 | [ ] | Telegram Mini App: tab bar (афиша / билеты / профиль) | 4 | P1 | — | [21-mini-app-and-web-wireframes.md](../features/content/21-mini-app-and-web-wireframes.md) |
 | [ ] | Mini App: highlights + фильтры (сегодня / выходные / бесплатно) | 2 | P1 | — | [21-mini-app-and-web-wireframes.md](../features/content/21-mini-app-and-web-wireframes.md) |
 | [ ] | Сайт: B2B-блок + SEO footer + QR в Mini App | 2 | P1 | сред | [21-mini-app-and-web-wireframes.md](../features/content/21-mini-app-and-web-wireframes.md) |
@@ -51,8 +51,8 @@
 | Статус | Фича | Сложн. | Важн. | Монет. | Спека |
 |:------:|------|:------:|:-----:|:------:|-------|
 | [x] | Каталог venues API + страницы | 2 | P1 | — | [verticals/events-and-venues.md](../verticals/events-and-venues.md) |
-| [ ] | Афиша всех событий на странице venue | 2 | P1 | сред | [15-event-detail-series-venues.md](../features/content/15-event-detail-series-venues.md) |
-| [ ] | Страница организатора / источника + подписка | 3 | P1 | сред | [15-event-detail-series-venues.md](../features/content/15-event-detail-series-venues.md) |
+| [x] | Афиша всех событий на странице venue | 2 | P1 | сред | [15-event-detail-series-venues.md](../features/content/15-event-detail-series-venues.md) |
+| [x] | Страница организатора / источника + подписка | 3 | P1 | сред | [15-event-detail-series-venues.md](../features/content/15-event-detail-series-venues.md) |
 | [ ] | Теневые профили org из парсера + claim | 4 | P1 | выс | [17-ingest-sources-context.md](../features/content/17-ingest-sources-context.md) |
 | [ ] | Вайб-фильтры («для свидания», «с ноутбуком») | 3 | P2 | — | [verticals/events-and-venues.md](../verticals/events-and-venues.md) |
 
@@ -117,7 +117,7 @@
 | [ ] | Promo-блоки в подборках (не event) | 3 | P2 | сред | [14-digests-curated-admin-smm.md](../features/content/14-digests-curated-admin-smm.md) |
 | [ ] | Admin «тиндер» для сборки дайджеста | 4 | P2 | — | [14-digests-curated-admin-smm.md](../features/content/14-digests-curated-admin-smm.md) |
 | [ ] | Cron авто-черновики дайджестов (праздники, ⭐4–5) | 3 | P2 | — | [14-digests-curated-admin-smm.md](../features/content/14-digests-curated-admin-smm.md) |
-| [ ] | Stories города на главной (city stories API → UI) | 3 | P1 | выс | [04-features-priority.md](../04-features-priority.md) |
+| [x] | Stories города на главной (city stories API → UI) | 3 | P1 | выс | [04-features-priority.md](../04-features-priority.md) |
 | [ ] | HTML→image экспорт для Instagram | 4 | P2 | сред | [14-digests-curated-admin-smm.md](../features/content/14-digests-curated-admin-smm.md) |
 
 ---
@@ -234,9 +234,9 @@
 | | Кол-во |
 |---|--------|
 | Всего строк | 130 |
-| `[x]` сделано | 43 |
+| `[x]` сделано | 47 |
 | `[~]` в работе | 0 |
-| `[ ]` в плане | 87 |
+| `[ ]` в плане | 83 |
 
 > **Примечание:** `[x]` = есть рабочий код или MVP закрыт по спеке; `[~]` = идёт реализация; `[ ]` = не начато или только спека. Строки «снято» (§11) не входят в «в плане». При расхождении с кодом — править здесь первым делом.
 

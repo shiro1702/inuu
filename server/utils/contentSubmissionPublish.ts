@@ -135,7 +135,12 @@ export async function publishContentSubmission(
     .eq('slug', 'inuu-editorial')
     .maybeSingle()
 
-  const shopId = (editorialShop as any)?.id ? String((editorialShop as any).id) : null
+  const editorialShopId = (editorialShop as any)?.id ? String((editorialShop as any).id) : null
+  const payloadOrgId =
+    payload.organization && typeof payload.organization === 'object' && (payload.organization as { id?: unknown }).id
+      ? String((payload.organization as { id: unknown }).id).trim()
+      : ''
+  const shopId = payloadOrgId || editorialShopId
   const title = String(payload.title || '').trim()
   const { descriptionShort, descriptionFull } = resolveSubmissionDescriptions(payload)
   if (title.length < 3) {

@@ -9,7 +9,13 @@
       <section v-if="events.length" class="mt-8">
         <h2 class="text-lg font-semibold text-gray-900">События</h2>
         <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <CityEventCard v-for="item in events" :key="item.id" :event="item" />
+          <CityEventCard
+            v-for="item in events"
+            :key="item.id"
+            :event="item"
+            :sale-mode="item.saleMode"
+            :cta="item.cta"
+          />
         </div>
       </section>
 

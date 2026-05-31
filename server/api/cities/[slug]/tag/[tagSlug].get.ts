@@ -1,5 +1,6 @@
 import { createError, defineEventHandler, setResponseHeader } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
+import { enrichEventsForStorefront } from '~/server/utils/enrichEventsForStorefront'
 import { resolveCityBySlug } from '~/server/utils/inuuCity'
 import { parseSourceMetadata } from '~/server/utils/eventPublicDetail'
 import { countSeriesDates, dedupeEventsListForDisplay } from '~/server/utils/eventSeries'
@@ -25,7 +26,7 @@ export default defineEventHandler(async (event) => {
 
   const { data: eventRows } = await client
     .from('events')
-    .select('id,slug,title,description,excerpt,starts_at,price,currency,cover_media_url,series_slug,source_metadata')
+    .select('id,slug,title,description,excerpt,starts_at,price,currency,cover_media_url,series_slug,source_metadata,shop_id,source_channel,venue_id')
     .eq('city_id', city.id)
     .eq('is_published', true)
     .gte('starts_at', nowIso)
@@ -38,10 +39,11 @@ export default defineEventHandler(async (event) => {
   })
 
   const seriesCounts = countSeriesDates(eventsFiltered)
-  const events = dedupeEventsListForDisplay(eventsFiltered).map((row) => ({
+  const deduped = dedupeEventsListForDisplay(eventsFiltered).map((row) => ({
     ...row,
     series_date_count: row.series_slug ? seriesCounts.get(String(row.series_slug)) || 1 : 1,
   }))
+  const events = await enrichEventsForStorefront(client, deduped)
 
   const { data: newsRows } = await client
     .from('editorial_posts')

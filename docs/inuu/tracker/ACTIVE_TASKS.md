@@ -50,7 +50,7 @@
 
 ## Активные задачи
 
-> **Очередь:** 3 задачи — TASK-001…003 после закрытия userbot.
+> **Очередь:** 2 задачи — TASK-001…002 после закрытия userbot и TASK-003.
 
 ### TASK-001 · Пре-фильтр и контекст источника в Groq-парсере
 
@@ -109,43 +109,9 @@
 
 ---
 
-### TASK-003 · Публичные страницы org/venue и афиша на витрине
-
-- **Статус:** `todo`
-- **Матрица:** §3 · «Страница организатора / источника + подписка» · §3 · «Афиша всех событий на странице venue» · §2 · «CTA native 🎟 vs parsed 🌐» · §6 · «Stories города на главной» (частично)
-- **Цель:** Parsed-события из TASK-001/002 видны на сайте: пользователь кликает организатора / venue и видит их афишу; native vs parsed CTA; главная показывает stories.
-- **Спеки:**
-  - [15-event-detail-series-venues.md](../features/content/15-event-detail-series-venues.md) — места, org, блок «источник»
-  - [17-ingest-sources-context.md](../features/content/17-ingest-sources-context.md) — `native` vs `parsed`, CTA
-  - [21-mini-app-and-web-wireframes.md](../features/content/21-mini-app-and-web-wireframes.md) — визуальное различие 🎟 / 🌐
-  - [03-core-platform.md](../03-core-platform.md) — stories на главной
-  - [verticals/events-and-venues.md](../verticals/events-and-venues.md)
-- **In scope:**
-  - `GET /api/cities/[slug]/organizations/[orgSlug]` + страница `/[city_slug]/organizations/[slug]` — афиша upcoming events
-  - На карточке события: блок «Организатор» / «Источник: @channel» со ссылкой
-  - CTA на карточках: **🎟 Купить** (native) vs **🌐 На сайт** (parsed)
-  - Страница venue: блок «События здесь» (API filter `venue_id`)
-  - Stories: данные из `home.get.ts` уже есть — довести UI на главной (компонент stories, если заглушка)
-- **Out of scope:** Mini App tab bar (TASK-005), подписка на org (push), claim org в ЛК, chips дат / «похожие», cron-подборки
-- **Ключевые файлы:**
-  - `server/api/cities/[slug]/home.get.ts`
-  - `server/api/cities/[slug]/organizations/` (новый)
-  - `pages/[city_slug]/organizations/` (новый)
-  - `pages/[city_slug]/venues/` — афиша
-  - `pages/[city_slug]/events/` — блок org/source + CTA
-  - Vue-компонент stories (см. `03-core-platform.md`)
-- **Критерии готовности:**
-  - [ ] Опубликованное parsed-событие с `organization_id` → кликабельная страница org с ≥1 событием
-  - [ ] Venue с событиями показывает список на своей странице
-  - [ ] На ленте видно различие native / parsed CTA
-  - [ ] Главная города показывает ≥1 story из API (не пустой placeholder)
-  - [ ] FEATURE_MATRIX: venue afisha + org page + native/parsed CTA → `[x]`; stories → `[~]` или `[x]` по факту глубины UI
-
----
-
 ## Следующая волна (не активно)
 
-Появятся здесь после закрытия TASK-001…003:
+Появятся здесь после закрытия TASK-001…002:
 
 | ID | Тема | Матрица | Спека |
 |----|------|---------|-------|
@@ -166,7 +132,8 @@
 | ID | Название | Закрыто | Коммит / PR |
 |----|----------|---------|-------------|
 | TASK-000 | Userbot: подписка на TG-каналы → ingest | 31.05.2026 | `workers/telegram-userbot/`, `035_city_telegram_sources.sql` |
+| TASK-003 | Публичные org/venue и афиша на витрине | 31.05.2026 | [TASK-003-public-org-venue-storefront.md](./TASK-003-public-org-venue-storefront.md) — saleMode/CTA, org page, venue grid, stories |
 
 ---
 
-**Последнее обновление:** 31.05.2026 · активных: **3** · in_progress: **0**
+**Последнее обновление:** 31.05.2026 · активных: **2** · in_progress: **0**

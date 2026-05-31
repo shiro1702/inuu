@@ -6,6 +6,7 @@
 |------|------------|
 | [FEATURE_MATRIX.md](./FEATURE_MATRIX.md) | Все фичи по группам + чекбоксы + ссылки на спеки |
 | [ACTIVE_TASKS.md](./ACTIVE_TASKS.md) | **Активная очередь** (≤3 задачи на чат) — вместо кэша в Cursor |
+| [TASK-003-public-org-venue-storefront.md](./TASK-003-public-org-venue-storefront.md) | Runbook исполнения TASK-003 (org/venue, CTA, stories) |
 
 ## Как пользоваться
 

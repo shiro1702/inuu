@@ -2,10 +2,16 @@ import { createError, defineEventHandler, setResponseHeader } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import { resolveCityBySlug } from '~/server/utils/inuuCity'
 import {
+  EDITORIAL_SHOP_SLUG,
+  enrichEventsForStorefront,
+  loadShopForStorefront,
+} from '~/server/utils/enrichEventsForStorefront'
+import {
   buildEventMediaGallery,
   loadSimilarPublishedEvents,
   parseSourceMetadata,
   resolveCityTagLabels,
+  resolveEventDisplayLinks,
   type PublicEventSession,
 } from '~/server/utils/eventPublicDetail'
 
@@ -80,6 +86,37 @@ export default defineEventHandler(async (event) => {
     limit: 6,
   })
 
+  const displayLinks = resolveEventDisplayLinks(data as any)
+  let organization: { slug: string; name: string } | null = null
+  const shopId = (data as any).shop_id ? String((data as any).shop_id) : null
+
+  if (shopId) {
+    const shop = await loadShopForStorefront(client, shopId)
+    if (shop && shop.slug !== EDITORIAL_SHOP_SLUG) {
+      organization = { slug: shop.slug, name: shop.name }
+    }
+  }
+
+  const venueRow = (data as any).venues
+  const venue = venueRow?.slug
+    ? {
+        slug: String(venueRow.slug),
+        title: String(venueRow.title || ''),
+        address: venueRow.address ? String(venueRow.address) : null,
+      }
+    : null
+
+  const sourceDisplay = organization
+    ? null
+    : {
+        label: displayLinks.sourceLabel || meta.organization_name || 'Источник',
+        url: displayLinks.sourceUrl,
+      }
+
+  const similarEnriched = similarEvents.length
+    ? await enrichEventsForStorefront(client, similarEvents)
+    : []
+
   return {
     ok: true,
     event: data,
@@ -90,8 +127,13 @@ export default defineEventHandler(async (event) => {
       registrationUrl: meta.registration_url || null,
       sourceUrl: meta.source_url || null,
     },
-    organizationName: meta.organization_name || null,
+    organizationName: meta.organization_name || organization?.name || null,
+    organization,
+    venue,
+    saleMode: displayLinks.saleMode,
+    cta: displayLinks.cta,
+    sourceDisplay,
     seriesSessions,
-    similarEvents,
+    similarEvents: similarEnriched,
   }
 })

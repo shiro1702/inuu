@@ -1,36 +1,55 @@
 <template>
-  <NuxtLink
-    :to="`${cityBasePath}/events/${event.slug}`"
-    class="group block overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:border-primary/30 hover:shadow-md"
+  <article
+    class="group overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:border-primary/30 hover:shadow-md"
   >
-    <div
-      v-if="event.cover_media_url"
-      class="aspect-[16/9] bg-cover bg-center"
-      :style="{ backgroundImage: `url(${event.cover_media_url})` }"
-    />
-    <div v-else class="aspect-[16/9] bg-gradient-to-br from-indigo-100 to-violet-50" />
-    <div class="p-4">
-      <p class="text-xs font-medium uppercase tracking-wide text-indigo-600">
-        {{ formattedDate }}
-        <span v-if="seriesDateCount > 1" class="normal-case text-indigo-500">
-          · ещё {{ seriesDateCount - 1 }} {{ datesLabel }}
-        </span>
-      </p>
-      <h3 class="mt-1 text-lg font-semibold text-gray-900 group-hover:text-primary">
-        {{ event.title }}
-      </h3>
-      <p v-if="cardDescription" class="mt-2 line-clamp-2 text-sm text-gray-600">
-        {{ cardDescription }}
-      </p>
-      <p v-if="event.price > 0" class="mt-3 text-sm font-medium text-gray-900">
-        от {{ event.price }} ₽
-      </p>
-      <p v-else class="mt-3 text-sm font-medium text-emerald-700">Бесплатно</p>
+    <NuxtLink
+      :to="`${cityBasePath}/events/${event.slug}`"
+      class="block"
+    >
+      <div
+        v-if="event.cover_media_url"
+        class="aspect-[16/9] bg-cover bg-center"
+        :style="{ backgroundImage: `url(${event.cover_media_url})` }"
+      />
+      <div v-else class="aspect-[16/9] bg-gradient-to-br from-indigo-100 to-violet-50" />
+      <div class="p-4">
+        <p class="text-xs font-medium uppercase tracking-wide text-indigo-600">
+          {{ formattedDate }}
+          <span v-if="seriesDateCount > 1" class="normal-case text-indigo-500">
+            · ещё {{ seriesDateCount - 1 }} {{ datesLabel }}
+          </span>
+        </p>
+        <h3 class="mt-1 text-lg font-semibold text-gray-900 group-hover:text-primary">
+          {{ event.title }}
+        </h3>
+        <p v-if="cardDescription" class="mt-2 line-clamp-2 text-sm text-gray-600">
+          {{ cardDescription }}
+        </p>
+        <p v-if="event.price > 0" class="mt-3 text-sm font-medium text-gray-900">
+          от {{ event.price }} ₽
+        </p>
+        <p v-else class="mt-3 text-sm font-medium text-emerald-700">Бесплатно</p>
+      </div>
+    </NuxtLink>
+
+    <div v-if="cta?.url" class="border-t border-gray-100 px-4 pb-4 pt-0">
+      <a
+        :href="cta.url"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="mt-3 flex w-full items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold transition"
+        :class="ctaButtonClass"
+        @click.stop
+      >
+        {{ cta.emoji }} {{ cta.label }}
+      </a>
     </div>
-  </NuxtLink>
+  </article>
 </template>
 
 <script setup lang="ts">
+import type { EventCta, EventSaleMode } from '~/types/storefront'
+
 const props = defineProps<{
   event: {
     slug: string
@@ -42,6 +61,8 @@ const props = defineProps<{
     cover_media_url?: string | null
     series_date_count?: number
   }
+  saleMode?: EventSaleMode
+  cta?: EventCta | null
 }>()
 
 const { cityBasePath } = useCity()
@@ -72,5 +93,14 @@ const formattedDate = computed(() => {
   } catch {
     return ''
   }
+})
+
+const cta = computed(() => props.cta ?? null)
+
+const ctaButtonClass = computed(() => {
+  if (props.saleMode === 'parsed') {
+    return 'border border-gray-300 bg-white text-gray-800 hover:bg-gray-50'
+  }
+  return 'bg-primary text-white hover:opacity-90'
 })
 </script>

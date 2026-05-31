@@ -1,6 +1,7 @@
 import { defineEventHandler, setResponseHeader } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import { resolveCityBySlug } from '~/server/utils/inuuCity'
+import { enrichEventsForStorefront } from '~/server/utils/enrichEventsForStorefront'
 import { prepareEventsListForDisplay } from '~/server/utils/eventListDisplay'
 
 const HOME_EVENTS_LIMIT = 6
@@ -25,7 +26,7 @@ export default defineEventHandler(async (event) => {
       .limit(12),
     client
       .from('events')
-      .select('id,slug,title,description,excerpt,starts_at,ends_at,price,currency,cover_media_url,is_promoted,venue_id,series_slug')
+      .select('id,slug,title,description,excerpt,starts_at,ends_at,price,currency,cover_media_url,is_promoted,venue_id,series_slug,shop_id,source_channel,source_metadata')
       .eq('city_id', city.id)
       .eq('is_published', true)
       .gte('starts_at', nowIso)
@@ -66,7 +67,10 @@ export default defineEventHandler(async (event) => {
       editorialName: city.editorial_name,
     },
     stories: storiesRes.data ?? [],
-    events: prepareEventsListForDisplay(eventsRes.data ?? [], HOME_EVENTS_LIMIT, { sortByImportance: true }),
+    events: await enrichEventsForStorefront(
+      client,
+      prepareEventsListForDisplay(eventsRes.data ?? [], HOME_EVENTS_LIMIT, { sortByImportance: true }),
+    ),
     venues: venuesRes.data ?? [],
     curatedLists: listsRes.data ?? [],
     hotSlots: hotSlotsRes.data ?? [],

@@ -1,6 +1,7 @@
 import { defineEventHandler, getQuery, setResponseHeader } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import { resolveCityBySlug } from '~/server/utils/inuuCity'
+import { enrichEventsForStorefront } from '~/server/utils/enrichEventsForStorefront'
 import {
   filterEventsByDateRange,
   filterEventsByTags,
@@ -37,7 +38,7 @@ export default defineEventHandler(async (event) => {
 
   let request = client
     .from('events')
-    .select('id,slug,title,description,excerpt,starts_at,ends_at,price,currency,cover_media_url,is_promoted,venue_id,series_slug,category_id,source_metadata')
+    .select('id,slug,title,description,excerpt,starts_at,ends_at,price,currency,cover_media_url,is_promoted,venue_id,series_slug,category_id,source_metadata,shop_id,source_channel')
     .eq('city_id', city.id)
     .eq('is_published', true)
     .gte('starts_at', nowIso)
@@ -56,7 +57,10 @@ export default defineEventHandler(async (event) => {
   rows = filterEventsByTags(rows, tagSlugs)
   rows = filterEventsByDateRange(rows, dateFrom, dateTo, city.timezone)
 
-  const items = prepareEventsListForDisplay(rows, limit)
+  const items = await enrichEventsForStorefront(
+    client,
+    prepareEventsListForDisplay(rows, limit),
+  )
 
   return { ok: true, items }
 })

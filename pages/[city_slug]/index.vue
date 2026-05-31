@@ -55,7 +55,13 @@
         </NuxtLink>
       </div>
       <div v-if="home?.events?.length" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <CityEventCard v-for="event in home.events" :key="event.id" :event="event" />
+        <CityEventCard
+          v-for="event in home.events"
+          :key="event.id"
+          :event="event"
+          :sale-mode="(event as any).saleMode"
+          :cta="(event as any).cta"
+        />
       </div>
       <p v-else class="text-sm text-gray-500">Скоро появятся новые события.</p>
     </section>
