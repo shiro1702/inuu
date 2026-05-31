@@ -40,7 +40,16 @@ Seed: `supabase/migrations/019_inuu_seed_ulan_ude.sql`. Редакция как 
 | [19-organizer-lk-monetization.md](./19-organizer-lk-monetization.md) | ЛК организатора, шаблоны афиш, B2B upsell |
 | [20-bot-engagement-backlog.md](./20-bot-engagement-backlog.md) | Backlog: матч друзей, радар, квесты |
 
-Индекс сырого лога: [fix/brainstorm/30.05.2026.md](../../../fix/brainstorm/30.05.2026.md).
+### Из брейншторма 31.05.2026
+
+| Файл | Тема |
+|------|------|
+| [21-mini-app-and-web-wireframes.md](./21-mini-app-and-web-wireframes.md) | TMA + сайт: wireframes, checkout, native/parsed |
+| [22-ai-bot-concierge-and-intent.md](./22-ai-bot-concierge-and-intent.md) | Intent router, RAG, голос, группы, AI backend |
+| [23-bot-roles-ops-support.md](./23-bot-roles-ops-support.md) | Бот B2C / B2B / admin, helpdesk, scanner |
+| [24-mvp-launch-checklist-ulan-ude.md](./24-mvp-launch-checklist-ulan-ude.md) | MVP чеклист, must/cut, лимиты Groq/Vercel |
+
+Индекс сырого лога: [fix/brainstorm/30.05.2026.md](../../../fix/brainstorm/30.05.2026.md), [31.05.2026.md](../../../fix/brainstorm/31.05.2026.md).
 
 ## Связанные спеки
 

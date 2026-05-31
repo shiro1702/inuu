@@ -2,7 +2,9 @@
 
 Lean-подход: короткие спринты, измеримые метрики, **pivot** при провале гипотезы.
 
-**Стек:** Nuxt 3 + Nitro + Supabase + Telegram/MAX Mini App. См. [11-tech-stack.md](./11-tech-stack.md).
+**Стек:** Nuxt 3 + Nitro + Supabase + Telegram/MAX Mini App + **Groq**. См. [11-tech-stack.md](./11-tech-stack.md).
+
+**Метрики MVP (31.05):** CAC, CR афиша→оплата, брошенные корзины на ЮKassa, claim rate теневых org — [24-mvp-launch-checklist-ulan-ude.md](./features/content/24-mvp-launch-checklist-ulan-ude.md).
 
 ---
 

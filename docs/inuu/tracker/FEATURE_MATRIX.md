@@ -32,6 +32,10 @@
 | [x] | Серии событий (`series_slug`) + picker дат в UI | 3 | P1 | — | [15-event-detail-series-venues.md](../features/content/15-event-detail-series-venues.md) |
 | [x] | CTA «Запись / билеты» → внешняя ссылка | 1 | P0 | — | [15-event-detail-series-venues.md](../features/content/15-event-detail-series-venues.md) |
 | [x] | `source_url` / метаданные источника на событии | 2 | P1 | — | [08-event-sourcing-and-moderation-pipeline.md](../features/content/08-event-sourcing-and-moderation-pipeline.md) |
+| [ ] | CTA native 🎟 vs parsed 🌐 на карточках | 2 | P0 | — | [21-mini-app-and-web-wireframes.md](../features/content/21-mini-app-and-web-wireframes.md), [17-ingest-sources-context.md](../features/content/17-ingest-sources-context.md) |
+| [ ] | Telegram Mini App: tab bar (афиша / билеты / профиль) | 4 | P1 | — | [21-mini-app-and-web-wireframes.md](../features/content/21-mini-app-and-web-wireframes.md) |
+| [ ] | Mini App: highlights + фильтры (сегодня / выходные / бесплатно) | 2 | P1 | — | [21-mini-app-and-web-wireframes.md](../features/content/21-mini-app-and-web-wireframes.md) |
+| [ ] | Сайт: B2B-блок + SEO footer + QR в Mini App | 2 | P1 | сред | [21-mini-app-and-web-wireframes.md](../features/content/21-mini-app-and-web-wireframes.md) |
 | [ ] | Chips дат «как в кино» + мини-календарь на длинных сериях | 3 | P1 | — | [15-event-detail-series-venues.md](../features/content/15-event-detail-series-venues.md) |
 | [ ] | Блок «Похожие события» по тегам/категории | 2 | P1 | — | [15-event-detail-series-venues.md](../features/content/15-event-detail-series-venues.md) |
 | [ ] | Избранное + «Мои планы» + push за сутки | 3 | P1 | низ | [verticals/events-and-venues.md](../verticals/events-and-venues.md) |
@@ -72,8 +76,11 @@
 | [ ] | Vision: сверка текст ↔ афиша (`conflict_alert`) | 3 | P1 | — | [16-parsing-pipeline-extensions.md](../features/content/16-parsing-pipeline-extensions.md) |
 | [ ] | Web CRON парсинг сайтов | 4 | P1 | сред | [17-ingest-sources-context.md](../features/content/17-ingest-sources-context.md) |
 | [ ] | Контекст источника в промпте (театр / клуб / …) | 2 | P1 | — | [17-ingest-sources-context.md](../features/content/17-ingest-sources-context.md) |
+| [ ] | AI-санитар парсинга (title, price, category, vibe) | 2 | P1 | — | [22-ai-bot-concierge-and-intent.md](../features/content/22-ai-bot-concierge-and-intent.md), [16-parsing-pipeline-extensions.md](../features/content/16-parsing-pipeline-extensions.md) |
+| [ ] | TL;DR + vibe emoji на карточке события | 2 | P1 | — | [22-ai-bot-concierge-and-intent.md](../features/content/22-ai-bot-concierge-and-intent.md), [13-ai-content-horizon.md](../features/content/13-ai-content-horizon.md) |
+| [ ] | Сжатие афиш WebP при ingest | 2 | P1 | — | [24-mvp-launch-checklist-ulan-ude.md](../features/content/24-mvp-launch-checklist-ulan-ude.md) |
+| [ ] | Groq: каскад 8b/70b + graceful 429 | 2 | P1 | — | [24-mvp-launch-checklist-ulan-ude.md](../features/content/24-mvp-launch-checklist-ulan-ude.md), [11-tech-stack.md](../11-tech-stack.md) |
 | [ ] | VK wall ingest | 3 | P2 | — | [16-parsing-pipeline-extensions.md](../features/content/16-parsing-pipeline-extensions.md) |
-| [ ] | AI-рерайт описаний при парсинге | 2 | P2 | — | [13-ai-content-horizon.md](../features/content/13-ai-content-horizon.md) |
 
 ---
 
@@ -92,6 +99,8 @@
 | [ ] | `/news`, `/event` для редакции (без очереди) | 2 | P2 | — | [05-bot-news-dialog-script.md](../features/content/05-bot-news-dialog-script.md) |
 | [ ] | Approve с рангом одной кнопкой «Одобрить 5⭐» | 1 | P2 | — | [16-parsing-pipeline-extensions.md](../features/content/16-parsing-pipeline-extensions.md) |
 | [ ] | Редактирование тегов в Mini App (словарь из БД) | 3 | P1 | — | [16-parsing-pipeline-extensions.md](../features/content/16-parsing-pipeline-extensions.md) |
+| [ ] | Bot helpdesk: forward + reply из admin chat | 3 | P1 | — | [23-bot-roles-ops-support.md](../features/content/23-bot-roles-ops-support.md) |
+| [ ] | Admin алерты (cron, ЮKassa, storage) | 2 | P2 | — | [23-bot-roles-ops-support.md](../features/content/23-bot-roles-ops-support.md) |
 
 ---
 
@@ -122,8 +131,12 @@
 | [x] | `/subscribe` + callbacks `inuu:notify:*` | 3 | P1 | — | [12-afisha-tag-subscriptions.md](../features/content/12-afisha-tag-subscriptions.md) |
 | [ ] | Push при publish события (match по тегам) | 3 | P1 | выс | [06-bot-digest-subscriptions.md](../features/content/06-bot-digest-subscriptions.md) |
 | [ ] | Push при publish подборки / новости | 3 | P1 | сред | [06-bot-digest-subscriptions.md](../features/content/06-bot-digest-subscriptions.md) |
+| [ ] | Напоминания −24ч / −2ч + QR в чате | 2 | P1 | — | [23-bot-roles-ops-support.md](../features/content/23-bot-roles-ops-support.md) |
+| [ ] | AI intent router + NL-консьерж в боте | 4 | P1 | сред | [22-ai-bot-concierge-and-intent.md](../features/content/22-ai-bot-concierge-and-intent.md), [13-ai-content-horizon.md](../features/content/13-ai-content-horizon.md) |
+| [ ] | Голосовые → Whisper (Groq) → intent поиск | 3 | P2 | — | [22-ai-bot-concierge-and-intent.md](../features/content/22-ai-bot-concierge-and-intent.md) |
+| [ ] | RAG-профиль: теги + покупки в промпте Groq | 3 | P2 | — | [22-ai-bot-concierge-and-intent.md](../features/content/22-ai-bot-concierge-and-intent.md) |
+| [ ] | Бот в группах: @mention + Poll «куда идём» | 3 | P2 | низ | [22-ai-bot-concierge-and-intent.md](../features/content/22-ai-bot-concierge-and-intent.md) |
 | [ ] | Персональный пятничный дайджест (Groq текст) | 4 | P2 | низ | [06-bot-digest-subscriptions.md](../features/content/06-bot-digest-subscriptions.md) |
-| [ ] | AI-консьерж (NL-запрос в боте) | 4 | P3 | сред | [13-ai-content-horizon.md](../features/content/13-ai-content-horizon.md) |
 | [ ] | Лимиты маркетинговых рассылок / opt-out | 2 | P2 | — | [06-bot-digest-subscriptions.md](../features/content/06-bot-digest-subscriptions.md) |
 
 ---
@@ -147,12 +160,16 @@
 |:------:|------|:------:|:-----:|:------:|-------|
 | [x] | Схема БД payments (legacy / inuu migrations) | 2 | P1 | — | [payments/PAYMENTS_RU_YOOKASSA_TBANK.md](../../payments/PAYMENTS_RU_YOOKASSA_TBANK.md) |
 | [x] | Webhook YooKassa (ресторанный legacy) | 3 | — | — | [payments/PAYMENTS_TODO_RU.md](../../payments/PAYMENTS_TODO_RU.md) |
-| [ ] | Покупка билета в боте / Mini App | 5 | P1 | выс | [18-ticketing-full-flow.md](../features/content/18-ticketing-full-flow.md) |
+| [ ] | Покупка билета в боте / Mini App | 5 | P1 | выс | [18-ticketing-full-flow.md](../features/content/18-ticketing-full-flow.md), [21-mini-app-and-web-wireframes.md](../features/content/21-mini-app-and-web-wireframes.md) |
+| [ ] | Чекбокс оферта platform + org при оплате | 1 | P0 | — | [24-mvp-launch-checklist-ulan-ude.md](../features/content/24-mvp-launch-checklist-ulan-ude.md), [18-ticketing-full-flow.md](../features/content/18-ticketing-full-flow.md) |
+| [ ] | Push QR-билета в чат после оплаты | 2 | P0 | — | [23-bot-roles-ops-support.md](../features/content/23-bot-roles-ops-support.md), [18-ticketing-full-flow.md](../features/content/18-ticketing-full-flow.md) |
+| [ ] | SOS «Проблема с билетом» → support | 1 | P1 | — | [23-bot-roles-ops-support.md](../features/content/23-bot-roles-ops-support.md), [18-ticketing-full-flow.md](../features/content/18-ticketing-full-flow.md) |
 | [ ] | Hold 15 мин + анти-овербукинг | 3 | P1 | — | [18-ticketing-full-flow.md](../features/content/18-ticketing-full-flow.md) |
 | [ ] | ЮKassa split (4% платформе) | 4 | P1 | выс | [18-ticketing-full-flow.md](../features/content/18-ticketing-full-flow.md) |
 | [ ] | QR-билет + сканнер для организатора | 4 | P1 | — | [18-ticketing-full-flow.md](../features/content/18-ticketing-full-flow.md) |
 | [ ] | Динамические «волны» цен | 4 | P2 | выс | [18-ticketing-full-flow.md](../features/content/18-ticketing-full-flow.md) |
-| [ ] | Возвраты + waitlist | 4 | P2 | — | [18-ticketing-full-flow.md](../features/content/18-ticketing-full-flow.md) |
+| [ ] | Возвраты MVP: заявка в admin chat → ручной refund | 3 | P1 | — | [18-ticketing-full-flow.md](../features/content/18-ticketing-full-flow.md), [23-bot-roles-ops-support.md](../features/content/23-bot-roles-ops-support.md) |
+| [ ] | Автовозвраты + waitlist (калькулятор 193-ФЗ) | 4 | P2 | — | [18-ticketing-full-flow.md](../features/content/18-ticketing-full-flow.md) |
 | [ ] | «Поделиться билетом» другу (deep link) | 3 | P2 | низ | [18-ticketing-full-flow.md](../features/content/18-ticketing-full-flow.md) |
 | [ ] | Оплата публикации партнёрской новости (B2B) | 3 | P2 | выс | [07-paid-news-publication.md](../features/content/07-paid-news-publication.md) |
 
@@ -205,26 +222,27 @@
 |:------:|------|:------:|:-----:|:------:|-------|
 | [ ] | «Матч с друзьями» (групповой выбор) | 5 | P3 | низ | [20-bot-engagement-backlog.md](../features/content/20-bot-engagement-backlog.md) |
 | [ ] | Радар «что рядом» (гео) | 3 | P2 | сред | [20-bot-engagement-backlog.md](../features/content/20-bot-engagement-backlog.md) |
-| [ ] | AI-маршрут на вечер (3 точки) | 4 | P2 | — | [20-bot-engagement-backlog.md](../features/content/20-bot-engagement-backlog.md) |
+| [ ] | AI-маршрут на вечер (событие + еда рядом) | 4 | P2 | — | [22-ai-bot-concierge-and-intent.md](../features/content/22-ai-bot-concierge-and-intent.md), [20-bot-engagement-backlog.md](../features/content/20-bot-engagement-backlog.md) |
+| [ ] | Рулетка «случайные выходные» | 2 | P2 | — | [22-ai-bot-concierge-and-intent.md](../features/content/22-ai-bot-concierge-and-intent.md), [20-bot-engagement-backlog.md](../features/content/20-bot-engagement-backlog.md) |
 | [ ] | Нишевые TG-каналы (стратегия «Дерево») | 3 | P3 | сред | [13-ai-content-horizon.md](../features/content/13-ai-content-horizon.md) |
 | [ ] | Stories-матрица автоконтента | 4 | P2 | — | [14-digests-curated-admin-smm.md](../features/content/14-digests-curated-admin-smm.md) |
-| [ ] | Голосования «куда идём» в TG-группах | 3 | P2 | низ | [04-features-priority.md](../04-features-priority.md) |
 
 ---
 
-## Сводка (на 30.05.2026)
+## Сводка (на 31.05.2026)
 
 | | Кол-во |
 |---|--------|
-| Всего строк | 95 |
+| Всего строк | 130 |
 | `[x]` сделано | 43 |
 | `[~]` в работе | 0 |
-| `[ ]` в плане | 52 |
+| `[ ]` в плане | 87 |
 
-> **Примечание:** `[x]` = есть рабочий код или MVP закрыт по спеке; `[~]` = идёт реализация; `[ ]` = не начато или только спека. При расхождении с кодом — править здесь первым делом.
+> **Примечание:** `[x]` = есть рабочий код или MVP закрыт по спеке; `[~]` = идёт реализация; `[ ]` = не начато или только спека. Строки «снято» (§11) не входят в «в плане». При расхождении с кодом — править здесь первым делом.
 
 ## Связанные документы
 
 - [04-features-priority.md](../04-features-priority.md) — приоритеты волн A–E  
-- [03-recommended-mvp.md](../features/content/03-recommended-mvp.md) — фазы контента  
-- [fix/brainstorm/30.05.2026.md](../../fix/brainstorm/30.05.2026.md) — индекс брейншторма
+- [03-recommended-mvp.md](../features/content/03-recommended-mvp.md) — фазы контента (в т.ч. **1g** из 31.05)  
+- [fix/brainstorm/30.05.2026.md](../../fix/brainstorm/30.05.2026.md) — индекс брейншторма 30.05  
+- [fix/brainstorm/31.05.2026.md](../../fix/brainstorm/31.05.2026.md) — индекс брейншторма 31.05 (спеки 21–24)

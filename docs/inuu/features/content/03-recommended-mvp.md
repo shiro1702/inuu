@@ -96,6 +96,19 @@
 | P2 | ЛК организатора + шаблоны афиш | [19](./19-organizer-lk-monetization.md) |
 | P3 | AI-консьерж, нишевые каналы | [13](./13-ai-content-horizon.md) |
 
+### Фаза 1g — «Wireframes, bot roles, AI concierge» (из брейншторма 31.05)
+
+Индекс: [fix/brainstorm/31.05.2026.md](../../../fix/brainstorm/31.05.2026.md).
+
+| Приоритет | Тема | Спека |
+|-----------|------|--------|
+| P0 | MVP чеклист Улан-Удэ (юридика, support, must/cut) | [24](./24-mvp-launch-checklist-ulan-ude.md) |
+| P0 | Wireframes TMA + сайт, native/parsed | [21](./21-mini-app-and-web-wireframes.md) |
+| P0 | Бот: QR, scanner, helpdesk | [23](./23-bot-roles-ops-support.md) |
+| P1 | AI санитар + TL;DR при парсинге | [22](./22-ai-bot-concierge-and-intent.md), [16](./16-parsing-pipeline-extensions.md) |
+| P1 | Intent NL-поиск в боте | [22](./22-ai-bot-concierge-and-intent.md) |
+| P2 | RAG-профиль, голос, группы | [22](./22-ai-bot-concierge-and-intent.md) |
+
 ### Фаза 3 — «Каналы»
 
 - Автопост в TG при publish  

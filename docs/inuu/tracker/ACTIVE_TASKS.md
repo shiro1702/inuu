@@ -40,9 +40,11 @@
 
 ---
 
-## Текущий вектор (30.05.2026)
+## Текущий вектор (31.05.2026)
 
-**Наполнить БД событиями** через парсер (TG + web) и **привести витрину** к виду, где parsed-контент виден пользователю: карточки → организатор / venue → подборки и stories (следующая волна после org-страниц).
+**Наполнить БД событиями** (TG userbot + web cron) и **привести витрину** к виду, где parsed-контент виден: org/venue → подборки → stories.
+
+Параллельно зафиксирован **MVP launch** из брейншторма 31.05: wireframes TMA, bot roles (QR / scanner / helpdesk), AI sanitizer — см. фазу **1g** в [03-recommended-mvp.md](../features/content/03-recommended-mvp.md) и спеки **21–24**.
 
 ---
 
@@ -64,7 +66,7 @@
   - Поле `context_type` на источнике (или fallback из parser chat metadata) → подстановка в system prompt
   - Подстановка словаря `city_content_tags` в промпт (1 категория + 1–5 тегов из БД)
   - Unit/интеграционная проверка на 5–10 реальных постах из moderation/parser чата
-- **Out of scope:** Vision cross-check, `post_type` cancellation/update, userbot (TASK-000), dashboard CRUD источников
+- **Out of scope:** Vision cross-check, `post_type` cancellation/update, userbot (TASK-000), dashboard CRUD источников, AI sanitizer / TL;DR (TASK-004)
 - **Ключевые файлы:**
   - `server/utils/` — groq parser, ingest submit
   - `server/api/ingest/content/submit.post.ts`
@@ -86,6 +88,7 @@
   - [17-ingest-sources-context.md](../features/content/17-ingest-sources-context.md) — web-cron, shadow org, dedupe
   - [10-telegram-sources-without-bot-access.md](../features/content/10-telegram-sources-without-bot-access.md) — тот же `POST /api/ingest/content/submit`
   - [15-event-detail-series-venues.md](../features/content/15-event-detail-series-venues.md) — `source_url`, `organization_id`
+  - [24-mvp-launch-checklist-ulan-ude.md](../features/content/24-mvp-launch-checklist-ulan-ude.md) — WebP, один город
 - **In scope:**
   - Миграция/расширение `sources` (или аналог): `url`, `context_type`, `organization_id`, `cron_enabled`
   - Cron route (Vercel cron / `server/api/cron/…`): обход 2–3 whitelist-сайтов Улан-Удэ
@@ -109,44 +112,52 @@
 ### TASK-003 · Публичные страницы org/venue и афиша на витрине
 
 - **Статус:** `todo`
-- **Матрица:** §3 · «Страница организатора / источника + подписка» · §3 · «Афиша всех событий на странице venue» · §6 · «Stories города на главной» (частично)
-- **Цель:** Parsed-события из TASK-001/002 видны на сайте: пользователь кликает организатора / venue и видит их афишу; главная показывает stories.
+- **Матрица:** §3 · «Страница организатора / источника + подписка» · §3 · «Афиша всех событий на странице venue» · §2 · «CTA native 🎟 vs parsed 🌐» · §6 · «Stories города на главной» (частично)
+- **Цель:** Parsed-события из TASK-001/002 видны на сайте: пользователь кликает организатора / venue и видит их афишу; native vs parsed CTA; главная показывает stories.
 - **Спеки:**
   - [15-event-detail-series-venues.md](../features/content/15-event-detail-series-venues.md) — места, org, блок «источник»
   - [17-ingest-sources-context.md](../features/content/17-ingest-sources-context.md) — `native` vs `parsed`, CTA
+  - [21-mini-app-and-web-wireframes.md](../features/content/21-mini-app-and-web-wireframes.md) — визуальное различие 🎟 / 🌐
   - [03-core-platform.md](../03-core-platform.md) — stories на главной
   - [verticals/events-and-venues.md](../verticals/events-and-venues.md)
 - **In scope:**
   - `GET /api/cities/[slug]/organizations/[orgSlug]` + страница `/[city_slug]/organizations/[slug]` — афиша upcoming events
   - На карточке события: блок «Организатор» / «Источник: @channel» со ссылкой
+  - CTA на карточках: **🎟 Купить** (native) vs **🌐 На сайт** (parsed)
   - Страница venue: блок «События здесь» (API filter `venue_id`)
   - Stories: данные из `home.get.ts` уже есть — довести UI на главной (компонент stories, если заглушка)
-  - CTA parsed-события: «Купить на сайте организатора» (`registration_url` / `source_url`)
-- **Out of scope:** Подписка на org (push), claim org в ЛК, chips дат / «похожие», cron-подборки, admin CRUD подборок
+- **Out of scope:** Mini App tab bar (TASK-005), подписка на org (push), claim org в ЛК, chips дат / «похожие», cron-подборки
 - **Ключевые файлы:**
   - `server/api/cities/[slug]/home.get.ts`
   - `server/api/cities/[slug]/organizations/` (новый)
   - `pages/[city_slug]/organizations/` (новый)
   - `pages/[city_slug]/venues/` — афиша
-  - `pages/[city_slug]/events/` — блок org/source
+  - `pages/[city_slug]/events/` — блок org/source + CTA
   - Vue-компонент stories (см. `03-core-platform.md`)
 - **Критерии готовности:**
   - [ ] Опубликованное parsed-событие с `organization_id` → кликабельная страница org с ≥1 событием
   - [ ] Venue с событиями показывает список на своей странице
+  - [ ] На ленте видно различие native / parsed CTA
   - [ ] Главная города показывает ≥1 story из API (не пустой placeholder)
-  - [ ] FEATURE_MATRIX: venue afisha + org page → `[x]`; stories → `[~]` или `[x]` по факту глубины UI
+  - [ ] FEATURE_MATRIX: venue afisha + org page + native/parsed CTA → `[x]`; stories → `[~]` или `[x]` по факту глубины UI
 
 ---
 
 ## Следующая волна (не активно)
 
-Появятся здесь после закрытия TASK-000…003:
+Появятся здесь после закрытия TASK-001…003:
 
-| Тема | Матрица | Спека |
-|------|---------|-------|
-| `post_type`: отмена / перенос / sold-out | §4 | [16](../features/content/16-parsing-pipeline-extensions.md) |
-| Cron-черновики подборок (Пт–Вс, ⭐4+) | §6 | [14](../features/content/14-digests-curated-admin-smm.md) |
-| Подписка на организатора + push при publish | §3, §7 | [15](../features/content/15-event-detail-series-venues.md), [06](../features/content/06-bot-digest-subscriptions.md) |
+| ID | Тема | Матрица | Спека |
+|----|------|---------|-------|
+| TASK-004 | AI sanitizer + TL;DR/vibe при парсинге | §4 | [22](../features/content/22-ai-bot-concierge-and-intent.md), [16](../features/content/16-parsing-pipeline-extensions.md) |
+| TASK-005 | Bot: QR после оплаты + helpdesk + scanner MVP | §5, §9 | [23](../features/content/23-bot-roles-ops-support.md), [18](../features/content/18-ticketing-full-flow.md) |
+| TASK-006 | AI intent router (NL-поиск в боте) | §7 | [22](../features/content/22-ai-bot-concierge-and-intent.md) |
+| — | `post_type`: отмена / перенос / sold-out | §4 | [16](../features/content/16-parsing-pipeline-extensions.md) |
+| — | Cron-черновики подборок (Пт–Вс, ⭐4+) | §6 | [14](../features/content/14-digests-curated-admin-smm.md) |
+| — | Mini App wireframes (tab bar, checkout) | §2 | [21](../features/content/21-mini-app-and-web-wireframes.md) |
+| — | ЮKassa split + hold + оферта org | §9 | [18](../features/content/18-ticketing-full-flow.md), [24](../features/content/24-mvp-launch-checklist-ulan-ude.md) |
+
+Индекс брейншторма 31.05: [fix/brainstorm/31.05.2026.md](../../fix/brainstorm/31.05.2026.md).
 
 ---
 

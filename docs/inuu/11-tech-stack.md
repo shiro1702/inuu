@@ -129,6 +129,18 @@ Brainstorm в [chat](../fix/brainstorm/chat) с October — историческ
 
 ---
 
+## AI (Groq)
+
+| Компонент | Назначение |
+|-----------|------------|
+| **Groq LLM** | Intent extraction, санитар парсинга, TL;DR — см. [22-ai-bot-concierge-and-intent.md](./features/content/22-ai-bot-concierge-and-intent.md) |
+| **Groq Whisper** | Транскрибация voice в боте → тот же intent pipeline |
+| Лимиты free tier | Bottleneck на пике (пятница); каскад 8b/70b, graceful 429 — [24-mvp-launch-checklist-ulan-ude.md](./features/content/24-mvp-launch-checklist-ulan-ude.md) |
+
+Webhook Telegram: для voice + RAG — **async ACK** (ответ «Слушаю…»), т.к. Vercel fn timeout 10 с.
+
+---
+
 ## Связанные документы
 
 - [10-existing-codebase.md](./10-existing-codebase.md) — наследие кода и вычистка

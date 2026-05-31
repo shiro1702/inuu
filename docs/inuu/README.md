@@ -71,9 +71,9 @@
 | [features/content/10-telegram-sources-without-bot-access.md](./features/content/10-telegram-sources-without-bot-access.md) | Как подключать TG-источники, куда нельзя добавить бота |
 | [features/content/11-digest-parsing-and-curated-picks.md](./features/content/11-digest-parsing-and-curated-picks.md) | Digest-парсинг, подборки недели/месяца |
 | [features/content/12-afisha-tag-subscriptions.md](./features/content/12-afisha-tag-subscriptions.md) | Подписки на теги афиши |
-| [features/content/README.md](./features/content/README.md) | Обзор + **13–20** из брейншторма 30.05.2026 |
+| [features/content/README.md](./features/content/README.md) | Обзор + **13–24** из брейнштормов 30–31.05.2026 |
 
-Брейншторм 30.05 (индекс → спеки): [fix/brainstorm/30.05.2026.md](../fix/brainstorm/30.05.2026.md).
+Брейнштормы (индекс → спеки): [30.05.2026](../fix/brainstorm/30.05.2026.md), [31.05.2026](../fix/brainstorm/31.05.2026.md).
 
 ### Вертикали
 
