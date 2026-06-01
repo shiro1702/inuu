@@ -8,6 +8,10 @@ import {
 import { prepareEventsListForDisplay } from '~/server/utils/eventListDisplay'
 import { parseSourceMetadata } from '~/server/utils/eventPublicDetail'
 import { resolveCityBySlug } from '~/server/utils/inuuCity'
+import {
+  loadOrganizationUpcomingEvents,
+  resolveOrganizationDisplayName,
+} from '~/server/utils/organizationPublicEvents'
 
 const UPCOMING_EVENTS_LIMIT = 24
 const UPCOMING_EVENTS_FETCH_POOL = 80
@@ -43,17 +47,15 @@ export default defineEventHandler(async (event) => {
   const shopId = String(shop.id)
   const nowIso = new Date().toISOString()
 
-  const { data: eventRows, error: eventsError } = await client
-    .from('events')
-    .select('id,slug,title,description,excerpt,starts_at,ends_at,price,currency,cover_media_url,is_promoted,venue_id,series_slug,category_id,source_metadata,shop_id,source_channel')
-    .eq('city_id', city.id)
-    .eq('shop_id', shopId)
-    .eq('is_published', true)
-    .gte('starts_at', nowIso)
-    .order('starts_at', { ascending: true })
-    .limit(UPCOMING_EVENTS_FETCH_POOL)
-
-  if (eventsError) {
+  let eventRows: Awaited<ReturnType<typeof loadOrganizationUpcomingEvents>>
+  try {
+    eventRows = await loadOrganizationUpcomingEvents(client, {
+      cityId: city.id,
+      shopId,
+      nowIso,
+      fetchPool: UPCOMING_EVENTS_FETCH_POOL,
+    })
+  } catch (eventsError) {
     console.error('[organizations/detail] load events failed:', eventsError)
     throw createError({ statusCode: 500, statusMessage: 'Failed to load organization events' })
   }
@@ -63,9 +65,15 @@ export default defineEventHandler(async (event) => {
     prepareEventsListForDisplay(eventRows ?? [], UPCOMING_EVENTS_LIMIT),
   )
 
+  const publicName = await resolveOrganizationDisplayName(client, {
+    cityId: city.id,
+    shopId,
+    fallbackName: String(shop.name),
+  })
+
   const profile = organizationProfileFromShop({
     slug: String(shop.slug),
-    name: String(shop.name),
+    name: publicName,
     ui_settings: (shop.ui_settings && typeof shop.ui_settings === 'object'
       ? shop.ui_settings
       : {}) as Record<string, unknown>,

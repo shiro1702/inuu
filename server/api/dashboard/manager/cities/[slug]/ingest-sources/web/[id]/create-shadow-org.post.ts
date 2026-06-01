@@ -1,6 +1,5 @@
-import { createError, defineEventHandler } from 'h3'
-import { serverSupabaseServiceRole } from '#supabase/server'
-import { getWebSourceById, mapWebSourceRow, WEB_SOURCE_SELECT } from '~/server/utils/ingestSourcesDashboard'
+import { defineEventHandler } from 'h3'
+import { getWebSourceById } from '~/server/utils/ingestSourcesDashboard'
 import { resolveOrCreateShadowOrg } from '~/server/utils/ingestShadowOrg'
 import { resolveManagerCityScopeOrThrow } from '~/server/utils/managerCityAccess'
 
@@ -22,19 +21,11 @@ export default defineEventHandler(async (event) => {
     event,
     cityId: scope.cityId,
     sourceUrl: source.url,
+    orgNameHint: source.displayName,
     webSourceId: source.id,
   })
 
-  const client = await serverSupabaseServiceRole(event)
-  const { data, error } = await client
-    .from('city_web_sources')
-    .select(WEB_SOURCE_SELECT)
-    .eq('id', source.id)
-    .maybeSingle()
-
-  if (error || !data?.id) {
-    throw createError({ statusCode: 500, statusMessage: error?.message || 'Failed to reload source' })
-  }
+  const item = await getWebSourceById({ event, cityId: scope.cityId, id: source.id })
 
   return {
     ok: true as const,
@@ -44,6 +35,6 @@ export default defineEventHandler(async (event) => {
       slug: shadow.slug,
       name: shadow.name,
     },
-    item: mapWebSourceRow(data),
+    item,
   }
 })

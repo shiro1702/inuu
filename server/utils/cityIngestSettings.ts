@@ -22,17 +22,32 @@ export async function loadCityIngestSettings(
   return parseCityIngestSettings(ingest)
 }
 
-export async function resolveCityPrefilterEnabled(
+async function resolveCityIngestFlag(
   event: H3Event,
   citySlug: string | null | undefined,
+  pick: (settings: CityIngestSettings) => boolean,
 ): Promise<boolean> {
   const slug = String(citySlug || '').trim()
   if (!slug) return true
   try {
     const city = await resolveCityBySlug(event, slug)
     const settings = await loadCityIngestSettings(event, city.id)
-    return settings.prefilter_enabled
+    return pick(settings)
   } catch {
     return true
   }
+}
+
+export async function resolveCityPrefilterEnabled(
+  event: H3Event,
+  citySlug: string | null | undefined,
+): Promise<boolean> {
+  return resolveCityIngestFlag(event, citySlug, (s) => s.prefilter_enabled)
+}
+
+export async function resolveCityRejectPastEventsEnabled(
+  event: H3Event,
+  citySlug: string | null | undefined,
+): Promise<boolean> {
+  return resolveCityIngestFlag(event, citySlug, (s) => s.reject_past_events_enabled)
 }

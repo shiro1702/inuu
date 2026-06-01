@@ -1,5 +1,10 @@
 import { createError, defineEventHandler, getHeader } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
+import {
+  queryWebSourcesWith,
+  WEB_SOURCE_CRON_SELECT,
+  WEB_SOURCE_CRON_SELECT_LEGACY,
+} from '~/server/utils/ingestSourcesDashboard'
 import { executeWebSourceCrawl, type WebCrawlSourceRow } from '~/server/utils/webCrawlRouter'
 
 type WebSourceRow = WebCrawlSourceRow & {
@@ -18,13 +23,16 @@ export default defineEventHandler(async (event) => {
   }
 
   const client = await serverSupabaseServiceRole(event)
-  const { data: sources, error } = await client
-    .from('city_web_sources')
-    .select(
-      'id,city_id,url,context_type,organization_id,parsing_strategy,parsing_rules,rules_validated_at,cities!inner(slug,timezone,name)',
-    )
-    .eq('cron_enabled', true)
-    .eq('is_active', true)
+  const { data: sources, error } = await queryWebSourcesWith(
+    WEB_SOURCE_CRON_SELECT,
+    WEB_SOURCE_CRON_SELECT_LEGACY,
+    (select) =>
+      client
+        .from('city_web_sources')
+        .select(select)
+        .eq('cron_enabled', true)
+        .eq('is_active', true),
+  )
 
   if (error) {
     throw createError({ statusCode: 500, statusMessage: error.message })

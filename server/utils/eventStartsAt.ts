@@ -91,6 +91,34 @@ export function listEventStartsAtFromPayload(
   return [resolveEventStartsAt(payload, timeZone)]
 }
 
+/**
+ * True when event has parsed dates and all of them are before now (with lead buffer).
+ * Events without dates return false — moderation can still review them.
+ */
+export function isEventEntirelyInPast(
+  payload: EventParseResult,
+  timeZone = 'Asia/Irkutsk',
+  minLeadMs = MIN_LEAD_MS,
+): boolean {
+  const rawDates = Array.isArray(payload.recurrence?.dates) ? payload.recurrence.dates : []
+  if (!rawDates.length) return false
+
+  const parsed = rawDates
+    .map((d) => parseEventDate(d, timeZone))
+    .filter((d): d is Date => d !== null)
+  if (!parsed.length) return false
+
+  const minStart = Date.now() + minLeadMs
+  return parsed.every((d) => d.getTime() < minStart)
+}
+
+export function filterUpcomingEvents(
+  events: EventParseResult[],
+  timeZone = 'Asia/Irkutsk',
+): EventParseResult[] {
+  return events.filter((ev) => !isEventEntirelyInPast(ev, timeZone))
+}
+
 /** Pick a future starts_at for the city afisha (never in the past). */
 export function resolveEventStartsAt(
   payload: EventParseResult,

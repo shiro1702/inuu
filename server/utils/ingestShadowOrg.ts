@@ -1,6 +1,10 @@
 import type { H3Event } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import { slugifyTaxonomy } from '~/server/utils/cityContentTaxonomy'
+import {
+  extractTelegramChannelFromUrl,
+  resolveIngestSourceDisplayName,
+} from '~/server/utils/ingestSourceDisplayName'
 
 function extractDomain(sourceUrl: string): string {
   try {
@@ -8,15 +12,6 @@ function extractDomain(sourceUrl: string): string {
   } catch {
     return 'unknown-source'
   }
-}
-
-function displayNameFromDomain(domain: string): string {
-  const base = domain.split('.')[0] || domain
-  return base
-    .split('-')
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ')
 }
 
 export type ShadowOrgResult = {
@@ -35,14 +30,19 @@ export async function resolveOrCreateShadowOrg(args: {
 }): Promise<ShadowOrgResult> {
   const client = await serverSupabaseServiceRole(args.event)
   const domain = extractDomain(args.sourceUrl)
-  const slugBase = slugifyTaxonomy(domain) || 'parsed-org'
-  const name = String(args.orgNameHint || '').trim() || displayNameFromDomain(domain)
+  const channel = extractTelegramChannelFromUrl(args.sourceUrl)
+  const parsedSourceKey = channel ? `t.me/${channel.toLowerCase()}` : domain
+  const slugBase = slugifyTaxonomy(channel || domain) || 'parsed-org'
+  const name = resolveIngestSourceDisplayName({
+    sourceUrl: args.sourceUrl,
+    displayName: args.orgNameHint,
+  })
 
   const { data: byDomain } = await client
     .from('shops')
     .select('id,slug,name,ui_settings')
     .eq('city_id', args.cityId)
-    .filter('ui_settings->>parsed_source_domain', 'eq', domain)
+    .filter('ui_settings->>parsed_source_domain', 'eq', parsedSourceKey)
     .maybeSingle()
 
   if (byDomain?.id) {
@@ -85,7 +85,7 @@ export async function resolveOrCreateShadowOrg(args: {
       org_type: 'venue_operator',
       ui_settings: {
         is_claimed: false,
-        parsed_source_domain: domain,
+        parsed_source_domain: parsedSourceKey,
       },
     } as any)
     .select('id,slug,name')

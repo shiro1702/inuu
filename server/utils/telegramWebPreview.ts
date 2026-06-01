@@ -1,4 +1,5 @@
 import * as cheerio from 'cheerio'
+import { normalizeRemoteMediaUrl } from '~/server/utils/remoteMediaUrl'
 
 const FETCH_TIMEOUT_MS = 8000
 const USER_AGENT = 'INUU-ContentBot/1.0 (+https://inuu.ru)'
@@ -55,10 +56,29 @@ export function buildTelegramPostExternalId(dataPost: string): string {
   return `tgweb:${dataPost.replace('/', ':')}`
 }
 
-function extractPosterUrl(style: string | undefined): string | null {
+function extractPosterUrlFromStyle(style: string | undefined): string | null {
   if (!style) return null
-  const match = style.match(/url\(['"]?([^'")]+)['"]?\)/i)
-  return match?.[1] || null
+  const match = style.match(/background-image:\s*url\(['"]?([^'")]+)['"]?\)/i)
+  return normalizeRemoteMediaUrl(match?.[1] || null)
+}
+
+function extractPosterUrl(
+  $: cheerio.CheerioAPI,
+  message: cheerio.Cheerio<cheerio.Element>,
+): string | null {
+  const wrap = message.find('.tgme_widget_message_photo_wrap').first()
+  const fromStyle = extractPosterUrlFromStyle(wrap.attr('style'))
+  if (fromStyle && !fromStyle.includes('telegram.org/img/emoji')) {
+    return fromStyle
+  }
+
+  const imgSrc = wrap.find('img').first().attr('src')
+  const fromImg = normalizeRemoteMediaUrl(imgSrc)
+  if (fromImg && !fromImg.includes('telegram.org/img/emoji')) {
+    return fromImg
+  }
+
+  return null
 }
 
 function extractMessageText($: cheerio.CheerioAPI, message: cheerio.Cheerio<cheerio.Element>): string {
@@ -83,9 +103,7 @@ export function parseTelegramWebPreviewHtml(html: string): TelegramWebPreviewPos
     if (text.length < 10) return
 
     const datetime = message.find('time[datetime]').first().attr('datetime') || null
-    const posterUrl = extractPosterUrl(
-      message.find('.tgme_widget_message_photo_wrap').first().attr('style'),
-    )
+    const posterUrl = extractPosterUrl($, message)
 
     posts.push({
       dataPost,

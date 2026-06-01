@@ -1,6 +1,7 @@
 import { createError, type H3Event } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import type { EventParseResult } from '~/server/utils/ai/eventParseSchema'
+import { formatTopicTagsAsHashtags } from '~/server/utils/ingestSourceDisplayName'
 import { formatDescriptionsForModeration } from '~/server/utils/eventParseDescriptions'
 import { publishContentSubmission } from '~/server/utils/contentSubmissionPublish'
 import { buildContentSubmissionEditLinks } from '~/server/utils/contentSubmissionEditUrl'
@@ -162,7 +163,7 @@ export function formatContentSubmissionCard(args: {
     : typeof p.price_from === 'number'
       ? `от ${p.price_from} ₽`
       : '—'
-  const tags = Array.isArray(p.topic_tags) && p.topic_tags.length ? p.topic_tags.join(', ') : '—'
+  const tags = formatTopicTagsAsHashtags(Array.isArray(p.topic_tags) ? p.topic_tags : [])
   const meta = args.meta || {}
 
   return [

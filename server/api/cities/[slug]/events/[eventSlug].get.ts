@@ -1,11 +1,8 @@
 import { createError, defineEventHandler, setResponseHeader } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import { resolveCityBySlug } from '~/server/utils/inuuCity'
-import {
-  EDITORIAL_SHOP_SLUG,
-  enrichEventsForStorefront,
-  loadShopForStorefront,
-} from '~/server/utils/enrichEventsForStorefront'
+import { enrichEventsForStorefront } from '~/server/utils/enrichEventsForStorefront'
+import { resolvePublicEventOrganization } from '~/server/utils/resolvePublicOrganization'
 import {
   buildEventMediaGallery,
   loadSimilarPublishedEvents,
@@ -87,15 +84,16 @@ export default defineEventHandler(async (event) => {
   })
 
   const displayLinks = resolveEventDisplayLinks(data as any)
-  let organization: { slug: string; name: string } | null = null
   const shopId = (data as any).shop_id ? String((data as any).shop_id) : null
-
-  if (shopId) {
-    const shop = await loadShopForStorefront(client, shopId)
-    if (shop && shop.slug !== EDITORIAL_SHOP_SLUG) {
-      organization = { slug: shop.slug, name: shop.name }
-    }
-  }
+  const organization = await resolvePublicEventOrganization({
+    client,
+    event,
+    cityId: city.id,
+    citySlug: slug,
+    shopId,
+    sourceMetadata: (data as any).source_metadata,
+    sourceChannel: (data as any).source_channel,
+  })
 
   const venueRow = (data as any).venues
   const venue = venueRow?.slug

@@ -4,7 +4,7 @@ import {
   assertShopInCity,
   getWebSourceById,
   mapWebSourceRow,
-  WEB_SOURCE_SELECT,
+  updateWebSourceReturning,
 } from '~/server/utils/ingestSourcesDashboard'
 import {
   INGEST_CONTEXT_TYPES,
@@ -14,6 +14,7 @@ import { resolveManagerCityScopeOrThrow } from '~/server/utils/managerCityAccess
 
 type Body = {
   url?: string
+  displayName?: string | null
   contextType?: string
   organizationId?: string | null
   cronEnabled?: boolean
@@ -36,6 +37,9 @@ export default defineEventHandler(async (event) => {
   const patch: Record<string, unknown> = { updated_at: new Date().toISOString() }
 
   if (body.url !== undefined) patch.url = normalizeWebSourceUrl(String(body.url))
+  if (body.displayName !== undefined) {
+    patch.display_name = body.displayName ? String(body.displayName).trim().slice(0, 120) : null
+  }
   if (body.contextType !== undefined) patch.context_type = normalizeContextType(body.contextType)
   if (body.organizationId !== undefined) {
     patch.organization_id = await assertShopInCity({
@@ -51,13 +55,11 @@ export default defineEventHandler(async (event) => {
   }
 
   const client = await serverSupabaseServiceRole(event)
-  const { data, error } = await client
-    .from('city_web_sources')
-    .update(patch as any)
-    .eq('city_id', scope.cityId)
-    .eq('id', sourceId)
-    .select(WEB_SOURCE_SELECT)
-    .maybeSingle()
+  const { data, error } = await updateWebSourceReturning(
+    client,
+    { cityId: scope.cityId, id: sourceId },
+    patch,
+  )
 
   if (error) {
     if (/duplicate|unique/i.test(error.message)) {

@@ -2,8 +2,8 @@ import { createError, defineEventHandler, readBody } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import {
   assertShopInCity,
+  insertWebSourceReturning,
   mapWebSourceRow,
-  WEB_SOURCE_SELECT,
 } from '~/server/utils/ingestSourcesDashboard'
 import {
   INGEST_CONTEXT_TYPES,
@@ -13,6 +13,7 @@ import { resolveManagerCityScopeOrThrow } from '~/server/utils/managerCityAccess
 
 type Body = {
   url?: string
+  displayName?: string | null
   contextType?: string
   organizationId?: string | null
   cronEnabled?: boolean
@@ -38,19 +39,16 @@ export default defineEventHandler(async (event) => {
   })
 
   const client = await serverSupabaseServiceRole(event)
-  const { data, error } = await client
-    .from('city_web_sources')
-    .insert({
-      city_id: scope.cityId,
-      url,
-      context_type: normalizeContextType(body.contextType),
-      organization_id: organizationId,
-      cron_enabled: body.cronEnabled === true,
-      is_active: body.isActive !== false,
-      notes: body.notes ? String(body.notes).trim().slice(0, 500) : null,
-    } as any)
-    .select(WEB_SOURCE_SELECT)
-    .maybeSingle()
+  const { data, error } = await insertWebSourceReturning(client, {
+    city_id: scope.cityId,
+    url,
+    display_name: body.displayName ? String(body.displayName).trim().slice(0, 120) : null,
+    context_type: normalizeContextType(body.contextType),
+    organization_id: organizationId,
+    cron_enabled: body.cronEnabled === true,
+    is_active: body.isActive !== false,
+    notes: body.notes ? String(body.notes).trim().slice(0, 500) : null,
+  })
 
   if (error) {
     if (/duplicate|unique/i.test(error.message)) {

@@ -3,12 +3,15 @@ import type { IngestContextType } from '~/server/utils/ingestSourcesDashboardSha
 
 const CONTEXT_PROMPTS: Record<IngestContextType, string> = {
   theater:
-    'Контекст: театр. Ищи состав, возрастное ограничение (12+), ряды. НЕ выдумывай line-up, dress code, столы.',
-  club: 'Контекст: клуб. Ищи line-up, dress code, бронь столов, DJ.',
-  standup: 'Контекст: стендап. Ищи комиков, open mic, формат вечера.',
-  library: 'Контекст: библиотека. Ищи лекции, клубы по интересам, возраст участников.',
-  museum: 'Контекст: музей. Ищи выставки, экскурсии, возрастные ограничения.',
-  cinema: 'Контекст: кино. Ищи фильм, сеансы, формат (2D/3D/IMAX).',
+    'Контекст: театр. Ищи состав, возрастное ограничение (12+), ряды. НЕ выдумывай line-up, dress code, столы. topic_tags: slug culture (если подходит).',
+  club: 'Контекст: клуб. Ищи line-up, dress code, бронь столов, DJ. topic_tags: slug nightlife.',
+  standup:
+    'Контекст: стендап / open mic. Ищи комиков, дату, площадку, цену. topic_tags: обязательно slug nightlife; добавь culture если уместно. Не оставляй topic_tags пустым.',
+  library:
+    'Контекст: библиотека. Ищи лекции, клубы по интересам, возраст участников. topic_tags: culture и/или family.',
+  museum:
+    'Контекст: музей. Ищи выставки, экскурсии, возрастные ограничения. topic_tags: culture.',
+  cinema: 'Контекст: кино. Ищи фильм, сеансы, формат (2D/3D/IMAX). topic_tags: culture.',
   general: 'Контекст: общий городской источник. Извлекай только явные факты из текста.',
 }
 
@@ -29,12 +32,14 @@ export function buildEventParseSystemPrompt(input: EventParseInput): string {
     'Запрещено выдумывать факты: если не найдено — ставь null или пустой массив.',
     CONTEXT_PROMPTS[contextType],
     tagList
-      ? `topic_tags: выбери 1–5 slug ТОЛЬКО из справочника [${tagList}]. Новые slug запрещены — если нет точного совпадения, пропусти тег.`
+      ? `topic_tags: выбери 1–5 slug ТОЛЬКО из справочника [${tagList}]. Новые slug запрещены. Для стендапа/клуба используй nightlife; для культурных событий — culture. Не оставляй topic_tags пустым, если событие явно развлекательное.`
       : 'topic_tags: до 5 slug латиницей, только реально подходящие теме.',
     categoryList
       ? `category_slug: один slug ТОЛЬКО из [${categoryList}] или null если ничего не подходит. Новые slug запрещены.`
       : 'category_slug: slug категории латиницей или null.',
     'dates должны быть строками в ISO-like формате, если дата неясна — не выдумывать.',
+    'Не включай в events[] мероприятия, которые уже прошли (дата/время раньше текущего момента в timezone).',
+    'Если в тексте только прошедшие даты — верни events: [].',
     'Если в тексте несколько дат ОДНОГО И ТОГО ЖЕ мероприятия — parse_kind=single, все даты в recurrence.dates одного события.',
     'Если в тексте СПИСОК РАЗНЫХ мероприятий (афиша недели, нумерованный список, несколько названий) — parse_kind=digest, каждый пункт отдельный объект в events[].',
     preferDigest

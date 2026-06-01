@@ -42,6 +42,7 @@ export type WebCrawlSourceRow = {
   id: string
   city_id: string
   url: string
+  display_name?: string | null
   context_type: string
   organization_id: string | null
   parsing_strategy: unknown
@@ -204,6 +205,7 @@ async function resolveOrganization(ctx: IngestCtx): Promise<{
       event: ctx.event,
       cityId: ctx.source.city_id,
       sourceUrl: ctx.source.url,
+      orgNameHint: ctx.source.display_name,
       webSourceId: ctx.source.id,
     })
     organizationId = shadow.shopId
@@ -220,8 +222,9 @@ async function runIngestText(
     sourceExternalId: string
     preferDigest?: boolean
     parsedEvents?: EventParseResult[]
+    coverMediaUrl?: string | null
   },
-): Promise<{ processed: boolean; skipped: boolean; error?: string }> {
+): Promise<{ processed: boolean; skipped: boolean; skipReason?: string; error?: string }> {
   const { organizationId, organizationName } = await resolveOrganization(ctx)
   let ingest: Awaited<ReturnType<typeof runContentIngest>>
   try {
@@ -241,6 +244,7 @@ async function runIngestText(
     organizationId,
     organizationName,
     parsedEvents: args.parsedEvents,
+    coverMediaUrl: args.coverMediaUrl,
   })
   } catch (error: unknown) {
     const message =
@@ -253,7 +257,10 @@ async function runIngestText(
   }
 
   if (ingest.skippedByPrefilter) {
-    return { processed: false, skipped: true }
+    return { processed: false, skipped: true, skipReason: 'prefilter' }
+  }
+  if (ingest.skippedByPastEvent) {
+    return { processed: false, skipped: true, skipReason: 'past_event' }
   }
   if (ctx.persist && !ingest.persisted.ok) {
     return {
@@ -262,7 +269,7 @@ async function runIngestText(
       error: ingest.persisted.warning || 'persist_failed',
     }
   }
-  return { processed: !ingest.skippedByPrefilter && ingest.events.length > 0, skipped: false }
+  return { processed: ingest.events.length > 0, skipped: false }
 }
 
 async function tryFastLaneIngest(
@@ -432,8 +439,14 @@ export async function runTelegramWebPreviewCrawl(ctx: IngestCtx): Promise<WebCra
   let anyProcessed = false
   let lastError: string | undefined
   let skippedCount = 0
+  let pastSkippedCount = 0
+  let lastChannelPosterUrl: string | null = null
 
   for (const post of preview.posts) {
+    if (post.posterUrl) {
+      lastChannelPosterUrl = post.posterUrl
+    }
+    const coverMediaUrl = post.posterUrl || lastChannelPosterUrl
     const sourceExternalId = buildTelegramPostExternalId(post.dataPost)
     const postText = post.datetime ? `${post.text}\n\n(${post.datetime})` : post.text
     const ingest = await runIngestText(ctx, {
@@ -441,8 +454,10 @@ export async function runTelegramWebPreviewCrawl(ctx: IngestCtx): Promise<WebCra
       sourceUrl: post.sourceUrl,
       sourceExternalId,
       preferDigest: detectPreferDigest(postText),
+      coverMediaUrl,
     })
     if (ingest.skipped) skippedCount += 1
+    if (ingest.skipReason === 'past_event') pastSkippedCount += 1
     if (ingest.processed) anyProcessed = true
     if (ingest.error) lastError = ingest.error
   }
@@ -450,9 +465,17 @@ export async function runTelegramWebPreviewCrawl(ctx: IngestCtx): Promise<WebCra
   return {
     ok: anyProcessed || skippedCount > 0,
     skipped: !anyProcessed && skippedCount > 0,
-    skipReason: !anyProcessed && skippedCount > 0 ? 'all_posts_prefiltered' : undefined,
+    skipReason: !anyProcessed && skippedCount > 0
+      ? pastSkippedCount > 0 && pastSkippedCount === skippedCount
+        ? 'all_posts_past_events'
+        : 'all_posts_prefiltered'
+      : undefined,
     error: anyProcessed ? undefined : lastError || 'no_events_extracted',
-    hint: anyProcessed ? undefined : 'Посты загружены, но Groq не извлёк события (пре-фильтр или пустой parse)',
+    hint: anyProcessed
+      ? undefined
+      : pastSkippedCount > 0
+        ? 'Посты распознаны, но все даты в прошлом — в очередь не попали'
+        : 'Посты загружены, но Groq не извлёк события (пре-фильтр или пустой parse)',
     fetchMode: 'html',
     ingestProcessed: anyProcessed,
     stats,

@@ -5,7 +5,12 @@ import { parseEventsWithGroq } from '~/server/utils/ai/groqEventParser'
 import type { EventDigestMeta, EventParseInput, EventParseResult } from '~/server/utils/ai/eventParseSchema'
 import { writeAiParseLog } from '~/server/utils/ai/aiParseLogs'
 import { enrichRawTextWithUrls } from '~/server/utils/contentUrlEnricher'
-import { resolveCityPrefilterEnabled } from '~/server/utils/cityIngestSettings'
+import {
+  resolveCityPrefilterEnabled,
+  resolveCityRejectPastEventsEnabled,
+} from '~/server/utils/cityIngestSettings'
+import { filterUpcomingEvents } from '~/server/utils/eventStartsAt'
+import { resolveIngestCoverMediaUrl } from '~/server/utils/contentCoverMedia'
 import { resolveIngestSourceContext, resolveIngestSourceOrganization } from '~/server/utils/ingestSourceContext'
 import { resolveCityBySlug } from '~/server/utils/inuuCity'
 import { loadCityParseTaxonomy, resolveParsedTaxonomy } from '~/server/utils/cityContentTaxonomy'
@@ -118,16 +123,19 @@ export type ContentIngestResult = {
   latencyMs: number
   enrichedUrls?: string[]
   skippedByPrefilter?: boolean
+  skippedByPastEvent?: boolean
 }
 
 async function resolveEventResult(
   event: H3Event,
   cityId: string,
   result: EventParseResult,
+  contextType?: string | null,
 ): Promise<EventParseResult> {
   const resolvedTaxonomy = await resolveParsedTaxonomy(event, cityId, {
     topicTags: result.topic_tags,
     categorySlug: result.category_slug,
+    contextType,
   })
   return {
     ...result,
@@ -515,6 +523,86 @@ export async function runContentIngest(
   }
 
   const digestResult = parseOutput.result
+  const ingestTimezone = input.timezone || cityForTaxonomy?.timezone || 'Asia/Irkutsk'
+  const rejectPastEvents = citySlugHint
+    ? await resolveCityRejectPastEventsEnabled(event, citySlugHint)
+    : true
+  if (rejectPastEvents) {
+    events = filterUpcomingEvents(events, ingestTimezone)
+    if (!events.length) {
+      await writeAiParseLog(event, {
+        sourceKind: input.sourceKind,
+        sourceUrl: input.sourceUrl ?? null,
+        sourceExternalId: input.sourceExternalId ?? null,
+        citySlug: citySlugHint,
+        model: parseOutput.model,
+        status: 'skipped',
+        latencyMs: parseOutput.latencyMs,
+        errorMessage: 'all_dates_in_past',
+        payload: { reason: 'all_dates_in_past' },
+      })
+      return {
+        city: cityForTaxonomy
+          ? {
+              id: cityForTaxonomy.id,
+              slug: cityForTaxonomy.slug,
+              name: cityForTaxonomy.name,
+              timezone: cityForTaxonomy.timezone,
+            }
+          : {
+              id: '',
+              slug: citySlugHint || '',
+              name: citySlugHint || '',
+              timezone: ingestTimezone,
+            },
+        parseKind: digestResult.parse_kind,
+        digest: digestResult.digest,
+        events: [],
+        items: [],
+        batchId: null,
+        parentSubmissionId: null,
+        parse: {
+          title: '',
+          description_short: '',
+          description_full: '',
+          description: '',
+          cover_media_url: null,
+          city_slug: citySlugHint,
+          event_kind: 'event',
+          category_slug: null,
+          venue: { name: null, address: null },
+          organization: { name: null },
+          source: {
+            kind: input.sourceKind,
+            url: input.sourceUrl || null,
+            external_id: input.sourceExternalId || null,
+          },
+          is_free: false,
+          price_from: null,
+          capacity: null,
+          registration_url: null,
+          topic_tags: [],
+          recurrence: { rule: 'none', dates: [] },
+          confidence: 0,
+          missing_fields: ['past_event_skipped'],
+        },
+        moderationStatus: 'needs_revision',
+        duplicates: { checked: false, items: [], seriesMatches: [] },
+        persisted: { ok: false, id: null, warning: 'skipped: all_dates_in_past' },
+        model: parseOutput.model,
+        latencyMs: parseOutput.latencyMs,
+        enrichedUrls: enriched.enrichedUrls,
+        skippedByPastEvent: true,
+      }
+    }
+  }
+
+  let parseKind = digestResult.parse_kind
+  let digest = digestResult.digest
+  if (events.length === 1 && parseKind === 'digest') {
+    parseKind = 'single'
+    digest = null
+  }
 
   let organizationId = input.organizationId || null
   let organizationName = input.organizationName || null
@@ -541,10 +629,6 @@ export async function runContentIngest(
     }))
   }
 
-  if (input.coverMediaUrl && events[0]) {
-    events = [{ ...events[0], cover_media_url: input.coverMediaUrl }, ...events.slice(1)]
-  }
-
   const lastUsage = [...parseOutput.attempts].reverse().find((x) => x.ok && x.usage)?.usage
   const citySlug = events[0]?.city_slug || input.citySlug
   if (!citySlug) {
@@ -555,9 +639,28 @@ export async function runContentIngest(
     ? cityForTaxonomy
     : await resolveCityBySlug(event, citySlug)
 
+  const coverSource =
+    input.coverMediaUrl?.trim()
+    || events.map((ev) => String(ev.cover_media_url || '').trim()).find(Boolean)
+    || null
+
+  if (coverSource) {
+    const resolved = await resolveIngestCoverMediaUrl(event, {
+      sourceUrl: coverSource,
+      cityId: city.id,
+      key: input.sourceExternalId || input.sourceUrl || 'cover',
+    })
+    if (resolved?.url) {
+      events = events.map((ev) => ({
+        ...ev,
+        cover_media_url: resolved.url,
+      }))
+    }
+  }
+
   const items: ContentIngestItemResult[] = []
   for (let i = 0; i < events.length; i++) {
-    let parsed = await resolveEventResult(event, city.id, events[i])
+    let parsed = await resolveEventResult(event, city.id, events[i], taxonomyHints.contextType)
     events[i] = parsed
     const duplicates = await findEventDuplicates({
       event,
@@ -579,8 +682,6 @@ export async function runContentIngest(
     })
   }
 
-  const parseKind = digestResult.parse_kind
-  const digest = digestResult.digest
   const firstItem = items[0]
   const shouldPersist = input.persist === true
 

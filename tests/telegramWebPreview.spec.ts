@@ -29,6 +29,7 @@ describe('telegramWebPreview', () => {
     expect(posts).toHaveLength(1)
     expect(posts[0]?.text.toLowerCase()).toContain('открытый микрофон')
     expect(posts[0]?.dataPost).toBe('standuuup2u/100')
+    expect(posts[0]?.posterUrl).toBe('https://cdn4.telesco.pe/file/poster-test.jpg')
     expect(buildTelegramPostSourceUrl('standuuup2u/100')).toBe('https://t.me/standuuup2u/100')
     expect(buildTelegramPostExternalId('standuuup2u/100')).toBe('tgweb:standuuup2u:100')
   })

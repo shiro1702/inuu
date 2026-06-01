@@ -3,7 +3,7 @@ import { serverSupabaseServiceRole } from '#supabase/server'
 import {
   getWebSourceById,
   mapWebSourceRow,
-  WEB_SOURCE_SELECT,
+  updateWebSourceReturning,
 } from '~/server/utils/ingestSourcesDashboard'
 import { resolveManagerCityScopeOrThrow } from '~/server/utils/managerCityAccess'
 
@@ -14,17 +14,15 @@ export default defineEventHandler(async (event) => {
   await getWebSourceById({ event, cityId: scope.cityId, id: sourceId })
 
   const client = await serverSupabaseServiceRole(event)
-  const { data, error } = await client
-    .from('city_web_sources')
-    .update({
+  const { data, error } = await updateWebSourceReturning(
+    client,
+    { cityId: scope.cityId, id: sourceId },
+    {
       parsing_rules: null,
       rules_validated_at: null,
       updated_at: new Date().toISOString(),
-    } as any)
-    .eq('city_id', scope.cityId)
-    .eq('id', sourceId)
-    .select(WEB_SOURCE_SELECT)
-    .maybeSingle()
+    },
+  )
 
   if (error) {
     throw createError({ statusCode: 500, statusMessage: error.message })

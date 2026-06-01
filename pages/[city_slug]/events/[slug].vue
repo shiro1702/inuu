@@ -40,15 +40,6 @@
         <span v-if="venue.address"> · {{ venue.address }}</span>
       </p>
 
-      <p v-if="organization" class="text-sm text-gray-500">
-        Организатор:
-        <NuxtLink
-          :to="`${cityBasePath}/organizations/${organization.slug}`"
-          class="font-medium text-primary hover:underline"
-        >
-          {{ organization.name }}
-        </NuxtLink>
-      </p>
       <p v-else-if="sourceDisplay" class="text-sm text-gray-500">
         Источник:
         <a
@@ -67,6 +58,24 @@
         {{ priceLabel }}
       </p>
     </header>
+
+    <section
+      v-if="organization"
+      class="rounded-xl border border-gray-200 bg-gray-50 p-4"
+    >
+      <p class="text-xs font-medium uppercase tracking-wide text-gray-500">Организатор</p>
+      <NuxtLink
+        :to="organizationPageUrl"
+        class="mt-2 flex flex-wrap items-center justify-between gap-2 group"
+      >
+        <span class="text-base font-semibold text-gray-900 group-hover:text-primary">
+          {{ organization.name }}
+        </span>
+        <span class="text-sm font-medium text-primary group-hover:underline">
+          Все события →
+        </span>
+      </NuxtLink>
+    </section>
 
     <EventSeriesDatePicker v-if="seriesSessions.length > 1" :sessions="seriesSessions" />
 
@@ -143,6 +152,10 @@ const saleMode = ref<EventSaleMode>('native')
 const cta = ref<EventCta | null>(null)
 
 const formattedMainDate = computed(() => formatDateTime(event.value?.starts_at))
+
+const organizationPageUrl = computed(
+  () => `${cityBasePath.value}/organizations/${organization.value?.slug || ''}`,
+)
 
 const fullDescription = computed(() => String(event.value?.description || '').trim())
 

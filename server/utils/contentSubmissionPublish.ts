@@ -10,6 +10,8 @@ import {
   isMissingEventsExcerptColumnError,
   isMissingEventsSeriesSlugColumnError,
 } from '~/server/utils/eventSeries'
+import { resolveIngestSourceOrganization } from '~/server/utils/ingestSourceContext'
+import { findShopIdByParsedSourceUrl } from '~/server/utils/resolvePublicOrganization'
 
 function slugifyTitle(input: string): string {
   return slugifyTaxonomy(input).slice(0, 80) || `item-${Date.now()}`
@@ -140,7 +142,27 @@ export async function publishContentSubmission(
     payload.organization && typeof payload.organization === 'object' && (payload.organization as { id?: unknown }).id
       ? String((payload.organization as { id: unknown }).id).trim()
       : ''
-  const shopId = payloadOrgId || editorialShopId
+
+  let shopId = payloadOrgId || editorialShopId
+  if (!payloadOrgId) {
+    const publishSourceUrl = String((submission as any).source_url || payload.source?.url || '').trim() || null
+    const publishSourceKind = String((submission as any).source_kind || payload.source?.kind || '').trim() || null
+    const citySlugForOrg = String((city as any)?.slug || payload.city_slug || '').trim()
+
+    if (citySlugForOrg && publishSourceUrl) {
+      const linked = await resolveIngestSourceOrganization(event, {
+        citySlug: citySlugForOrg,
+        sourceUrl: publishSourceUrl,
+        sourceKind: publishSourceKind,
+      })
+      if (linked?.organizationId) {
+        shopId = linked.organizationId
+      } else {
+        const shadowShopId = await findShopIdByParsedSourceUrl(client, cityId, publishSourceUrl)
+        if (shadowShopId) shopId = shadowShopId
+      }
+    }
+  }
   const title = String(payload.title || '').trim()
   const { descriptionShort, descriptionFull } = resolveSubmissionDescriptions(payload)
   if (title.length < 3) {

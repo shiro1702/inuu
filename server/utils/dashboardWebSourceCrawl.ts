@@ -3,7 +3,10 @@ import { serverSupabaseServiceRole } from '#supabase/server'
 import {
   getWebSourceById,
   mapWebSourceRow,
-  WEB_SOURCE_SELECT,
+  queryWebSourcesWith,
+  WEB_SOURCE_CRAWL_SELECT,
+  WEB_SOURCE_CRAWL_SELECT_LEGACY,
+  queryWebSources,
 } from '~/server/utils/ingestSourcesDashboard'
 import { resolveOrCreateShadowOrg } from '~/server/utils/ingestShadowOrg'
 import type { ManagerCityScope } from '~/server/utils/managerCityAccess'
@@ -27,14 +30,17 @@ export async function runDashboardWebSourceCrawl(args: {
   })
 
   const client = await serverSupabaseServiceRole(args.event)
-  const { data: row, error } = await client
-    .from('city_web_sources')
-    .select(
-      'id,city_id,url,context_type,organization_id,parsing_strategy,parsing_rules,rules_validated_at',
-    )
-    .eq('city_id', args.scope.cityId)
-    .eq('id', args.sourceId)
-    .maybeSingle()
+  const { data: row, error } = await queryWebSourcesWith(
+    WEB_SOURCE_CRAWL_SELECT,
+    WEB_SOURCE_CRAWL_SELECT_LEGACY,
+    (select) =>
+      client
+        .from('city_web_sources')
+        .select(select)
+        .eq('city_id', args.scope.cityId)
+        .eq('id', args.sourceId)
+        .maybeSingle(),
+  )
 
   if (error || !row?.id) {
     throw createError({ statusCode: 404, statusMessage: 'Web source not found' })
@@ -55,6 +61,7 @@ export async function runDashboardWebSourceCrawl(args: {
       event: args.event,
       cityId: args.scope.cityId,
       sourceUrl: sourceDto.url,
+      orgNameHint: sourceDto.displayName,
       webSourceId: sourceDto.id,
     })
     organizationId = shadow.shopId
@@ -87,11 +94,9 @@ export async function runDashboardWebSourceCrawl(args: {
     .update({ last_crawled_at: new Date().toISOString() } as Record<string, string>)
     .eq('id', args.sourceId)
 
-  const { data: refreshed } = await client
-    .from('city_web_sources')
-    .select(WEB_SOURCE_SELECT)
-    .eq('id', args.sourceId)
-    .maybeSingle()
+  const { data: refreshed } = await queryWebSources((select) =>
+    client.from('city_web_sources').select(select).eq('id', args.sourceId).maybeSingle(),
+  )
 
   return {
     crawlResult,

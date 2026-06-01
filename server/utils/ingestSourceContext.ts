@@ -4,12 +4,60 @@ import {
   normalizeContextTypeForSource,
   type IngestContextType,
 } from '~/server/utils/ingestSourcesDashboardShared'
+import { extractTelegramChannelFromUrl } from '~/server/utils/ingestSourceDisplayName'
 import { resolveCityBySlug } from '~/server/utils/inuuCity'
 
 function extractTelegramSourceKey(sourceUrl: string | null | undefined): string | null {
-  if (!sourceUrl) return null
-  const match = sourceUrl.match(/(?:t\.me|telegram\.me)\/([a-zA-Z0-9_]+)/i)
-  return match?.[1] ? match[1].toLowerCase() : null
+  const channel = extractTelegramChannelFromUrl(String(sourceUrl || '').trim())
+  return channel ? channel.toLowerCase() : null
+}
+
+function shopFromIngestSourceJoin(data: {
+  organization_id?: string | null
+  shops?: unknown
+  display_name?: string | null
+}): IngestSourceOrganization | null {
+  const orgId = data.organization_id ? String(data.organization_id) : null
+  const shop = Array.isArray(data.shops) ? data.shops[0] : data.shops
+  if (!orgId || !shop || typeof shop !== 'object') return null
+  const nameFromDisplay =
+    typeof data.display_name === 'string' && data.display_name.trim()
+      ? data.display_name.trim()
+      : null
+  const shopName = typeof (shop as { name?: unknown }).name === 'string'
+    ? String((shop as { name: string }).name)
+    : ''
+  if (!shopName && !nameFromDisplay) return null
+  return {
+    organizationId: orgId,
+    organizationName: nameFromDisplay || shopName,
+  }
+}
+
+async function resolveWebSourceOrganizationByTelegramChannel(
+  client: Awaited<ReturnType<typeof serverSupabaseServiceRole>>,
+  cityId: string,
+  channel: string,
+): Promise<IngestSourceOrganization | null> {
+  const key = channel.toLowerCase()
+  const { data: rows } = await client
+    .from('city_web_sources')
+    .select('organization_id,display_name,url,shops:organization_id(id,name)')
+    .eq('city_id', cityId)
+    .eq('is_active', true)
+    .not('organization_id', 'is', null)
+
+  for (const row of rows ?? []) {
+    const rowChannel = extractTelegramChannelFromUrl(String((row as { url?: string }).url || ''))
+    if (rowChannel?.toLowerCase() !== key) continue
+    const linked = shopFromIngestSourceJoin(row as {
+      organization_id?: string | null
+      shops?: unknown
+      display_name?: string | null
+    })
+    if (linked) return linked
+  }
+  return null
 }
 
 function normalizeWebUrl(sourceUrl: string | null | undefined): string | null {
@@ -90,24 +138,28 @@ export async function resolveIngestSourceOrganization(
   const client = await serverSupabaseServiceRole(event)
   const kind = String(args.sourceKind || '').trim()
 
+  const tgKey = extractTelegramSourceKey(args.sourceUrl)
+  if (tgKey) {
+    const fromWeb = await resolveWebSourceOrganizationByTelegramChannel(client, cityId, tgKey)
+    if (fromWeb) return fromWeb
+  }
+
   if (kind === 'web_cron' || kind === 'manual_editor') {
     const webUrl = normalizeWebUrl(args.sourceUrl)
     if (webUrl) {
       const { data } = await client
         .from('city_web_sources')
-        .select('organization_id,shops:organization_id(id,name)')
+        .select('organization_id,display_name,shops:organization_id(id,name)')
         .eq('city_id', cityId)
         .eq('url', webUrl)
         .maybeSingle()
-      const orgId = data?.organization_id ? String(data.organization_id) : null
-      const shop = Array.isArray((data as any)?.shops) ? (data as any).shops[0] : (data as any)?.shops
-      if (orgId && shop?.name) {
-        return { organizationId: orgId, organizationName: String(shop.name) }
-      }
+      const linked = shopFromIngestSourceJoin(
+        (data || {}) as { organization_id?: string | null; shops?: unknown; display_name?: string | null },
+      )
+      if (linked) return linked
     }
   }
 
-  const tgKey = extractTelegramSourceKey(args.sourceUrl)
   if (tgKey) {
     const { data } = await client
       .from('city_telegram_sources')
@@ -115,11 +167,10 @@ export async function resolveIngestSourceOrganization(
       .eq('city_id', cityId)
       .eq('source_key', tgKey)
       .maybeSingle()
-    const orgId = data?.organization_id ? String(data.organization_id) : null
-    const shop = Array.isArray((data as any)?.shops) ? (data as any).shops[0] : (data as any)?.shops
-    if (orgId && shop?.name) {
-      return { organizationId: orgId, organizationName: String(shop.name) }
-    }
+    const linked = shopFromIngestSourceJoin(
+      (data || {}) as { organization_id?: string | null; shops?: unknown },
+    )
+    if (linked) return linked
   }
 
   return null

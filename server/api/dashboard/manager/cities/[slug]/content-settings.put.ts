@@ -11,6 +11,7 @@ type Body = {
   maxModerationChatId?: string | null
   maxParserSourceChats?: string[]
   prefilterEnabled?: boolean
+  rejectPastEventsEnabled?: boolean
 }
 
 function normalizeChatArray(input: unknown): string[] {
@@ -81,6 +82,9 @@ export default defineEventHandler(async (event) => {
     prefilter_enabled: body.prefilterEnabled === undefined
       ? existingIngest.prefilter_enabled
       : body.prefilterEnabled !== false,
+    reject_past_events_enabled: body.rejectPastEventsEnabled === undefined
+      ? existingIngest.reject_past_events_enabled
+      : body.rejectPastEventsEnabled !== false,
   }
 
   const nextSettings = {

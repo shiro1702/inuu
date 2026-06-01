@@ -236,10 +236,19 @@ export async function loadCityParseTaxonomy(
   return { tags, categories }
 }
 
+const CONTEXT_DEFAULT_TOPIC_TAGS: Record<string, string[]> = {
+  standup: ['nightlife', 'culture'],
+  club: ['nightlife'],
+  theater: ['culture'],
+  museum: ['culture'],
+  cinema: ['culture'],
+  library: ['culture', 'family'],
+}
+
 export async function resolveParsedTaxonomy(
   event: H3Event,
   cityId: string,
-  args: { topicTags: string[]; categorySlug: string | null },
+  args: { topicTags: string[]; categorySlug: string | null; contextType?: string | null },
 ): Promise<{ topicTags: string[]; categorySlug: string | null }> {
   const [tags, categories] = await Promise.all([
     listCityContentTags(event, cityId),
@@ -248,7 +257,7 @@ export async function resolveParsedTaxonomy(
   const knownTagSlugs = new Set(tags.map((t) => t.slug))
   const knownCategorySlugs = new Set(categories.map((c) => c.slug))
 
-  const topicTags = Array.from(
+  let topicTags = Array.from(
     new Set(
       args.topicTags
         .map((x) => slugifyTaxonomy(String(x || '')))
@@ -257,6 +266,12 @@ export async function resolveParsedTaxonomy(
   )
     .filter((slug) => knownTagSlugs.has(slug))
     .slice(0, 5)
+
+  if (!topicTags.length) {
+    const ctx = String(args.contextType || 'general').trim().toLowerCase()
+    const defaults = CONTEXT_DEFAULT_TOPIC_TAGS[ctx] || []
+    topicTags = defaults.filter((slug) => knownTagSlugs.has(slug)).slice(0, 5)
+  }
 
   const catSlug = args.categorySlug ? slugifyTaxonomy(args.categorySlug) : null
   const categorySlug = catSlug && knownCategorySlugs.has(catSlug) ? catSlug : null

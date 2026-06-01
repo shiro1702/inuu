@@ -12,11 +12,17 @@
 
     <template v-else>
       <div class="flex flex-wrap items-center justify-between gap-3 rounded border border-gray-100 bg-gray-50 p-3">
-        <label class="inline-flex items-center gap-2 text-sm text-gray-800">
-          <input v-model="prefilterEnabled" type="checkbox" @change="savePrefilter" />
-          Пре-фильтр до Groq (regex дат/цен + ключевые слова)
-        </label>
-        <span v-if="prefilterMessage" class="text-xs text-gray-600">{{ prefilterMessage }}</span>
+        <div class="flex flex-wrap gap-4">
+          <label class="inline-flex items-center gap-2 text-sm text-gray-800">
+            <input v-model="prefilterEnabled" type="checkbox" @change="saveIngestSettings" />
+            Пре-фильтр до Groq (regex дат/цен + ключевые слова)
+          </label>
+          <label class="inline-flex items-center gap-2 text-sm text-gray-800">
+            <input v-model="rejectPastEventsEnabled" type="checkbox" @change="saveIngestSettings" />
+            Не добавлять в очередь события с датой в прошлом
+          </label>
+        </div>
+        <span v-if="ingestSettingsMessage" class="text-xs text-gray-600">{{ ingestSettingsMessage }}</span>
       </div>
 
       <section class="space-y-3">
@@ -33,6 +39,7 @@
             <thead class="border-b text-gray-500">
               <tr>
                 <th class="py-2 pr-3">URL</th>
+                <th class="py-2 pr-3">Название</th>
                 <th class="py-2 pr-3">Контекст</th>
                 <th class="py-2 pr-3">Организация</th>
                 <th class="py-2 pr-3">Cron</th>
@@ -43,9 +50,17 @@
             <tbody>
               <tr v-for="item in webSources" :key="item.id" class="border-b border-gray-100 align-top">
                 <td class="max-w-xs py-2 pr-3 font-mono break-all">{{ item.url }}</td>
+                <td class="py-2 pr-3 text-gray-800">{{ item.displayName || '—' }}</td>
                 <td class="py-2 pr-3">{{ item.contextType }}</td>
                 <td class="py-2 pr-3">
-                  <span v-if="item.organization">{{ item.organization.name }}</span>
+                  <template v-if="item.organization">
+                    <a
+                      :href="orgPublicUrl(item.organization.slug)"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="font-medium text-primary hover:underline"
+                    >{{ item.organization.name }}</a>
+                  </template>
                   <span v-else class="text-gray-400">теневая при парсе</span>
                   <span
                     v-if="item.organization && !item.organization.isClaimed"
@@ -188,6 +203,15 @@
           <input v-model="webForm.url" class="w-full rounded border px-3 py-2 font-mono text-xs" placeholder="https://..." />
         </label>
         <label class="block space-y-1 text-sm">
+          <span>Название источника</span>
+          <input
+            v-model="webForm.displayName"
+            class="w-full rounded border px-3 py-2 text-sm"
+            placeholder="STANDUP2U, Telegram @standuuup2u"
+          />
+          <span class="text-xs text-gray-500">Для теневой org и подписи «Источник» на сайте. Для t.me можно оставить пустым — подставится канал из URL.</span>
+        </label>
+        <label class="block space-y-1 text-sm">
           <span>Контекст для Groq</span>
           <select v-model="webForm.contextType" class="w-full rounded border px-3 py-2">
             <option v-for="ctx in contextTypes" :key="ctx" :value="ctx">{{ ctx }}</option>
@@ -270,6 +294,7 @@ type ParsingRules = {
 type WebSource = {
   id: string
   url: string
+  displayName: string | null
   contextType: string
   organizationId: string | null
   organization: SourceOrg
@@ -294,7 +319,8 @@ type TgSource = {
 const loading = ref(false)
 const errorMessage = ref('')
 const prefilterEnabled = ref(true)
-const prefilterMessage = ref('')
+const rejectPastEventsEnabled = ref(true)
+const ingestSettingsMessage = ref('')
 const contextTypes = ref<string[]>([])
 const webSources = ref<WebSource[]>([])
 const telegramSources = ref<TgSource[]>([])
@@ -316,6 +342,7 @@ const webFormOpen = ref(false)
 const webForm = ref({
   id: '',
   url: '',
+  displayName: '',
   contextType: 'general',
   organizationId: '',
   cronEnabled: false,
@@ -339,6 +366,10 @@ function formatDate(value: string): string {
   } catch {
     return value
   }
+}
+
+function orgPublicUrl(orgSlug: string): string {
+  return `/${props.citySlug}/organizations/${orgSlug}`
 }
 
 function pretty(value: unknown): string {
@@ -375,6 +406,7 @@ async function loadSources() {
     webSources.value = payload.webSources || []
     telegramSources.value = payload.telegramSources || []
     prefilterEnabled.value = payload.ingestSettings?.prefilter_enabled !== false
+    rejectPastEventsEnabled.value = payload.ingestSettings?.reject_past_events_enabled !== false
     const alertsPayload = await alertsRes.json().catch(() => ({}))
     scrapingAlerts.value = alertsPayload.ok ? alertsPayload.alerts || [] : []
   } catch (err: any) {
@@ -384,20 +416,23 @@ async function loadSources() {
   }
 }
 
-async function savePrefilter() {
+async function saveIngestSettings() {
   if (!props.citySlug) return
-  prefilterMessage.value = 'Сохраняем...'
+  ingestSettingsMessage.value = 'Сохраняем...'
   try {
     const res = await fetch(`/api/dashboard/manager/cities/${props.citySlug}/content-settings`, {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ prefilterEnabled: prefilterEnabled.value }),
+      body: JSON.stringify({
+        prefilterEnabled: prefilterEnabled.value,
+        rejectPastEventsEnabled: rejectPastEventsEnabled.value,
+      }),
     })
     const payload = await res.json()
     if (!payload.ok) throw new Error(payload.message || 'Save failed')
-    prefilterMessage.value = 'Сохранено'
+    ingestSettingsMessage.value = 'Сохранено'
   } catch (err: any) {
-    prefilterMessage.value = err?.message || 'Ошибка'
+    ingestSettingsMessage.value = err?.message || 'Ошибка'
   }
 }
 
@@ -405,6 +440,7 @@ function openWebForm(item?: WebSource) {
   webForm.value = {
     id: item?.id || '',
     url: item?.url || '',
+    displayName: item?.displayName || '',
     contextType: item?.contextType || 'general',
     organizationId: item?.organizationId || '',
     cronEnabled: item?.cronEnabled ?? false,
@@ -417,6 +453,7 @@ function openWebForm(item?: WebSource) {
 async function saveWebForm() {
   const body = {
     url: webForm.value.url,
+    displayName: webForm.value.displayName.trim() || null,
     contextType: webForm.value.contextType,
     organizationId: webForm.value.organizationId || null,
     cronEnabled: webForm.value.cronEnabled,
@@ -485,7 +522,12 @@ async function runCrawl(item: WebSource) {
     } else {
       errorMessage.value = ''
     }
-    testResultText.value = pretty(payload)
+    if (payload.ok && payload.source?.organization?.slug) {
+      const org = payload.source.organization
+      testResultText.value = `${pretty(payload)}\n\nОрганизация: ${org.name}\n${window.location.origin}${orgPublicUrl(org.slug)}`
+    } else {
+      testResultText.value = pretty(payload)
+    }
     await loadSources()
   } catch (err: unknown) {
     errorMessage.value = err instanceof Error ? err.message : 'Ошибка запуска'
@@ -499,7 +541,12 @@ async function createShadowOrg(item: WebSource) {
     method: 'POST',
   })
   const payload = await res.json()
-  testResultText.value = pretty(payload)
+  if (payload.ok && payload.organization?.slug) {
+    const url = orgPublicUrl(payload.organization.slug)
+    testResultText.value = `Организация: ${payload.organization.name}\n${window.location.origin}${url}`
+  } else {
+    testResultText.value = pretty(payload)
+  }
   await loadSources()
 }
 

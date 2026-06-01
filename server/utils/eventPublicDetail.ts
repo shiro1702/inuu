@@ -181,14 +181,19 @@ function resolveSourceLabel(row: {
   source_metadata?: unknown
 }): string | null {
   const meta = parseSourceMetadata(row.source_metadata)
-  if (meta.organization_name) return String(meta.organization_name).trim() || null
+  const sourceUrl = meta.source_url || ''
+  const tgMatch = sourceUrl.match(/(?:t\.me|telegram\.me)\/(?:s\/)?([a-zA-Z0-9_]+)/i)
+  if (tgMatch?.[1] && !['joinchat', 'c', 'share'].includes(tgMatch[1].toLowerCase())) {
+    return `Telegram @${tgMatch[1]}`
+  }
+
+  const orgName = meta.organization_name ? String(meta.organization_name).trim() : ''
+  if (orgName && orgName.length > 1 && orgName.toLowerCase() !== 't') {
+    return orgName
+  }
 
   const channel = String(row.source_channel || '').trim()
   if (!channel) return null
-
-  const sourceUrl = meta.source_url || ''
-  const tgMatch = sourceUrl.match(/(?:t\.me|telegram\.me)\/([a-zA-Z0-9_]+)/i)
-  if (tgMatch?.[1]) return `@${tgMatch[1]}`
 
   return SOURCE_CHANNEL_LABELS[channel] || channel
 }
