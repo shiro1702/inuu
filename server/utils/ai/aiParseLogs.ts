@@ -7,7 +7,7 @@ type LogArgs = {
   sourceExternalId?: string | null
   citySlug?: string | null
   model: string
-  status: 'success' | 'failed' | 'persisted' | 'persist_failed'
+  status: 'success' | 'failed' | 'persisted' | 'persist_failed' | 'skipped'
   latencyMs?: number | null
   promptTokens?: number | null
   completionTokens?: number | null

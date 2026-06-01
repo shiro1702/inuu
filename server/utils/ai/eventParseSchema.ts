@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-export const SOURCE_KINDS = ['bot_submit', 'telegram_parse', 'manual_editor'] as const
+export const SOURCE_KINDS = ['bot_submit', 'telegram_parse', 'manual_editor', 'web_cron'] as const
 export const EVENT_KINDS = ['event', 'masterclass', 'news'] as const
 export const RECURRENCE_RULES = ['none', 'daily', 'weekly', 'monthly', 'custom'] as const
 export const PARSE_KINDS = ['single', 'digest'] as const
@@ -38,6 +38,7 @@ export const eventParseResultSchema = z.object({
   }),
   organization: z.object({
     name: nullableTrimmedString,
+    id: z.string().uuid().nullable().optional(),
   }),
   source: z.object({
     kind: z.enum(SOURCE_KINDS),
@@ -48,7 +49,7 @@ export const eventParseResultSchema = z.object({
   price_from: z.number().nonnegative().nullable().default(null),
   capacity: z.number().int().positive().nullable().default(null),
   registration_url: nullableTrimmedString,
-  topic_tags: z.array(z.string().trim().min(2).max(40)).max(8),
+  topic_tags: z.array(z.string().trim().min(2).max(40)).max(5),
   recurrence: z.object({
     rule: z.enum(RECURRENCE_RULES).default('none'),
     dates: z.array(z.string().trim().min(10).max(64)).max(32),
@@ -88,6 +89,7 @@ export type EventParseInput = {
     categorySlug?: string | null
     topicTags?: string[]
     preferDigest?: boolean
+    contextType?: string | null
     availableTags?: Array<{ slug: string; name: string }>
     availableCategories?: Array<{ slug: string; name: string }>
   }
@@ -98,6 +100,7 @@ const eventParseHintsSchema = z
     categorySlug: z.string().trim().max(64).nullable().optional(),
     topicTags: z.array(z.string().trim().min(2).max(40)).max(10).optional(),
     preferDigest: z.boolean().optional(),
+    contextType: z.string().trim().max(32).nullable().optional(),
     availableTags: z
       .array(z.object({ slug: z.string(), name: z.string() }))
       .max(100)

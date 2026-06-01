@@ -34,6 +34,8 @@ export default defineNuxtConfig({
     reviewPromptDelayMinutes: Number(process.env.NUXT_REVIEW_PROMPT_DELAY_MIN ?? '45'),
     /** Secret for POST /api/cron/review-prompts (header x-cron-secret). */
     cronReviewPromptsSecret: process.env.NUXT_CRON_REVIEW_PROMPTS_SECRET ?? '',
+    /** Secret for POST /api/cron/web-sources-crawl (header x-cron-secret). */
+    cronWebSourcesSecret: process.env.NUXT_CRON_WEB_SOURCES_SECRET ?? '',
     /** Optional secret for POST /api/ingest/content/submit (header x-ingest-secret). */
     ingestSecret: process.env.NUXT_INGEST_SECRET ?? '',
     vkIdClientSecret: process.env.NUXT_VK_ID_CLIENT_SECRET ?? '',

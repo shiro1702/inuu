@@ -1,0 +1,430 @@
+<template>
+  <article class="space-y-4 rounded-lg border border-gray-200 bg-white p-4 lg:col-span-2">
+    <header class="space-y-1">
+      <h2 class="text-lg font-semibold">Источники парсинга (Web + Telegram)</h2>
+      <p class="text-xs text-gray-500">
+        Web cron и userbot читают whitelist из БД. Strict tags (1 категория + 1–5 тегов из справочника) включены в промпт автоматически — настройте теги в блоке «Ручное добавление новости» ниже.
+      </p>
+    </header>
+
+    <div v-if="loading" class="text-sm text-gray-600">Загрузка источников...</div>
+    <div v-else-if="errorMessage" class="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">{{ errorMessage }}</div>
+
+    <template v-else>
+      <div class="flex flex-wrap items-center justify-between gap-3 rounded border border-gray-100 bg-gray-50 p-3">
+        <label class="inline-flex items-center gap-2 text-sm text-gray-800">
+          <input v-model="prefilterEnabled" type="checkbox" @change="savePrefilter" />
+          Пре-фильтр до Groq (regex дат/цен + ключевые слова)
+        </label>
+        <span v-if="prefilterMessage" class="text-xs text-gray-600">{{ prefilterMessage }}</span>
+      </div>
+
+      <section class="space-y-3">
+        <div class="flex items-center justify-between gap-2">
+          <h3 class="text-sm font-semibold text-gray-800">Web-источники (cron)</h3>
+          <button type="button" class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50" @click="openWebForm()">
+            + Добавить сайт
+          </button>
+        </div>
+
+        <div v-if="!webSources.length" class="text-xs text-gray-500">Нет web-источников. Добавьте URL страницы афиши.</div>
+        <div v-else class="overflow-x-auto">
+          <table class="min-w-full text-left text-xs">
+            <thead class="border-b text-gray-500">
+              <tr>
+                <th class="py-2 pr-3">URL</th>
+                <th class="py-2 pr-3">Контекст</th>
+                <th class="py-2 pr-3">Организация</th>
+                <th class="py-2 pr-3">Cron</th>
+                <th class="py-2 pr-3">Активен</th>
+                <th class="py-2">Действия</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in webSources" :key="item.id" class="border-b border-gray-100 align-top">
+                <td class="max-w-xs py-2 pr-3 font-mono break-all">{{ item.url }}</td>
+                <td class="py-2 pr-3">{{ item.contextType }}</td>
+                <td class="py-2 pr-3">
+                  <span v-if="item.organization">{{ item.organization.name }}</span>
+                  <span v-else class="text-gray-400">теневая при парсе</span>
+                  <span
+                    v-if="item.organization && !item.organization.isClaimed"
+                    class="ml-1 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-800"
+                  >теневая</span>
+                </td>
+                <td class="py-2 pr-3">{{ item.cronEnabled ? 'да' : 'нет' }}</td>
+                <td class="py-2 pr-3">{{ item.isActive ? 'да' : 'нет' }}</td>
+                <td class="py-2">
+                  <div class="flex flex-wrap gap-1">
+                    <button type="button" class="rounded border px-1.5 py-0.5 hover:bg-gray-50" @click="openWebForm(item)">Изм.</button>
+                    <button type="button" class="rounded border px-1.5 py-0.5 hover:bg-gray-50" @click="testCrawl(item)">Проверить</button>
+                    <button
+                      v-if="!item.organizationId"
+                      type="button"
+                      class="rounded border px-1.5 py-0.5 hover:bg-gray-50"
+                      @click="createShadowOrg(item)"
+                    >Shadow org</button>
+                    <button type="button" class="rounded border border-red-200 px-1.5 py-0.5 text-red-700 hover:bg-red-50" @click="deleteWeb(item)">×</button>
+                  </div>
+                  <p v-if="item.lastCrawledAt" class="mt-1 text-[10px] text-gray-400">crawl: {{ formatDate(item.lastCrawledAt) }}</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <pre v-if="testResultText" class="max-h-48 overflow-auto rounded bg-gray-900 p-2 text-[10px] text-gray-100">{{ testResultText }}</pre>
+      </section>
+
+      <section class="space-y-3 border-t border-gray-100 pt-4">
+        <div class="flex items-center justify-between gap-2">
+          <div>
+            <h3 class="text-sm font-semibold text-gray-800">Telegram-источники (userbot)</h3>
+            <p class="text-[10px] text-gray-500">Userbot читает `city_telegram_sources`. «TG parser source chats» выше — legacy chat id.</p>
+          </div>
+          <button type="button" class="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50" @click="openTgForm()">
+            + Добавить канал
+          </button>
+        </div>
+
+        <div v-if="!telegramSources.length" class="text-xs text-gray-500">Нет TG-источников.</div>
+        <div v-else class="overflow-x-auto">
+          <table class="min-w-full text-left text-xs">
+            <thead class="border-b text-gray-500">
+              <tr>
+                <th class="py-2 pr-3">@channel</th>
+                <th class="py-2 pr-3">Контекст</th>
+                <th class="py-2 pr-3">Организация</th>
+                <th class="py-2 pr-3">Активен</th>
+                <th class="py-2">Действия</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in telegramSources" :key="item.id" class="border-b border-gray-100 align-top">
+                <td class="py-2 pr-3 font-mono">@{{ item.sourceKey }}</td>
+                <td class="py-2 pr-3">{{ item.contextType }}</td>
+                <td class="py-2 pr-3">
+                  <span v-if="item.organization">{{ item.organization.name }}</span>
+                  <span v-else class="text-gray-400">—</span>
+                </td>
+                <td class="py-2 pr-3">{{ item.isActive ? 'да' : 'нет' }}</td>
+                <td class="py-2">
+                  <div class="flex flex-wrap gap-1">
+                    <button type="button" class="rounded border px-1.5 py-0.5 hover:bg-gray-50" @click="openTgForm(item)">Изм.</button>
+                    <button type="button" class="rounded border border-red-200 px-1.5 py-0.5 text-red-700 hover:bg-red-50" @click="deleteTg(item)">×</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </template>
+
+    <div v-if="webFormOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" @click.self="webFormOpen = false">
+      <div class="w-full max-w-lg space-y-3 rounded-lg bg-white p-4 shadow-lg">
+        <h4 class="font-semibold">{{ webForm.id ? 'Редактировать web-источник' : 'Новый web-источник' }}</h4>
+        <label class="block space-y-1 text-sm">
+          <span>URL афиши</span>
+          <input v-model="webForm.url" class="w-full rounded border px-3 py-2 font-mono text-xs" placeholder="https://..." />
+        </label>
+        <label class="block space-y-1 text-sm">
+          <span>Контекст для Groq</span>
+          <select v-model="webForm.contextType" class="w-full rounded border px-3 py-2">
+            <option v-for="ctx in contextTypes" :key="ctx" :value="ctx">{{ ctx }}</option>
+          </select>
+        </label>
+        <label class="block space-y-1 text-sm">
+          <span>Организация</span>
+          <select v-model="webForm.organizationId" class="w-full rounded border px-3 py-2">
+            <option value="">Теневая org при первом парсе</option>
+            <option v-for="shop in shops" :key="shop.id" :value="shop.id">
+              {{ shop.name }}{{ shop.isClaimed ? '' : ' (теневая)' }}
+            </option>
+          </select>
+        </label>
+        <label class="inline-flex items-center gap-2 text-sm"><input v-model="webForm.cronEnabled" type="checkbox" /> Cron enabled</label>
+        <label class="inline-flex items-center gap-2 text-sm"><input v-model="webForm.isActive" type="checkbox" /> Активен</label>
+        <label class="block space-y-1 text-sm">
+          <span>Notes</span>
+          <input v-model="webForm.notes" class="w-full rounded border px-3 py-2 text-xs" />
+        </label>
+        <div class="flex justify-end gap-2">
+          <button type="button" class="rounded border px-3 py-1.5 text-sm" @click="webFormOpen = false">Отмена</button>
+          <button type="button" class="rounded bg-primary px-3 py-1.5 text-sm text-white" @click="saveWebForm">Сохранить</button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="tgFormOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" @click.self="tgFormOpen = false">
+      <div class="w-full max-w-lg space-y-3 rounded-lg bg-white p-4 shadow-lg">
+        <h4 class="font-semibold">{{ tgForm.id ? 'Редактировать TG-источник' : 'Новый TG-источник' }}</h4>
+        <label class="block space-y-1 text-sm">
+          <span>@username (без @)</span>
+          <input v-model="tgForm.sourceKey" class="w-full rounded border px-3 py-2 font-mono text-xs" placeholder="standup_uu" />
+        </label>
+        <label class="block space-y-1 text-sm">
+          <span>Контекст</span>
+          <select v-model="tgForm.contextType" class="w-full rounded border px-3 py-2">
+            <option v-for="ctx in contextTypes" :key="ctx" :value="ctx">{{ ctx }}</option>
+          </select>
+        </label>
+        <label class="block space-y-1 text-sm">
+          <span>Организация</span>
+          <select v-model="tgForm.organizationId" class="w-full rounded border px-3 py-2">
+            <option value="">Не привязана</option>
+            <option v-for="shop in shops" :key="shop.id" :value="shop.id">{{ shop.name }}</option>
+          </select>
+        </label>
+        <label class="inline-flex items-center gap-2 text-sm"><input v-model="tgForm.isActive" type="checkbox" /> Активен</label>
+        <label class="block space-y-1 text-sm">
+          <span>Notes</span>
+          <input v-model="tgForm.notes" class="w-full rounded border px-3 py-2 text-xs" />
+        </label>
+        <div class="flex justify-end gap-2">
+          <button type="button" class="rounded border px-3 py-1.5 text-sm" @click="tgFormOpen = false">Отмена</button>
+          <button type="button" class="rounded bg-primary px-3 py-1.5 text-sm text-white" @click="saveTgForm">Сохранить</button>
+        </div>
+      </div>
+    </div>
+  </article>
+</template>
+
+<script setup lang="ts">
+import { ref, watch } from 'vue'
+
+const props = defineProps<{ citySlug: string }>()
+
+type ShopItem = { id: string; slug: string; name: string; isClaimed: boolean }
+type SourceOrg = ShopItem | null
+type WebSource = {
+  id: string
+  url: string
+  contextType: string
+  organizationId: string | null
+  organization: SourceOrg
+  cronEnabled: boolean
+  isActive: boolean
+  lastCrawledAt: string | null
+  notes: string | null
+}
+type TgSource = {
+  id: string
+  sourceKey: string
+  contextType: string
+  organizationId: string | null
+  organization: SourceOrg
+  isActive: boolean
+  notes: string | null
+}
+
+const loading = ref(false)
+const errorMessage = ref('')
+const prefilterEnabled = ref(true)
+const prefilterMessage = ref('')
+const contextTypes = ref<string[]>([])
+const webSources = ref<WebSource[]>([])
+const telegramSources = ref<TgSource[]>([])
+const shops = ref<ShopItem[]>([])
+const testResultText = ref('')
+
+const webFormOpen = ref(false)
+const webForm = ref({
+  id: '',
+  url: '',
+  contextType: 'general',
+  organizationId: '',
+  cronEnabled: false,
+  isActive: true,
+  notes: '',
+})
+
+const tgFormOpen = ref(false)
+const tgForm = ref({
+  id: '',
+  sourceKey: '',
+  contextType: 'general',
+  organizationId: '',
+  isActive: true,
+  notes: '',
+})
+
+function formatDate(value: string): string {
+  try {
+    return new Date(value).toLocaleString('ru-RU')
+  } catch {
+    return value
+  }
+}
+
+function pretty(value: unknown): string {
+  try {
+    return JSON.stringify(value, null, 2)
+  } catch {
+    return String(value)
+  }
+}
+
+async function loadShops() {
+  if (!props.citySlug) return
+  const res = await fetch(`/api/dashboard/manager/cities/${props.citySlug}/shops`)
+  const payload = await res.json() as { ok: boolean; items: ShopItem[] }
+  shops.value = payload.ok ? payload.items : []
+}
+
+async function loadSources() {
+  if (!props.citySlug) return
+  loading.value = true
+  errorMessage.value = ''
+  try {
+    const [sourcesRes] = await Promise.all([
+      fetch(`/api/dashboard/manager/cities/${props.citySlug}/ingest-sources`),
+      loadShops(),
+    ])
+    const payload = await sourcesRes.json() as any
+    if (!payload.ok) {
+      errorMessage.value = payload.message || 'Не удалось загрузить источники'
+      return
+    }
+    contextTypes.value = payload.contextTypes || []
+    webSources.value = payload.webSources || []
+    telegramSources.value = payload.telegramSources || []
+    prefilterEnabled.value = payload.ingestSettings?.prefilter_enabled !== false
+  } catch (err: any) {
+    errorMessage.value = err?.message || 'Ошибка загрузки'
+  } finally {
+    loading.value = false
+  }
+}
+
+async function savePrefilter() {
+  if (!props.citySlug) return
+  prefilterMessage.value = 'Сохраняем...'
+  try {
+    const res = await fetch(`/api/dashboard/manager/cities/${props.citySlug}/content-settings`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ prefilterEnabled: prefilterEnabled.value }),
+    })
+    const payload = await res.json()
+    if (!payload.ok) throw new Error(payload.message || 'Save failed')
+    prefilterMessage.value = 'Сохранено'
+  } catch (err: any) {
+    prefilterMessage.value = err?.message || 'Ошибка'
+  }
+}
+
+function openWebForm(item?: WebSource) {
+  webForm.value = {
+    id: item?.id || '',
+    url: item?.url || '',
+    contextType: item?.contextType || 'general',
+    organizationId: item?.organizationId || '',
+    cronEnabled: item?.cronEnabled ?? false,
+    isActive: item?.isActive ?? true,
+    notes: item?.notes || '',
+  }
+  webFormOpen.value = true
+}
+
+async function saveWebForm() {
+  const body = {
+    url: webForm.value.url,
+    contextType: webForm.value.contextType,
+    organizationId: webForm.value.organizationId || null,
+    cronEnabled: webForm.value.cronEnabled,
+    isActive: webForm.value.isActive,
+    notes: webForm.value.notes || null,
+  }
+  const isEdit = !!webForm.value.id
+  const url = isEdit
+    ? `/api/dashboard/manager/cities/${props.citySlug}/ingest-sources/web/${webForm.value.id}`
+    : `/api/dashboard/manager/cities/${props.citySlug}/ingest-sources/web`
+  const res = await fetch(url, {
+    method: isEdit ? 'PUT' : 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    errorMessage.value = err?.statusMessage || 'Не удалось сохранить web-источник'
+    return
+  }
+  webFormOpen.value = false
+  await loadSources()
+}
+
+async function deleteWeb(item: WebSource) {
+  if (!confirm(`Удалить ${item.url}?`)) return
+  await fetch(`/api/dashboard/manager/cities/${props.citySlug}/ingest-sources/web/${item.id}`, { method: 'DELETE' })
+  await loadSources()
+}
+
+async function testCrawl(item: WebSource) {
+  testResultText.value = 'Запуск test crawl...'
+  const res = await fetch(`/api/dashboard/manager/cities/${props.citySlug}/ingest-sources/web/${item.id}/test-crawl`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({}),
+  })
+  const payload = await res.json()
+  testResultText.value = pretty(payload)
+  await loadSources()
+}
+
+async function createShadowOrg(item: WebSource) {
+  const res = await fetch(`/api/dashboard/manager/cities/${props.citySlug}/ingest-sources/web/${item.id}/create-shadow-org`, {
+    method: 'POST',
+  })
+  const payload = await res.json()
+  testResultText.value = pretty(payload)
+  await loadSources()
+}
+
+function openTgForm(item?: TgSource) {
+  tgForm.value = {
+    id: item?.id || '',
+    sourceKey: item?.sourceKey || '',
+    contextType: item?.contextType || 'general',
+    organizationId: item?.organizationId || '',
+    isActive: item?.isActive ?? true,
+    notes: item?.notes || '',
+  }
+  tgFormOpen.value = true
+}
+
+async function saveTgForm() {
+  const body = {
+    sourceKey: tgForm.value.sourceKey,
+    contextType: tgForm.value.contextType,
+    organizationId: tgForm.value.organizationId || null,
+    isActive: tgForm.value.isActive,
+    notes: tgForm.value.notes || null,
+  }
+  const isEdit = !!tgForm.value.id
+  const url = isEdit
+    ? `/api/dashboard/manager/cities/${props.citySlug}/ingest-sources/telegram/${tgForm.value.id}`
+    : `/api/dashboard/manager/cities/${props.citySlug}/ingest-sources/telegram`
+  const res = await fetch(url, {
+    method: isEdit ? 'PUT' : 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    errorMessage.value = err?.statusMessage || 'Не удалось сохранить TG-источник'
+    return
+  }
+  tgFormOpen.value = false
+  await loadSources()
+}
+
+async function deleteTg(item: TgSource) {
+  if (!confirm(`Удалить @${item.sourceKey}?`)) return
+  await fetch(`/api/dashboard/manager/cities/${props.citySlug}/ingest-sources/telegram/${item.id}`, { method: 'DELETE' })
+  await loadSources()
+}
+
+watch(() => props.citySlug, () => {
+  if (props.citySlug) loadSources()
+}, { immediate: true })
+</script>

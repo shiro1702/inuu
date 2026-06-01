@@ -241,7 +241,25 @@ export async function resolveParsedTaxonomy(
   cityId: string,
   args: { topicTags: string[]; categorySlug: string | null },
 ): Promise<{ topicTags: string[]; categorySlug: string | null }> {
-  const topicTags = await ensureCityContentTags(event, cityId, args.topicTags)
-  const categorySlug = await ensureCityEventCategory(event, cityId, args.categorySlug)
+  const [tags, categories] = await Promise.all([
+    listCityContentTags(event, cityId),
+    listCityEventCategories(event, cityId),
+  ])
+  const knownTagSlugs = new Set(tags.map((t) => t.slug))
+  const knownCategorySlugs = new Set(categories.map((c) => c.slug))
+
+  const topicTags = Array.from(
+    new Set(
+      args.topicTags
+        .map((x) => slugifyTaxonomy(String(x || '')))
+        .filter((x) => x.length >= 2),
+    ),
+  )
+    .filter((slug) => knownTagSlugs.has(slug))
+    .slice(0, 5)
+
+  const catSlug = args.categorySlug ? slugifyTaxonomy(args.categorySlug) : null
+  const categorySlug = catSlug && knownCategorySlugs.has(catSlug) ? catSlug : null
+
   return { topicTags, categorySlug }
 }

@@ -1,5 +1,6 @@
 import { defineEventHandler } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
+import { parseCityIngestSettings } from '~/server/utils/cityIngestSettings'
 import { resolveManagerCityScopeOrThrow } from '~/server/utils/managerCityAccess'
 
 type ContentOpsSettings = {
@@ -12,6 +13,9 @@ type ContentOpsSettings = {
     manager_chat_id?: string
     moderation_chat_id?: string
     parser_source_chats?: string[]
+  }
+  ingest?: {
+    prefilter_enabled?: boolean
   }
 }
 
@@ -30,6 +34,8 @@ export default defineEventHandler(async (event) => {
     return { ok: false as const, message: error?.message || 'City settings not found' }
   }
 
+  const raw = ((data as any).content_ops_settings || {}) as ContentOpsSettings
+
   return {
     ok: true as const,
     city: {
@@ -41,6 +47,7 @@ export default defineEventHandler(async (event) => {
       shopIds: scope.shopIds,
       primaryShopId: scope.primaryShopId,
     },
-    settings: ((data as any).content_ops_settings || {}) as ContentOpsSettings,
+    settings: raw,
+    ingestSettings: parseCityIngestSettings(raw.ingest),
   }
 })

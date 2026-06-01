@@ -1,9 +1,12 @@
 import { createError, defineEventHandler, readBody } from 'h3'
+import { evaluateContentPrefilter } from '~/server/utils/ai/contentPrefilter'
 import { eventParseInputSchema } from '~/server/utils/ai/eventParseSchema'
 import { parseEventsWithGroq } from '~/server/utils/ai/groqEventParser'
 import { writeAiParseLog } from '~/server/utils/ai/aiParseLogs'
 import { enrichRawTextWithUrls } from '~/server/utils/contentUrlEnricher'
+import { resolveCityPrefilterEnabled } from '~/server/utils/cityIngestSettings'
 import { loadCityParseTaxonomy, resolveParsedTaxonomy } from '~/server/utils/cityContentTaxonomy'
+import { resolveIngestSourceContext } from '~/server/utils/ingestSourceContext'
 import { resolveCityBySlug } from '~/server/utils/inuuCity'
 
 export default defineEventHandler(async (event) => {
@@ -23,10 +26,53 @@ export default defineEventHandler(async (event) => {
   if (citySlug) {
     const city = await resolveCityBySlug(event, citySlug)
     const taxonomy = await loadCityParseTaxonomy(event, city.id)
-    hints = { ...hints, availableTags: taxonomy.tags, availableCategories: taxonomy.categories }
+    const contextType = await resolveIngestSourceContext(event, {
+      citySlug,
+      sourceUrl: parsedInput.data.sourceUrl,
+    })
+    hints = {
+      ...hints,
+      availableTags: taxonomy.tags,
+      availableCategories: taxonomy.categories,
+      contextType,
+    }
   }
 
   const enriched = await enrichRawTextWithUrls(parsedInput.data.rawText)
+  const prefilterEnabled = citySlug
+    ? await resolveCityPrefilterEnabled(event, citySlug)
+    : true
+  if (prefilterEnabled) {
+    const prefilter = evaluateContentPrefilter(enriched.rawText)
+    if (!prefilter.pass) {
+    await writeAiParseLog(event, {
+      sourceKind: parsedInput.data.sourceKind,
+      sourceUrl: parsedInput.data.sourceUrl ?? null,
+      sourceExternalId: parsedInput.data.sourceExternalId ?? null,
+      citySlug: citySlug ?? null,
+      model: 'prefilter',
+      status: 'skipped',
+      latencyMs: 0,
+      errorMessage: 'skipped by prefilter',
+      payload: {
+        mode: 'parse-only',
+        reason: prefilter.reason,
+        signals: prefilter.signals,
+      },
+    })
+
+    return {
+      ok: true as const,
+      skippedByPrefilter: true,
+      reason: prefilter.reason,
+      signals: prefilter.signals,
+      eventsCount: 0,
+      events: [],
+      enrichedUrls: enriched.enrichedUrls,
+    }
+    }
+  }
+
   const output = await parseEventsWithGroq({ ...parsedInput.data, rawText: enriched.rawText, hints })
 
   let events = [...output.result.events]

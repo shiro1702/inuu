@@ -32,7 +32,7 @@ function stripHtml(html: string): string {
     .trim()
 }
 
-async function fetchUrlPlainText(url: string): Promise<string | null> {
+export async function fetchUrlPlainText(url: string): Promise<string | null> {
   if (/^https?:\/\/(t\.me|telegram\.me)\//i.test(url)) {
     return null
   }

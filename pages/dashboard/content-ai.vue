@@ -115,12 +115,15 @@
           </div>
         </article>
 
+        <DashboardIngestSourcesPanel v-if="selectedCitySlug" :city-slug="selectedCitySlug" />
+
         <article class="space-y-3 rounded-lg border border-gray-200 bg-white p-4">
           <h2 class="text-lg font-semibold">AI parse / ingest тест</h2>
           <label class="block space-y-1 text-sm">
             <span class="font-medium text-gray-700">Source kind</span>
             <select v-model="aiForm.sourceKind" class="w-full rounded-lg border border-gray-300 px-3 py-2">
               <option value="telegram_parse">telegram_parse</option>
+              <option value="web_cron">web_cron</option>
               <option value="bot_submit">bot_submit</option>
               <option value="manual_editor">manual_editor</option>
             </select>

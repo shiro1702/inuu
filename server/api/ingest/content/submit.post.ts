@@ -5,7 +5,7 @@ import { notifyContentIngestModeration } from '~/server/utils/inuuContentModerat
 
 type IngestBody = {
   rawText?: string
-  sourceKind?: 'bot_submit' | 'telegram_parse' | 'manual_editor'
+  sourceKind?: 'bot_submit' | 'telegram_parse' | 'manual_editor' | 'web_cron'
   sourceUrl?: string | null
   sourceExternalId?: string | null
   citySlug?: string | null

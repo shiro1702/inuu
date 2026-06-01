@@ -1,9 +1,12 @@
 import type { H3Event } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
+import { evaluateContentPrefilter } from '~/server/utils/ai/contentPrefilter'
 import { parseEventsWithGroq } from '~/server/utils/ai/groqEventParser'
 import type { EventDigestMeta, EventParseInput, EventParseResult } from '~/server/utils/ai/eventParseSchema'
 import { writeAiParseLog } from '~/server/utils/ai/aiParseLogs'
 import { enrichRawTextWithUrls } from '~/server/utils/contentUrlEnricher'
+import { resolveCityPrefilterEnabled } from '~/server/utils/cityIngestSettings'
+import { resolveIngestSourceContext, resolveIngestSourceOrganization } from '~/server/utils/ingestSourceContext'
 import { resolveCityBySlug } from '~/server/utils/inuuCity'
 import { loadCityParseTaxonomy, resolveParsedTaxonomy } from '~/server/utils/cityContentTaxonomy'
 
@@ -113,6 +116,7 @@ export type ContentIngestResult = {
   model: string
   latencyMs: number
   enrichedUrls?: string[]
+  skippedByPrefilter?: boolean
 }
 
 async function resolveEventResult(
@@ -363,7 +367,13 @@ async function persistBatchSubmissions(args: PersistBatchArgs): Promise<{
 
 export async function runContentIngest(
   event: H3Event,
-  input: EventParseInput & { persist?: boolean; skipUrlEnrich?: boolean },
+  input: EventParseInput & {
+    persist?: boolean
+    skipUrlEnrich?: boolean
+    skipPrefilter?: boolean
+    organizationId?: string | null
+    organizationName?: string | null
+  },
 ): Promise<ContentIngestResult> {
   const citySlugHint = input.citySlug || null
   let taxonomyHints = input.hints || {}
@@ -372,16 +382,106 @@ export async function runContentIngest(
   if (citySlugHint) {
     cityForTaxonomy = await resolveCityBySlug(event, citySlugHint)
     const taxonomy = await loadCityParseTaxonomy(event, cityForTaxonomy.id)
+    const resolvedContext = await resolveIngestSourceContext(event, {
+      citySlug: citySlugHint,
+      sourceUrl: input.sourceUrl,
+    })
     taxonomyHints = {
       ...taxonomyHints,
       availableTags: taxonomy.tags,
       availableCategories: taxonomy.categories,
+      contextType:
+        resolvedContext !== 'general'
+          ? resolvedContext
+          : (taxonomyHints.contextType || 'general'),
     }
   }
 
   const enriched = input.skipUrlEnrich
     ? { rawText: input.rawText, urls: [], enrichedUrls: [] as string[] }
     : await enrichRawTextWithUrls(input.rawText)
+
+  if (input.skipPrefilter !== true) {
+    const prefilterEnabled = citySlugHint
+      ? await resolveCityPrefilterEnabled(event, citySlugHint)
+      : true
+    if (prefilterEnabled) {
+      const prefilter = evaluateContentPrefilter(enriched.rawText)
+      if (!prefilter.pass) {
+        await writeAiParseLog(event, {
+        sourceKind: input.sourceKind,
+        sourceUrl: input.sourceUrl ?? null,
+        sourceExternalId: input.sourceExternalId ?? null,
+        citySlug: citySlugHint,
+        model: 'prefilter',
+        status: 'skipped',
+        latencyMs: 0,
+        errorMessage: 'skipped by prefilter',
+        payload: {
+          reason: prefilter.reason,
+          signals: prefilter.signals,
+          enrichedUrlCount: enriched.enrichedUrls.length,
+        },
+      })
+
+      const emptyParse = {
+        title: '',
+        description_short: '',
+        description_full: '',
+        description: '',
+        cover_media_url: null,
+        city_slug: citySlugHint,
+        event_kind: 'event' as const,
+        category_slug: null,
+        venue: { name: null, address: null },
+        organization: { name: null },
+        source: {
+          kind: input.sourceKind,
+          url: input.sourceUrl || null,
+          external_id: input.sourceExternalId || null,
+        },
+        is_free: false,
+        price_from: null,
+        capacity: null,
+        registration_url: null,
+        topic_tags: [],
+        recurrence: { rule: 'none' as const, dates: [] },
+        confidence: 0,
+        missing_fields: ['prefilter_skipped'],
+      }
+
+      return {
+        city: cityForTaxonomy
+          ? {
+              id: cityForTaxonomy.id,
+              slug: cityForTaxonomy.slug,
+              name: cityForTaxonomy.name,
+              timezone: cityForTaxonomy.timezone,
+            }
+          : {
+              id: '',
+              slug: citySlugHint || '',
+              name: citySlugHint || '',
+              timezone: input.timezone || 'Asia/Irkutsk',
+            },
+        parseKind: 'single',
+        digest: null,
+        events: [],
+        items: [],
+        batchId: null,
+        parentSubmissionId: null,
+        parse: emptyParse,
+        moderationStatus: 'needs_revision',
+        duplicates: { checked: false, items: [], seriesMatches: [] },
+        persisted: { ok: false, id: null, warning: 'skipped by prefilter' },
+        model: 'prefilter',
+        latencyMs: 0,
+        enrichedUrls: enriched.enrichedUrls,
+        skippedByPrefilter: true,
+      }
+      }
+    }
+  }
 
   const parseOutput = await parseEventsWithGroq({
     ...input,
@@ -391,6 +491,31 @@ export async function runContentIngest(
 
   const digestResult = parseOutput.result
   let events = [...digestResult.events]
+
+  let organizationId = input.organizationId || null
+  let organizationName = input.organizationName || null
+  if (!organizationId && citySlugHint) {
+    const linkedOrg = await resolveIngestSourceOrganization(event, {
+      citySlug: citySlugHint,
+      sourceUrl: input.sourceUrl,
+      sourceKind: input.sourceKind,
+    })
+    if (linkedOrg) {
+      organizationId = linkedOrg.organizationId
+      organizationName = linkedOrg.organizationName
+    }
+  }
+
+  if (organizationId) {
+    events = events.map((ev) => ({
+      ...ev,
+      organization: {
+        ...ev.organization,
+        id: organizationId!,
+        name: organizationName || ev.organization?.name || null,
+      },
+    }))
+  }
 
   if (input.coverMediaUrl && events[0]) {
     events = [{ ...events[0], cover_media_url: input.coverMediaUrl }, ...events.slice(1)]
