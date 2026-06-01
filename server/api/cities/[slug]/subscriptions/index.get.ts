@@ -1,11 +1,8 @@
 import { createError, defineEventHandler, setResponseHeader } from 'h3'
 import { resolveCustomerProfileId } from '~/server/utils/customerProfile'
 import { resolveCityBySlug } from '~/server/utils/inuuCity'
-import {
-  detectSubscriptionChannel,
-  loadCitySubscriptionSettings,
-  MVP_TOPICS,
-} from '~/server/utils/cityNotifySubscriptions'
+import { detectSubscriptionChannel } from '~/server/utils/cityTagSubscriptions'
+import { loadCitySubscriptionSettings, MVP_TOPICS } from '~/server/utils/cityNotifySubscriptions'
 
 export default defineEventHandler(async (event) => {
   setResponseHeader(event, 'Cache-Control', 'private, no-store')

@@ -1,6 +1,6 @@
 import { createError, defineEventHandler, readBody } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
-import { parseCityIngestSettings } from '~/server/utils/cityIngestSettings'
+import { parseCityIngestSettings } from '~/server/utils/cityIngestSettingsShared'
 import { resolveManagerCityScopeOrThrow } from '~/server/utils/managerCityAccess'
 
 type Body = {

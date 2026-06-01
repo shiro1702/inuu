@@ -4,10 +4,12 @@ import {
   assertShopInCity,
   getTelegramSourceById,
   mapTelegramSourceRow,
-  normalizeTelegramSourceKey,
 } from '~/server/utils/ingestSourcesDashboard'
+import {
+  INGEST_CONTEXT_TYPES,
+  normalizeTelegramSourceKey,
+} from '~/server/utils/ingestSourcesDashboardShared'
 import { resolveManagerCityScopeOrThrow } from '~/server/utils/managerCityAccess'
-import { INGEST_CONTEXT_TYPES } from '~/server/utils/ingestSourcesDashboardShared'
 
 type Body = {
   sourceKey?: string

@@ -13,6 +13,7 @@
   "dependencies": {
     "@nuxtjs/supabase": "^2.0.4",
     "@supabase/supabase-js": "^2.106.1",
+    "cheerio": "^1.2.0",
     "groq-sdk": "^1.2.1",
     "leaflet": "^1.9.4",
     "leaflet-draw": "^1.0.4",

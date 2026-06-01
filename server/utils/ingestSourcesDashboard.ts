@@ -10,13 +10,12 @@ import {
   normalizeTelegramSourceKey,
   normalizeWebSourceUrl,
 } from '~/server/utils/ingestSourcesDashboardShared'
-
-export {
-  INGEST_CONTEXT_TYPES,
-  normalizeTelegramSourceKey,
-  normalizeWebSourceUrl,
-} from '~/server/utils/ingestSourcesDashboardShared'
-export type { IngestContextType }
+import {
+  parseParsingRules,
+  parseParsingStrategy,
+  type ParsingRules,
+  type ParsingStrategy,
+} from '~/server/utils/webParsingTypes'
 
 export type ShopPickerItem = {
   id: string
@@ -36,6 +35,9 @@ export type WebSourceDto = {
   isActive: boolean
   lastCrawledAt: string | null
   notes: string | null
+  parsingStrategy: ParsingStrategy | null
+  parsingRules: ParsingRules | null
+  rulesValidatedAt: string | null
   createdAt: string
   updatedAt: string
 }
@@ -87,6 +89,9 @@ export function mapWebSourceRow(row: any): WebSourceDto {
     isActive: row.is_active !== false,
     lastCrawledAt: row.last_crawled_at ? String(row.last_crawled_at) : null,
     notes: row.notes ? String(row.notes) : null,
+    parsingStrategy: parseParsingStrategy(row.parsing_strategy),
+    parsingRules: parseParsingRules(row.parsing_rules),
+    rulesValidatedAt: row.rules_validated_at ? String(row.rules_validated_at) : null,
     createdAt: String(row.created_at || ''),
     updatedAt: String(row.updated_at || ''),
   }
@@ -153,8 +158,10 @@ export async function listCityShopsForPicker(
   return (data ?? []).map((row) => mapShopRow(row)!).filter(Boolean)
 }
 
-const WEB_SOURCE_SELECT = `
-  id,url,context_type,organization_id,cron_enabled,is_active,last_crawled_at,notes,created_at,updated_at,
+export const WEB_SOURCE_SELECT = `
+  id,url,context_type,organization_id,cron_enabled,is_active,last_crawled_at,notes,
+  parsing_strategy,parsing_rules,rules_validated_at,
+  created_at,updated_at,
   shops:organization_id(id,slug,name,ui_settings)
 `
 

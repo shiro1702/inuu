@@ -48,6 +48,9 @@ export default defineNuxtConfig({
       process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY ?? '',
     groqApiKey: process.env.NUXT_GROQ_API_KEY ?? '',
     groqModel: process.env.NUXT_GROQ_MODEL ?? 'llama-3.3-70b-versatile',
+    groqClassifierModel: process.env.NUXT_GROQ_CLASSIFIER_MODEL ?? 'llama-3.1-8b-instant',
+    webClassifierEnabled: process.env.NUXT_WEB_CLASSIFIER_ENABLED ?? '',
+    firecrawlApiKey: process.env.FIRECRAWL_API_KEY ?? '',
     public: {
       brandName: 'INUU',
       platformBaseDomain: process.env.NUXT_PLATFORM_BASE_DOMAIN ?? '',

@@ -59,6 +59,12 @@
                     <button type="button" class="rounded border px-1.5 py-0.5 hover:bg-gray-50" @click="openWebForm(item)">Изм.</button>
                     <button type="button" class="rounded border px-1.5 py-0.5 hover:bg-gray-50" @click="testCrawl(item)">Проверить</button>
                     <button
+                      type="button"
+                      class="rounded border border-primary/30 bg-primary/5 px-1.5 py-0.5 text-primary hover:bg-primary/10 disabled:opacity-50"
+                      :disabled="crawlRunningId === item.id"
+                      @click="runCrawl(item)"
+                    >{{ crawlRunningId === item.id ? 'Парсим…' : 'Запустить' }}</button>
+                    <button
                       v-if="!item.organizationId"
                       type="button"
                       class="rounded border px-1.5 py-0.5 hover:bg-gray-50"
@@ -67,12 +73,66 @@
                     <button type="button" class="rounded border border-red-200 px-1.5 py-0.5 text-red-700 hover:bg-red-50" @click="deleteWeb(item)">×</button>
                   </div>
                   <p v-if="item.lastCrawledAt" class="mt-1 text-[10px] text-gray-400">crawl: {{ formatDate(item.lastCrawledAt) }}</p>
+                  <div
+                    v-if="item.parsingStrategy || item.parsingRules"
+                    class="mt-2 max-w-md rounded border border-gray-100 bg-gray-50 p-2 text-[10px] text-gray-600"
+                  >
+                    <p v-if="item.parsingStrategy?.page_type" class="font-medium">
+                      strategy: {{ item.parsingStrategy.page_type }}
+                      <span v-if="item.parsingStrategy.classified_at" class="text-gray-400">
+                        · {{ formatDate(item.parsingStrategy.classified_at) }}
+                      </span>
+                    </p>
+                    <pre v-if="item.parsingRules" class="mt-1 max-h-24 overflow-auto whitespace-pre-wrap">{{ pretty(item.parsingRules) }}</pre>
+                    <p v-if="item.rulesValidatedAt" class="mt-1 text-gray-400">rules OK: {{ formatDate(item.rulesValidatedAt) }}</p>
+                    <div class="mt-1 flex flex-wrap gap-1">
+                      <button
+                        type="button"
+                        class="rounded border border-amber-200 px-1.5 py-0.5 text-amber-800 hover:bg-amber-50"
+                        @click="resetWebStrategy(item)"
+                      >Сбросить strategy</button>
+                      <button
+                        v-if="item.parsingRules"
+                        type="button"
+                        class="rounded border border-amber-200 px-1.5 py-0.5 text-amber-800 hover:bg-amber-50"
+                        @click="resetWebRules(item.id)"
+                      >Reset rules</button>
+                    </div>
+                  </div>
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
         <pre v-if="testResultText" class="max-h-48 overflow-auto rounded bg-gray-900 p-2 text-[10px] text-gray-100">{{ testResultText }}</pre>
+      </section>
+
+      <section v-if="scrapingAlerts.length" class="space-y-2 rounded border border-amber-100 bg-amber-50/50 p-3">
+        <h3 class="text-sm font-semibold text-amber-900">Алерты парсинга ({{ scrapingAlerts.length }})</h3>
+        <ul class="space-y-2 text-xs">
+          <li
+            v-for="alert in scrapingAlerts"
+            :key="alert.id"
+            class="rounded border border-amber-100 bg-white p-2"
+          >
+            <p class="font-mono break-all text-gray-800">{{ alert.url }}</p>
+            <p class="text-amber-800">{{ alert.reason }}</p>
+            <p v-if="alert.snapshot" class="mt-1 line-clamp-2 text-gray-500">{{ alert.snapshot }}</p>
+            <div class="mt-2 flex flex-wrap gap-1">
+              <button
+                type="button"
+                class="rounded border px-1.5 py-0.5 hover:bg-gray-50"
+                @click="resolveAlert(alert)"
+              >Resolve</button>
+              <button
+                v-if="alert.webSourceId"
+                type="button"
+                class="rounded border px-1.5 py-0.5 hover:bg-gray-50"
+                @click="resetWebRules(alert.webSourceId)"
+              >Reset rules</button>
+            </div>
+          </li>
+        </ul>
       </section>
 
       <section class="space-y-3 border-t border-gray-100 pt-4">
@@ -196,6 +256,17 @@ const props = defineProps<{ citySlug: string }>()
 
 type ShopItem = { id: string; slug: string; name: string; isClaimed: boolean }
 type SourceOrg = ShopItem | null
+type ParsingStrategy = {
+  page_type?: string
+  classified_at?: string | null
+  list_link_pattern?: string | null
+  confidence?: number | null
+}
+type ParsingRules = {
+  page_type?: string | null
+  selectors?: Record<string, string | null> | null
+  list_link_pattern?: string | null
+}
 type WebSource = {
   id: string
   url: string
@@ -206,6 +277,9 @@ type WebSource = {
   isActive: boolean
   lastCrawledAt: string | null
   notes: string | null
+  parsingStrategy: ParsingStrategy | null
+  parsingRules: ParsingRules | null
+  rulesValidatedAt: string | null
 }
 type TgSource = {
   id: string
@@ -226,6 +300,17 @@ const webSources = ref<WebSource[]>([])
 const telegramSources = ref<TgSource[]>([])
 const shops = ref<ShopItem[]>([])
 const testResultText = ref('')
+const crawlRunningId = ref('')
+type ScrapingAlert = {
+  id: string
+  webSourceId: string
+  webSourceUrl: string | null
+  url: string
+  reason: string
+  snapshot: string | null
+  createdAt: string
+}
+const scrapingAlerts = ref<ScrapingAlert[]>([])
 
 const webFormOpen = ref(false)
 const webForm = ref({
@@ -276,8 +361,9 @@ async function loadSources() {
   loading.value = true
   errorMessage.value = ''
   try {
-    const [sourcesRes] = await Promise.all([
+    const [sourcesRes, alertsRes] = await Promise.all([
       fetch(`/api/dashboard/manager/cities/${props.citySlug}/ingest-sources`),
+      fetch(`/api/dashboard/manager/cities/${props.citySlug}/ingest-sources/scraping-alerts`),
       loadShops(),
     ])
     const payload = await sourcesRes.json() as any
@@ -289,6 +375,8 @@ async function loadSources() {
     webSources.value = payload.webSources || []
     telegramSources.value = payload.telegramSources || []
     prefilterEnabled.value = payload.ingestSettings?.prefilter_enabled !== false
+    const alertsPayload = await alertsRes.json().catch(() => ({}))
+    scrapingAlerts.value = alertsPayload.ok ? alertsPayload.alerts || [] : []
   } catch (err: any) {
     errorMessage.value = err?.message || 'Ошибка загрузки'
   } finally {
@@ -360,15 +448,50 @@ async function deleteWeb(item: WebSource) {
 }
 
 async function testCrawl(item: WebSource) {
-  testResultText.value = 'Запуск test crawl...'
+  testResultText.value = 'Запуск test crawl (без очереди)...'
   const res = await fetch(`/api/dashboard/manager/cities/${props.citySlug}/ingest-sources/web/${item.id}/test-crawl`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({}),
   })
   const payload = await res.json()
+  if (!res.ok) {
+    errorMessage.value = payload?.statusMessage || 'Test crawl failed'
+  }
   testResultText.value = pretty(payload)
   await loadSources()
+}
+
+async function runCrawl(item: WebSource) {
+  const msg = item.organizationId
+    ? `Запустить парсер для ${item.url}?\n\nСоздастся submission в очередь модерации (как ночной cron).`
+    : `Запустить парсер для ${item.url}?\n\nБудет создана теневая организация и submission в очередь модерации.`
+  if (!confirm(msg)) return
+
+  crawlRunningId.value = item.id
+  testResultText.value = 'Ручной запуск парсера (persist)...'
+  errorMessage.value = ''
+  try {
+    const res = await fetch(`/api/dashboard/manager/cities/${props.citySlug}/ingest-sources/web/${item.id}/run-crawl`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ createShadowOrg: true }),
+    })
+    const payload = await res.json()
+    if (!res.ok) {
+      errorMessage.value = payload?.statusMessage || payload?.hint || 'Не удалось запустить парсер'
+    } else if (payload.ok === false) {
+      errorMessage.value = payload.hint || payload.error || 'Парсер не создал submission'
+    } else {
+      errorMessage.value = ''
+    }
+    testResultText.value = pretty(payload)
+    await loadSources()
+  } catch (err: unknown) {
+    errorMessage.value = err instanceof Error ? err.message : 'Ошибка запуска'
+  } finally {
+    crawlRunningId.value = ''
+  }
 }
 
 async function createShadowOrg(item: WebSource) {
@@ -377,6 +500,47 @@ async function createShadowOrg(item: WebSource) {
   })
   const payload = await res.json()
   testResultText.value = pretty(payload)
+  await loadSources()
+}
+
+async function resetWebStrategy(item: WebSource) {
+  if (!confirm('Сбросить parsing_strategy и parsing_rules для этого источника?')) return
+  const res = await fetch(
+    `/api/dashboard/manager/cities/${props.citySlug}/ingest-sources/web/${item.id}/reset-strategy`,
+    { method: 'POST' },
+  )
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    errorMessage.value = err?.statusMessage || 'Не удалось сбросить strategy'
+    return
+  }
+  await loadSources()
+}
+
+async function resetWebRules(webSourceId: string) {
+  if (!confirm('Сбросить parsing_rules?')) return
+  const res = await fetch(
+    `/api/dashboard/manager/cities/${props.citySlug}/ingest-sources/web/${webSourceId}/reset-rules`,
+    { method: 'POST' },
+  )
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    errorMessage.value = err?.statusMessage || 'Не удалось сбросить rules'
+    return
+  }
+  await loadSources()
+}
+
+async function resolveAlert(alert: ScrapingAlert) {
+  const res = await fetch(
+    `/api/dashboard/manager/cities/${props.citySlug}/ingest-sources/scraping-alerts/${alert.id}/resolve`,
+    { method: 'POST' },
+  )
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    errorMessage.value = err?.statusMessage || 'Не удалось закрыть alert'
+    return
+  }
   await loadSources()
 }
 

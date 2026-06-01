@@ -1,3 +1,9 @@
+import {
+  buildTelegramWebPreviewCombinedText,
+  fetchTelegramWebPreviewPosts,
+  resolveTelegramWebPreviewUrl,
+} from '~/server/utils/telegramWebPreview'
+
 const URL_REGEX = /https?:\/\/[^\s<>"')\]]+/gi
 const FETCH_TIMEOUT_MS = 8000
 const MAX_EXTRACTED_CHARS = 8000
@@ -33,6 +39,13 @@ function stripHtml(html: string): string {
 }
 
 export async function fetchUrlPlainText(url: string): Promise<string | null> {
+  if (resolveTelegramWebPreviewUrl(url)) {
+    const preview = await fetchTelegramWebPreviewPosts(url)
+    if (preview?.posts.length) {
+      return buildTelegramWebPreviewCombinedText(preview.posts).slice(0, MAX_EXTRACTED_CHARS)
+    }
+    return null
+  }
   if (/^https?:\/\/(t\.me|telegram\.me)\//i.test(url)) {
     return null
   }

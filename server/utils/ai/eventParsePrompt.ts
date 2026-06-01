@@ -1,5 +1,5 @@
 import type { EventParseInput } from '~/server/utils/ai/eventParseSchema'
-import type { IngestContextType } from '~/server/utils/ingestSourceContext'
+import type { IngestContextType } from '~/server/utils/ingestSourcesDashboardShared'
 
 const CONTEXT_PROMPTS: Record<IngestContextType, string> = {
   theater:

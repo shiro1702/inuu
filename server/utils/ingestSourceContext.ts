@@ -1,26 +1,10 @@
 import type { H3Event } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
+import {
+  normalizeContextTypeForSource,
+  type IngestContextType,
+} from '~/server/utils/ingestSourcesDashboardShared'
 import { resolveCityBySlug } from '~/server/utils/inuuCity'
-
-export const INGEST_CONTEXT_TYPES = [
-  'club',
-  'theater',
-  'standup',
-  'library',
-  'museum',
-  'cinema',
-  'general',
-] as const
-
-export type IngestContextType = (typeof INGEST_CONTEXT_TYPES)[number]
-
-function normalizeContextType(value: unknown): IngestContextType {
-  const raw = String(value || '').trim().toLowerCase()
-  if ((INGEST_CONTEXT_TYPES as readonly string[]).includes(raw)) {
-    return raw as IngestContextType
-  }
-  return 'general'
-}
 
 function extractTelegramSourceKey(sourceUrl: string | null | undefined): string | null {
   if (!sourceUrl) return null
@@ -65,7 +49,7 @@ export async function resolveIngestSourceContext(
       .eq('source_key', tgKey)
       .eq('is_active', true)
       .maybeSingle()
-    if (data?.context_type) return normalizeContextType(data.context_type)
+    if (data?.context_type) return normalizeContextTypeForSource(data.context_type)
   }
 
   const webUrl = normalizeWebUrl(args.sourceUrl)
@@ -77,7 +61,7 @@ export async function resolveIngestSourceContext(
       .eq('url', webUrl)
       .eq('is_active', true)
       .maybeSingle()
-    if (data?.context_type) return normalizeContextType(data.context_type)
+    if (data?.context_type) return normalizeContextTypeForSource(data.context_type)
   }
 
   return 'general'

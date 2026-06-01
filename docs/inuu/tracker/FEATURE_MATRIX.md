@@ -75,9 +75,9 @@
 | [ ] | `post_type`: new / cancellation / update / trash | 3 | P1 | — | [16-parsing-pipeline-extensions.md](../features/content/16-parsing-pipeline-extensions.md) |
 | [ ] | Vision: сверка текст ↔ афиша (`conflict_alert`) | 3 | P1 | — | [16-parsing-pipeline-extensions.md](../features/content/16-parsing-pipeline-extensions.md) |
 | [x] | Web CRON парсинг сайтов (MVP: plain text на index URL) | 4 | P1 | сред | [17-ingest-sources-context.md](../features/content/17-ingest-sources-context.md), TASK-002 |
-| [~] | Web: `parsing_strategy` / `parsing_rules` + `scraping_alerts` | 3 | P1 | — | [26](../features/content/26-web-scraping-classifier-and-rules.md), [TASK-008](./ACTIVE_TASKS.md) |
-| [~] | Web: Groq classifier (`page_type`) + router | 4 | P1 | — | [26](../features/content/26-web-scraping-classifier-and-rules.md), [TASK-009](./ACTIVE_TASKS.md) |
-| [~] | Web: cheerio fast lane + auto-healing rules | 4 | P1 | — | [26](../features/content/26-web-scraping-classifier-and-rules.md), [TASK-010](./ACTIVE_TASKS.md) |
+| [x] | Web: `parsing_strategy` / `parsing_rules` + `scraping_alerts` | 3 | P1 | — | [26](../features/content/26-web-scraping-classifier-and-rules.md), TASK-008 |
+| [x] | Web: Groq classifier (`page_type`) + router | 4 | P1 | — | [26](../features/content/26-web-scraping-classifier-and-rules.md), TASK-009 |
+| [x] | Web: cheerio fast lane + auto-healing rules | 4 | P1 | — | [26](../features/content/26-web-scraping-classifier-and-rules.md), TASK-010 |
 | [ ] | Groq event prompt: `publication_date` + CTA/age/lineup | 2 | P1 | — | [25-groq-event-extraction-prompt.md](../features/content/25-groq-event-extraction-prompt.md) |
 | [x] | Контекст источника в промпте (театр / клуб / …) | 2 | P1 | — | [17-ingest-sources-context.md](../features/content/17-ingest-sources-context.md) |
 | [ ] | AI-санитар парсинга (title, price, category, vibe) | 2 | P1 | — | [22-ai-bot-concierge-and-intent.md](../features/content/22-ai-bot-concierge-and-intent.md), [16-parsing-pipeline-extensions.md](../features/content/16-parsing-pipeline-extensions.md) |
@@ -239,8 +239,8 @@
 | | Кол-во |
 |---|--------|
 | Всего строк | 135 |
-| `[x]` сделано | 52 |
-| `[~]` в работе | 3 |
+| `[x]` сделано | 55 |
+| `[~]` в работе | 0 |
 | `[ ]` в плане | 80 |
 
 > **Примечание:** `[x]` = есть рабочий код или MVP закрыт по спеке; `[~]` = идёт реализация; `[ ]` = не начато или только спека. Строки «снято» (§11) не входят в «в плане». При расхождении с кодом — править здесь первым делом.

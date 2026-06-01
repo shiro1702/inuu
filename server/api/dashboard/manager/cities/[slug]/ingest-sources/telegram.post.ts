@@ -1,12 +1,11 @@
 import { createError, defineEventHandler, readBody } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
+import { assertShopInCity, mapTelegramSourceRow } from '~/server/utils/ingestSourcesDashboard'
 import {
-  assertShopInCity,
-  mapTelegramSourceRow,
+  INGEST_CONTEXT_TYPES,
   normalizeTelegramSourceKey,
-} from '~/server/utils/ingestSourcesDashboard'
+} from '~/server/utils/ingestSourcesDashboardShared'
 import { resolveManagerCityScopeOrThrow } from '~/server/utils/managerCityAccess'
-import { INGEST_CONTEXT_TYPES } from '~/server/utils/ingestSourcesDashboardShared'
 
 type Body = {
   sourceKey?: string

@@ -42,82 +42,21 @@
 
 ## Текущий вектор (01.06.2026)
 
-**Волна 2b — web-парсинг:** от «plain text на корневой URL» к конвейеру **classifier → router → CSS rules / fallback** ([26](../features/content/26-web-scraping-classifier-and-rules.md)).
+**Волна 2b закрыта** (TASK-008–010): classifier → router → cheerio fast lane + `scraping_alerts`. Runbook: [TASK-008-web-parsing-pipeline.md](./TASK-008-web-parsing-pipeline.md).
 
-Runbook исполнения: **[TASK-008-web-parsing-pipeline.md](./TASK-008-web-parsing-pipeline.md)**.
+**Следующий фокус:** вернуть **TASK-004** (каталог источников Улан-Удэ) после smoke на 2 `cron_enabled` URL и `NUXT_WEB_CLASSIFIER_ENABLED=true` на dev.
 
-**Отложено:** наполнение каталога TG + backfill, санитар/TL;DR, guides/cron (TASK-004–006) — вернёмся после стабильного web crawl.
+**Отложено:** TASK-005–006 (санитар/TL;DR, guides).
 
-Индекс брейншторма: [01.06.2026](../../fix/brainstorm/01.06.2026.md) · baseline cron: [TASK-002](./ACTIVE_TASKS.md#архив) (архив).
+Индекс брейншторма: [01.06.2026](../../fix/brainstorm/01.06.2026.md).
 
 ---
 
 ## Активные задачи
 
-> **Очередь:** 3 задачи · волна 2b (web-парсинг) · `todo`.
+> **Очередь:** 0 задач · волна 2b завершена · следующий кандидат: **TASK-004** (из paused).
 
-### TASK-008 · Web ingest: схема + HTML sanitize
-
-- **Статус:** `todo`
-- **Матрица:** §4 «Web: `parsing_strategy` / `parsing_rules` в БД» · §8 dashboard ingest
-- **Цель:** Подготовить БД и единый fetch/sanitize HTML перед classifier и cheerio.
-- **Спеки:** [26](../features/content/26-web-scraping-classifier-and-rules.md), [17](../features/content/17-ingest-sources-context.md), [TASK-008-web-parsing-pipeline.md](./TASK-008-web-parsing-pipeline.md) § TASK-008
-- **In scope:**
-  - Миграция: `city_web_sources.parsing_strategy`, `parsing_rules`, `rules_validated_at`; таблица `scraping_alerts`
-  - `server/utils/webPageSanitizer.ts` + `webPageFetch.ts` (timeout, UA, strip script/style/header/footer, links[], text ≤3k)
-  - Типы в `ingestSourcesDashboard.ts`; API GET/PUT отдают новые поля
-  - Dashboard: read-only блок «стратегия / rules» + кнопка «Сбросить strategy» (без classifier пока)
-- **Out of scope:** Groq classifier, apply rules, очередь child URL
-- **Ключевые файлы:** `supabase/migrations/039_*`, `server/api/cron/web-sources-crawl.post.ts`, `server/utils/ingestSourcesDashboard.ts`, `components/dashboard/DashboardIngestSourcesPanel.vue`
-- **Критерии готовности:**
-  - [ ] Миграция на dev; существующий cron не ломается (можно ещё вызывать `fetchUrlPlainText` до 009)
-  - [ ] `sanitizeWebPage(url)` — unit-тест на fixture HTML
-  - [ ] Dashboard показывает `parsing_strategy` / `parsing_rules` для web-источника
-- **Заметки:** Номер миграции `039` — проверить конфликт с незакоммиченными миграциями в ветке.
-
----
-
-### TASK-009 · Groq classifier + router в web cron
-
-- **Статус:** `todo`
-- **Матрица:** §4 «Web: Groq classifier (`page_type`)» · §4 «Web: router (list / single / wall)»
-- **Цель:** Определять тип страницы и ветвить crawl вместо одного blind `runContentIngest` на index URL.
-- **Спеки:** [26](../features/content/26-web-scraping-classifier-and-rules.md), [TASK-008-web-parsing-pipeline.md](./TASK-008-web-parsing-pipeline.md) § TASK-009
-- **In scope:**
-  - `groqWebPageClassifier.ts` + Zod schema (`page_type`, `event_urls[]`, `confidence`)
-  - `webCrawlRouter.ts`: ветки `single_event`, `event_list_links` (до 5 URL/прогон), `text_wall`, `unknown` → `scraping_alerts`
-  - Кэш: писать `parsing_strategy` в `city_web_sources`; повторный classify по правилам из runbook
-  - Интеграция в `web-sources-crawl.post.ts`; summary: `classified`, `child_urls_fetched`, `alerts`
-  - `tests/webPageClassifier.spec.ts` (fixtures)
-- **Out of scope:** CSS fast lane, rules generator, Puppeteer, VK
-- **Ключевые файлы:** `server/utils/ai/groqWebPageClassifier.ts`, `server/utils/webCrawlRouter.ts`, `web-sources-crawl.post.ts`
-- **Критерии готовности:**
-  - [ ] List-страница (fixture) → ≥1 ingest с дочернего URL
-  - [ ] `unknown` → alert, без submission
-  - [ ] Повторный cron с валидной strategy не дергает classifier (smoke log)
-- **Заметки:** Зависит от TASK-008. Feature flag `WEB_CLASSIFIER_ENABLED` — опционально для поэтапного деплоя.
-
----
-
-### TASK-010 · parsing_rules: fast lane, auto-healing, alerts UI
-
-- **Статус:** `todo`
-- **Матрица:** §4 «Web: cheerio fast lane + auto-healing» · §4 «Web: `scraping_alerts` + dashboard»
-- **Цель:** Парсить типовые страницы событий без Groq event parse; при поломке верстки — self-heal или fallback.
-- **Спеки:** [26](../features/content/26-web-scraping-classifier-and-rules.md), [25](../features/content/25-groq-event-extraction-prompt.md) (fallback text), [TASK-008-web-parsing-pipeline.md](./TASK-008-web-parsing-pipeline.md) § TASK-010
-- **In scope:**
-  - `groqParsingRulesGenerator.ts` + `webParsingRulesApply.ts` (селекторы, `@src` для poster)
-  - Fast lane → heal (1 retry) → fallback `runContentIngest(text)` как сейчас
-  - Structured path: собранный payload → `runContentIngest` с заполненными полями где возможно
-  - Dashboard: список open `scraping_alerts`, resolve / reset rules
-- **Out of scope:** Publication date в event prompt (отдельный backlog), агрегаторы Kassir/Яндекс
-- **Ключевые файлы:** `server/utils/ai/groqParsingRulesGenerator.ts`, `server/utils/webParsingRulesApply.ts`, `contentIngestCore.ts`, `DashboardIngestSourcesPanel.vue`
-- **Критерии готовности:**
-  - [ ] Fixture single-event: submission без вызова groq event parser (mock/spy)
-  - [ ] Сломанные rules → новые rules в БД после heal
-  - [ ] Fallback работает как текущий cron
-  - [ ] Менеджер видит и закрывает alert в UI
-- **Заметки:** Зависит от TASK-009. После закрытия — smoke на 2 реальных `cron_enabled` URL.
+_Нет активных задач. Чтобы взять TASK-004 — перенести из [Отложено](#отложено-волна-2a--контент--наполнение) в активные (лимит 3)._
 
 ---
 
@@ -127,7 +66,7 @@ Runbook исполнения: **[TASK-008-web-parsing-pipeline.md](./TASK-008-we
 
 | ID | Название | Почему отложено | Вернуть когда |
 |----|----------|-----------------|---------------|
-| TASK-004 | Каталог источников Улан-Удэ + backfill | Приоритет: довести web crawl до classifier/rules | TASK-008–010 done + 2 боевых web URL |
+| TASK-004 | Каталог источников Улан-Удэ + backfill | Приоритет: довести web crawl до classifier/rules | **Сейчас** — 008–010 done |
 | TASK-005 | Санитар + TL;DR / vibe на карточках | Не блокирует web pipeline | После первых approve из 004 или параллельно |
 | TASK-006 | Guides + cron-черновики подборок | Редакционный слой после афиши | TASK-004 частично закрыт |
 
@@ -187,7 +126,10 @@ Runbook исполнения: **[TASK-008-web-parsing-pipeline.md](./TASK-008-we
 | TASK-001 | Пре-фильтр + context_type + strict tags в Groq | 31.05.2026 | `contentPrefilter.ts`, `eventParsePrompt.ts`, `036_city_ingest_sources.sql` |
 | TASK-002 | Web CRON + shadow org (plain text MVP) | 31.05.2026 | `web-sources-crawl.post.ts`, `ingestShadowOrg.ts`, `vercel.json` |
 | TASK-007 | Dashboard: ingest-источники (web cron, TG, shadow org) | 31.05.2026 | `DashboardIngestSourcesPanel.vue`, ingest-sources API, `038_city_telegram_sources_org.sql` |
+| TASK-008 | Web ingest: схема + HTML sanitize | 01.06.2026 | `039_web_parsing_strategy.sql`, `webPageSanitizer.ts`, `webPageFetch.ts` |
+| TASK-009 | Groq classifier + router в web cron | 01.06.2026 | `groqWebPageClassifier.ts`, `webCrawlRouter.ts`, `NUXT_WEB_CLASSIFIER_ENABLED` |
+| TASK-010 | parsing_rules fast lane + alerts UI | 01.06.2026 | `webParsingRulesApply.ts`, `scraping_alerts` API, `parsedEvents` in ingest |
 
 ---
 
-**Последнее обновление:** 01.06.2026 · активных: **3** (волна 2b web, `todo`) · отложено: **004–006** · in_progress: **0**
+**Последнее обновление:** 01.06.2026 · активных: **0** · отложено: **004–006** · архив: **008–010** done

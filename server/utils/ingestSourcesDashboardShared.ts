@@ -1,4 +1,5 @@
 import { createError } from 'h3'
+import { resolveTelegramWebPreviewUrl } from '~/server/utils/telegramWebPreview'
 
 export const INGEST_CONTEXT_TYPES = [
   'club',
@@ -24,6 +25,8 @@ export function normalizeWebSourceUrl(input: string): string {
     throw createError({ statusCode: 400, statusMessage: 'URL must be http or https' })
   }
   parsed.hash = ''
+  const telegramPreview = resolveTelegramWebPreviewUrl(parsed.toString())
+  if (telegramPreview) return telegramPreview
   return parsed.toString().replace(/\/$/, '')
 }
 

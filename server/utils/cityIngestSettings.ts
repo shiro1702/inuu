@@ -6,9 +6,6 @@ import {
 } from '~/server/utils/cityIngestSettingsShared'
 import { resolveCityBySlug } from '~/server/utils/inuuCity'
 
-export type { CityIngestSettings } from '~/server/utils/cityIngestSettingsShared'
-export { parseCityIngestSettings } from '~/server/utils/cityIngestSettingsShared'
-
 export async function loadCityIngestSettings(
   event: H3Event,
   cityId: string,

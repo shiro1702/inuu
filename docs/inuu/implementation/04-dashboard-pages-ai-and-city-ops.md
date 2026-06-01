@@ -34,6 +34,7 @@
    - Telegram userbot: `@channel`, `context_type`, org
    - пре-фильтр до Groq (toggle на город)
    - test crawl / create shadow org
+   - подробный runbook: [WEB_URL_PARSER_RU.md](../runbooks/WEB_URL_PARSER_RU.md)
 5. Создать новость вручную в `editorial_posts`.
 6. Управлять очередью `content_submissions`:
    - фильтр по статусам

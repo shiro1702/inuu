@@ -4,10 +4,13 @@ import {
   assertShopInCity,
   getWebSourceById,
   mapWebSourceRow,
-  normalizeWebSourceUrl,
+  WEB_SOURCE_SELECT,
 } from '~/server/utils/ingestSourcesDashboard'
+import {
+  INGEST_CONTEXT_TYPES,
+  normalizeWebSourceUrl,
+} from '~/server/utils/ingestSourcesDashboardShared'
 import { resolveManagerCityScopeOrThrow } from '~/server/utils/managerCityAccess'
-import { INGEST_CONTEXT_TYPES } from '~/server/utils/ingestSourcesDashboardShared'
 
 type Body = {
   url?: string
@@ -17,11 +20,6 @@ type Body = {
   isActive?: boolean
   notes?: string | null
 }
-
-const WEB_SOURCE_SELECT = `
-  id,url,context_type,organization_id,cron_enabled,is_active,last_crawled_at,notes,created_at,updated_at,
-  shops:organization_id(id,slug,name,ui_settings)
-`
 
 function normalizeContextType(value: unknown): string {
   const raw = String(value || 'general').trim().toLowerCase()

@@ -1,13 +1,8 @@
 import { createError, defineEventHandler } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
-import { getWebSourceById, mapWebSourceRow } from '~/server/utils/ingestSourcesDashboard'
+import { getWebSourceById, mapWebSourceRow, WEB_SOURCE_SELECT } from '~/server/utils/ingestSourcesDashboard'
 import { resolveOrCreateShadowOrg } from '~/server/utils/ingestShadowOrg'
 import { resolveManagerCityScopeOrThrow } from '~/server/utils/managerCityAccess'
-
-const WEB_SOURCE_SELECT = `
-  id,url,context_type,organization_id,cron_enabled,is_active,last_crawled_at,notes,created_at,updated_at,
-  shops:organization_id(id,slug,name,ui_settings)
-`
 
 export default defineEventHandler(async (event) => {
   const slug = typeof event.context.params?.slug === 'string' ? event.context.params.slug : ''

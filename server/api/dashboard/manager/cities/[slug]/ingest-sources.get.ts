@@ -1,11 +1,8 @@
 import { defineEventHandler } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import { loadCityIngestSettings } from '~/server/utils/cityIngestSettings'
-import {
-  INGEST_CONTEXT_TYPES,
-  listTelegramSources,
-  listWebSources,
-} from '~/server/utils/ingestSourcesDashboard'
+import { listTelegramSources, listWebSources } from '~/server/utils/ingestSourcesDashboard'
+import { INGEST_CONTEXT_TYPES } from '~/server/utils/ingestSourcesDashboardShared'
 import { resolveManagerCityScopeOrThrow } from '~/server/utils/managerCityAccess'
 
 export default defineEventHandler(async (event) => {

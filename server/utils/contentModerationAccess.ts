@@ -203,10 +203,6 @@ export async function assertContentModerationAccess(
   throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
 }
 
-export function resolveTelegramModerationChatIds(settings: ContentOpsSettings | undefined): string[] {
-  return resolveModerationChatIds(settings, 'telegram')
-}
-
 export function resolveMaxModerationChatIds(settings: ContentOpsSettings | undefined): string[] {
   return resolveModerationChatIds(settings, 'max')
 }

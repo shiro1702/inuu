@@ -1,8 +1,8 @@
 import { createError, defineEventHandler, readBody, setResponseHeader } from 'h3'
 import { resolveCustomerProfileId } from '~/server/utils/customerProfile'
 import { resolveCityBySlug } from '~/server/utils/inuuCity'
+import { detectSubscriptionChannel } from '~/server/utils/cityTagSubscriptions'
 import {
-  detectSubscriptionChannel,
   loadCitySubscriptionSettings,
   MVP_TOPICS,
   updateCitySubscriptionSettings,

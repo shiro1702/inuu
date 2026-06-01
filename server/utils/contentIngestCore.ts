@@ -9,6 +9,7 @@ import { resolveCityPrefilterEnabled } from '~/server/utils/cityIngestSettings'
 import { resolveIngestSourceContext, resolveIngestSourceOrganization } from '~/server/utils/ingestSourceContext'
 import { resolveCityBySlug } from '~/server/utils/inuuCity'
 import { loadCityParseTaxonomy, resolveParsedTaxonomy } from '~/server/utils/cityContentTaxonomy'
+import { notifyContentIngestModeration } from '~/server/utils/inuuContentModeration'
 
 function normalizeTitle(value: string): string {
   return value.toLowerCase().replace(/\s+/g, ' ').trim()
@@ -373,6 +374,12 @@ export async function runContentIngest(
     skipPrefilter?: boolean
     organizationId?: string | null
     organizationName?: string | null
+    /** Pre-parsed events (web fast lane) — skips Groq event parser */
+    parsedEvents?: EventParseResult[]
+    /** Skip Telegram/MAX moderation cards (default: notify when persist succeeds) */
+    skipModerationNotify?: boolean
+    /** Override bot token for moderation cards (e.g. webhook handler token) */
+    moderationBotToken?: string
   },
 ): Promise<ContentIngestResult> {
   const citySlugHint = input.citySlug || null
@@ -483,14 +490,31 @@ export async function runContentIngest(
     }
   }
 
-  const parseOutput = await parseEventsWithGroq({
-    ...input,
-    rawText: enriched.rawText,
-    hints: taxonomyHints,
-  })
+  let parseOutput: Awaited<ReturnType<typeof parseEventsWithGroq>>
+  let events: EventParseResult[]
+
+  if (input.parsedEvents?.length) {
+    events = [...input.parsedEvents]
+    parseOutput = {
+      result: {
+        parse_kind: events.length > 1 ? 'digest' : 'single',
+        digest: null,
+        events,
+      },
+      attempts: [{ ok: true, attempt: 1, raw: 'fast_lane' }],
+      model: 'fast_lane',
+      latencyMs: 0,
+    }
+  } else {
+    parseOutput = await parseEventsWithGroq({
+      ...input,
+      rawText: enriched.rawText,
+      hints: taxonomyHints,
+    })
+    events = [...parseOutput.result.events]
+  }
 
   const digestResult = parseOutput.result
-  let events = [...digestResult.events]
 
   let organizationId = input.organizationId || null
   let organizationName = input.organizationName || null
@@ -629,7 +653,7 @@ export async function runContentIngest(
     },
   })
 
-  return {
+  const result: ContentIngestResult = {
     city: {
       id: city.id,
       slug: city.slug,
@@ -649,5 +673,37 @@ export async function runContentIngest(
     model: parseOutput.model,
     latencyMs: parseOutput.latencyMs,
     enrichedUrls: enriched.enrichedUrls,
+    skippedByPrefilter: false,
   }
+
+  if (
+    input.skipModerationNotify !== true
+    && shouldPersist
+    && persisted.ok
+    && persisted.id
+  ) {
+    const config = useRuntimeConfig(event)
+    const botToken = String(
+      input.moderationBotToken
+        || (event.context.tenant as { telegramBotToken?: string } | undefined)?.telegramBotToken
+        || config.botToken
+        || '',
+    ).trim()
+    if (botToken) {
+      await notifyContentIngestModeration(event, {
+        ingestResult: {
+          parseKind,
+          persisted,
+          items,
+        },
+        cityId: city.id,
+        botToken,
+        force: persisted.resent === true,
+      }).catch((err) => console.error('[contentIngest] moderation notify:', err))
+    } else {
+      console.warn('[contentIngest] moderation notify skipped: bot token not configured')
+    }
+  }
+
+  return result
 }

@@ -4,8 +4,8 @@ import { runContentIngest } from '~/server/utils/contentIngestCore'
 import { hasIngestibleContent } from '~/server/utils/contentUrlEnricher'
 import {
   loadCityTelegramOpsSettings,
-  notifyContentIngestModeration,
   resolveTelegramModerationChatIds,
+  type ContentOpsTelegramSettings,
 } from '~/server/utils/inuuContentModeration'
 import {
   addEventToCuratedList,
@@ -29,12 +29,6 @@ async function telegramSend(token: string, method: string, body: Record<string, 
     throw new Error(`Telegram ${method}: ${res.status} ${text}`)
   }
   return res.json()
-}
-
-export type ContentOpsTelegramSettings = {
-  manager_chat_id?: string
-  moderation_chat_id?: string
-  parser_source_chats?: string[]
 }
 
 export type ParserSourceCityRow = {
@@ -505,6 +499,7 @@ export async function tryHandleInuuParserSourceTelegramMessage(
       timezone: city.timezone,
       coverMediaUrl,
       persist: true,
+      moderationBotToken: args.botToken,
     })
 
     await telegramSend(args.botToken, 'sendMessage', {
@@ -512,15 +507,6 @@ export async function tryHandleInuuParserSourceTelegramMessage(
       text: formatIngestReply(result),
       reply_to_message_id: args.message.message_id,
     })
-
-    if (result.persisted.ok && result.persisted.id) {
-      await notifyContentIngestModeration(event, {
-        ingestResult: result,
-        cityId: result.city.id,
-        botToken: args.botToken,
-        force: result.persisted.resent === true,
-      }).catch((err) => console.error('[inuuContentBot] moderation cards:', err))
-    }
 
     return true
   } catch (err) {

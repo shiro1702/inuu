@@ -2,8 +2,6 @@ import type { H3Event } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import { buildWebSourceExternalId } from '~/server/utils/ingestSourceIds'
 
-export { buildWebSourceExternalId } from '~/server/utils/ingestSourceIds'
-
 export async function shouldSkipCrawl(args: {
   event: H3Event
   cityId: string
