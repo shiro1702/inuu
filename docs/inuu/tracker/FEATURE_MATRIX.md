@@ -97,6 +97,7 @@
 | [x] | Карточки в moderation chat: approve / reject / revise | 3 | P0 | — | [04-telegram-bot-content-moderation.md](../features/content/04-telegram-bot-content-moderation.md) |
 | [x] | Digest: approve_all / split / reject pack | 3 | P0 | — | [11-digest-parsing-and-curated-picks.md](../features/content/11-digest-parsing-and-curated-picks.md) |
 | [x] | Редакторский score ⭐1–5 после approve | 2 | P1 | — | [04-telegram-bot-content-moderation.md](../features/content/04-telegram-bot-content-moderation.md) |
+| [x] | Ссылка на событие на сайте в карточке после approve | 1 | P1 | — | [04-telegram-bot-content-moderation.md](../features/content/04-telegram-bot-content-moderation.md) |
 | [x] | Mini App редактирование заявки | 3 | P1 | — | [04-telegram-bot-content-moderation.md](../features/content/04-telegram-bot-content-moderation.md) |
 | [x] | Привязка moderation chat (`chat-link-token`, settings) | 2 | P0 | — | [implementation/04-dashboard-pages-ai-and-city-ops.md](../implementation/04-dashboard-pages-ai-and-city-ops.md) |
 | [x] | `/pick week\|month` — сбор подборки inline | 3 | P1 | — | [11-digest-parsing-and-curated-picks.md](../features/content/11-digest-parsing-and-curated-picks.md) |
@@ -238,8 +239,8 @@
 
 | | Кол-во |
 |---|--------|
-| Всего строк | 135 |
-| `[x]` сделано | 55 |
+| Всего строк | 136 |
+| `[x]` сделано | 56 |
 | `[~]` в работе | 0 |
 | `[ ]` в плане | 80 |
 

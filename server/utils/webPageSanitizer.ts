@@ -1,5 +1,6 @@
 import * as cheerio from 'cheerio'
 import { fetchUrlPlainText } from '~/server/utils/contentUrlEnricher'
+import { extractPrimaryImageFromHtml } from '~/server/utils/pageImageExtract'
 import { fetchWebPageHtml } from '~/server/utils/webPageFetch'
 
 const MAX_TEXT_CHARS = 3000
@@ -12,6 +13,7 @@ export type SanitizedWebPage = {
   text: string
   links: string[]
   htmlSnippet: string
+  imageUrl: string | null
 }
 
 function normalizeWhitespace(value: string): string {
@@ -61,12 +63,15 @@ export function sanitizeHtml(html: string, baseUrl: string): SanitizedWebPage {
   const snippetRoot = $('body').length ? $('body') : $.root()
   const htmlSnippet = snippetRoot.html()?.slice(0, MAX_SNIPPET_CHARS) || ''
 
+  const imageUrl = extractPrimaryImageFromHtml(html, baseUrl)
+
   return {
     url: baseUrl,
     finalUrl: baseUrl,
     text,
     links: links.slice(0, MAX_LINKS),
     htmlSnippet,
+    imageUrl,
   }
 }
 
@@ -103,6 +108,7 @@ export async function sanitizeWebPageWithFallback(url: string): Promise<Sanitize
         text: plain.trim().slice(0, MAX_TEXT_CHARS),
         links: primary?.links?.length ? primary.links : [],
         htmlSnippet: primary?.htmlSnippet || plain.slice(0, MAX_SNIPPET_CHARS),
+        imageUrl: primary?.imageUrl ?? null,
       },
       fetchMode: 'plain_text_fallback',
       hint: 'Used plain-text fallback (markdown or stripHtml)',

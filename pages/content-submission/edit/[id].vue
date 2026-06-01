@@ -42,14 +42,48 @@
         />
       </label>
 
-      <div v-if="form.coverMediaUrl" class="space-y-2">
-        <p class="text-sm font-medium text-gray-700">Обложка</p>
-        <img
-          :src="form.coverMediaUrl"
-          alt="Обложка события"
-          class="max-h-48 w-full rounded-lg border border-gray-200 object-cover"
-        />
-      </div>
+      <fieldset class="space-y-3">
+        <legend class="text-sm font-medium text-gray-700">Афиша</legend>
+        <EventMediaCarousel :urls="previewGalleryUrls" :alt="form.title || 'Афиша события'" />
+        <label class="block space-y-1 text-sm">
+          <span class="text-gray-600">URL обложки</span>
+          <input
+            v-model="form.coverMediaUrl"
+            type="url"
+            class="w-full rounded-lg border border-gray-300 px-3 py-2"
+            placeholder="https://…"
+          />
+        </label>
+        <div v-if="form.mediaUrls.length" class="space-y-2">
+          <p class="text-xs text-gray-500">Дополнительные фото в карусели</p>
+          <div
+            v-for="(_, index) in form.mediaUrls"
+            :key="index"
+            class="flex gap-2"
+          >
+            <input
+              v-model="form.mediaUrls[index]"
+              type="url"
+              class="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              placeholder="https://…"
+            />
+            <button
+              type="button"
+              class="shrink-0 rounded-lg border border-gray-300 px-2 text-sm text-gray-600"
+              @click="removeMediaUrl(index)"
+            >
+              Удалить
+            </button>
+          </div>
+        </div>
+        <button
+          type="button"
+          class="text-sm text-primary hover:underline"
+          @click="addMediaUrl"
+        >
+          + Добавить фото
+        </button>
+      </fieldset>
 
       <DashboardTaxonomyPicker
         v-if="citySlug"
@@ -146,6 +180,7 @@ const form = reactive({
   descriptionShort: '',
   descriptionFull: '',
   coverMediaUrl: '',
+  mediaUrls: [] as string[],
   categorySlug: '',
   registrationUrl: '',
   topicTags: [] as string[],
@@ -153,6 +188,26 @@ const form = reactive({
 })
 
 const authHeaders = computed(() => buildMessengerAuthHeaders())
+
+const previewGalleryUrls = computed(() => {
+  const urls: string[] = []
+  const cover = form.coverMediaUrl.trim()
+  if (cover) urls.push(cover)
+  for (const raw of form.mediaUrls) {
+    const url = String(raw || '').trim()
+    if (url && !urls.includes(url)) urls.push(url)
+  }
+  return urls
+})
+
+function addMediaUrl() {
+  if (form.mediaUrls.length >= 11) return
+  form.mediaUrls.push('')
+}
+
+function removeMediaUrl(index: number) {
+  form.mediaUrls.splice(index, 1)
+}
 
 const SUBMISSION_STATUS_LABELS: Record<string, string> = {
   draft: 'Черновик',
@@ -210,7 +265,12 @@ async function loadSubmission() {
     form.title = String(p.title || '')
     form.descriptionShort = String(p.description_short || p.description || '').slice(0, 280)
     form.descriptionFull = String(p.description_full || p.description || '')
-    form.coverMediaUrl = String(p.cover_media_url || '')
+    const cover = String(p.cover_media_url || '').trim()
+    form.coverMediaUrl = cover
+    const extraMedia = Array.isArray(p.media_urls)
+      ? p.media_urls.map((x: unknown) => String(x || '').trim()).filter(Boolean)
+      : []
+    form.mediaUrls = extraMedia.filter((url: string) => url !== cover)
     form.categorySlug = String(p.category_slug || '')
     form.registrationUrl = String(p.registration_url || '')
     form.topicTags = Array.isArray(p.topic_tags)
@@ -240,6 +300,8 @@ async function save() {
         title: form.title,
         descriptionShort: form.descriptionShort,
         descriptionFull: form.descriptionFull,
+        coverMediaUrl: form.coverMediaUrl,
+        mediaUrls: form.mediaUrls.map((x) => String(x || '').trim()).filter(Boolean),
         categorySlug: form.categorySlug || null,
         registrationUrl: form.registrationUrl,
         topicTags: form.topicTags,

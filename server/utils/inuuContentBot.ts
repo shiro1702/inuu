@@ -1,7 +1,7 @@
 import type { H3Event } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import { runContentIngest } from '~/server/utils/contentIngestCore'
-import { hasIngestibleContent } from '~/server/utils/contentUrlEnricher'
+import { extractUrls, hasIngestibleContent } from '~/server/utils/contentUrlEnricher'
 import {
   loadCityTelegramOpsSettings,
   resolveTelegramModerationChatIds,
@@ -14,7 +14,7 @@ import {
   upsertCuratedListForPeriod,
   type CuratedPeriod,
 } from '~/server/utils/curatedListPeriod'
-import { ingestTelegramMessageCover } from '~/server/utils/telegramContentMedia'
+import { resolveTelegramIngestCover } from '~/server/utils/telegramContentMedia'
 
 const TELEGRAM_API = (token: string) => `https://api.telegram.org/bot${token}`
 
@@ -475,12 +475,19 @@ export async function tryHandleInuuParserSourceTelegramMessage(
   if (isParserSourceCommand(rawText)) return false
 
   const { sourceUrl, sourceExternalId } = buildSourceMeta(args.message, chatIdValue)
+  const urlsInText = extractUrls(rawText)
+  const coverSourceUrl =
+    sourceUrl
+    || urlsInText.find((url) => /(?:t\.me|telegram\.me)\//i.test(url))
+    || urlsInText[0]
+    || null
 
-  const coverMediaUrl = await ingestTelegramMessageCover(event, {
+  const coverMediaUrl = await resolveTelegramIngestCover(event, {
     botToken: args.botToken,
     message: args.message,
     cityId: city.id,
     sourceExternalId,
+    sourceUrl: coverSourceUrl,
   })
 
   await telegramSend(args.botToken, 'sendMessage', {

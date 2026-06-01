@@ -1,5 +1,6 @@
 import { createError, defineEventHandler } from 'h3'
 import { resolveManagerCityScopeOrThrow } from '~/server/utils/managerCityAccess'
+import { buildPublicEventPagePath, buildPublicEventPageUrl } from '~/server/utils/contentSubmissionEditUrl'
 import { publishContentSubmission } from '~/server/utils/contentSubmissionPublish'
 import { serverSupabaseServiceRole } from '#supabase/server'
 
@@ -35,7 +36,14 @@ export default defineEventHandler(async (event) => {
       alreadyPublished: published.alreadyPublished,
       publicPath:
         published.entityType === 'event'
-          ? `/${scope.citySlug}/events/${published.entitySlug}`
+          ? buildPublicEventPagePath(scope.citySlug, published.entitySlug)
+          : null,
+      publicUrl:
+        published.entityType === 'event'
+          ? buildPublicEventPageUrl(event, {
+              citySlug: scope.citySlug,
+              eventSlug: published.entitySlug,
+            })
           : null,
     },
   }

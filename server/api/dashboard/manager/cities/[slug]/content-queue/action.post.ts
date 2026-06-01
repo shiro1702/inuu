@@ -2,6 +2,7 @@ import { createError, defineEventHandler, readBody } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import { resolveManagerCityScopeOrThrow } from '~/server/utils/managerCityAccess'
 import { publishContentSubmission } from '~/server/utils/contentSubmissionPublish'
+import { buildPublicEventPagePath, buildPublicEventPageUrl } from '~/server/utils/contentSubmissionEditUrl'
 import {
   showPostApproveScoreKeyboard,
   updateContentSubmissionModerationCardInChat,
@@ -53,12 +54,15 @@ export default defineEventHandler(async (event) => {
     if (published.entityType === 'event') {
       const config = useRuntimeConfig(event)
       const botToken = String((event.context.tenant as any)?.telegramBotToken || config.botToken || '').trim()
-      if (botToken) {
-        const publicPath = `/${scope.citySlug}/events/${published.entitySlug}`
+      const publicUrl = buildPublicEventPageUrl(event, {
+        citySlug: scope.citySlug,
+        eventSlug: published.entitySlug,
+      })
+      if (botToken && publicUrl) {
         await showPostApproveScoreKeyboard(event, {
           submissionId,
           botToken,
-          publishPath: publicPath,
+          publishPath: publicUrl,
         }).catch((err) => console.error('[content-queue] post-approve score UI:', err))
       }
     }
@@ -71,10 +75,11 @@ export default defineEventHandler(async (event) => {
         entityId: published.entityId,
         entitySlug: published.entitySlug,
         alreadyPublished: published.alreadyPublished,
-        publicPath:
-          published.entityType === 'event'
-            ? `/${scope.citySlug}/events/${published.entitySlug}`
-            : null,
+        publicPath: buildPublicEventPagePath(scope.citySlug, published.entitySlug),
+        publicUrl: buildPublicEventPageUrl(event, {
+          citySlug: scope.citySlug,
+          eventSlug: published.entitySlug,
+        }),
       },
     }
   }

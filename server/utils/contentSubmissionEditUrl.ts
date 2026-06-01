@@ -7,7 +7,7 @@ export type ContentSubmissionEditLinks = {
   telegramUrl: string | null
 }
 
-function resolveAppBaseUrl(event: H3Event): string {
+export function resolveAppBaseUrl(event: H3Event): string {
   const config = useRuntimeConfig(event)
   const raw = String(config.appUrl || process.env.NUXT_APP_URL || '').trim()
   if (raw) {
@@ -28,6 +28,25 @@ function resolveAppBaseUrl(event: H3Event): string {
 }
 
 export const CONTENT_SUBMISSION_EDIT_PATH = '/content-submission/edit'
+
+/** Публичная страница события на витрине города. */
+export function buildPublicEventPagePath(citySlug: string, eventSlug: string): string | null {
+  const city = citySlug.trim()
+  const slug = eventSlug.trim()
+  if (!city || !slug) return null
+  return `/${city}/events/${slug}`
+}
+
+/** HTTPS-ссылка на событие; без `NUXT_APP_URL` — только path. */
+export function buildPublicEventPageUrl(
+  event: H3Event,
+  args: { citySlug: string; eventSlug: string },
+): string | null {
+  const path = buildPublicEventPagePath(args.citySlug, args.eventSlug)
+  if (!path) return null
+  const base = resolveAppBaseUrl(event)
+  return base ? `${base.replace(/\/$/, '')}${path}` : path
+}
 
 export function buildContentSubmissionEditLinks(
   event: H3Event,

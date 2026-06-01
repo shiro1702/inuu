@@ -5,7 +5,6 @@ import { generateParsingRules } from '~/server/utils/ai/groqParsingRulesGenerato
 import type { EventParseResult } from '~/server/utils/ai/eventParseSchema'
 import { runContentIngest } from '~/server/utils/contentIngestCore'
 import { detectPreferDigest } from '~/server/utils/ai/eventParseSchema'
-import { fetchUrlPlainText } from '~/server/utils/contentUrlEnricher'
 import {
   buildTelegramPostExternalId,
   fetchTelegramWebPreviewPosts,
@@ -214,6 +213,10 @@ async function resolveOrganization(ctx: IngestCtx): Promise<{
   return { organizationId, organizationName }
 }
 
+function coverFromSanitized(sanitized?: SanitizedWebPage | null): string | null {
+  return sanitized?.imageUrl?.trim() || null
+}
+
 async function runIngestText(
   ctx: IngestCtx,
   args: {
@@ -314,6 +317,7 @@ async function tryFastLaneIngest(
         sourceUrl: args.pageUrl,
         sourceExternalId,
         parsedEvents: [parsed],
+        coverMediaUrl: first.fields.poster || coverFromSanitized(args.sanitized),
       })
       return { ok: true, usedFallback: false }
     }
@@ -347,6 +351,7 @@ async function tryFastLaneIngest(
       sourceUrl: args.pageUrl,
       sourceExternalId,
       parsedEvents: [parsed],
+      coverMediaUrl: second.fields.poster || coverFromSanitized(args.sanitized),
     })
     return { ok: true, usedFallback: false }
   }
@@ -396,6 +401,7 @@ async function ingestPageWithPipeline(
       rawText: sanitized.text,
       sourceUrl: pageUrl,
       sourceExternalId,
+      coverMediaUrl: coverFromSanitized(sanitized),
     })
   }
 
@@ -405,6 +411,7 @@ async function ingestPageWithPipeline(
       sourceUrl: pageUrl,
       sourceExternalId,
       preferDigest: true,
+      coverMediaUrl: coverFromSanitized(sanitized),
     })
   }
 
@@ -509,21 +516,25 @@ export async function runLegacyWebCrawl(ctx: IngestCtx): Promise<WebCrawlSourceR
     }
   }
 
-  const pageText = await fetchUrlPlainText(ctx.source.url)
-  if (!pageText || pageText.trim().length < 20) {
+  const fetchResult = await sanitizeWebPageWithFallback(ctx.source.url)
+  const sanitized = fetchResult.page
+  if (!sanitized || sanitized.text.trim().length < 20) {
     return {
       ok: false,
       skipped: false,
       error: 'empty_or_short_page',
+      hint: fetchResult.hint,
       ingestProcessed: false,
       stats,
+      fetchMode: fetchResult.fetchMode,
     }
   }
 
   const ingest = await runIngestText(crawlCtx, {
-    rawText: pageText,
+    rawText: sanitized.text,
     sourceUrl: ctx.source.url,
     sourceExternalId,
+    coverMediaUrl: coverFromSanitized(sanitized),
   })
 
   return {

@@ -4,7 +4,10 @@ import type { EventParseResult } from '~/server/utils/ai/eventParseSchema'
 import { formatTopicTagsAsHashtags } from '~/server/utils/ingestSourceDisplayName'
 import { formatDescriptionsForModeration } from '~/server/utils/eventParseDescriptions'
 import { publishContentSubmission } from '~/server/utils/contentSubmissionPublish'
-import { buildContentSubmissionEditLinks } from '~/server/utils/contentSubmissionEditUrl'
+import {
+  buildContentSubmissionEditLinks,
+  buildPublicEventPageUrl,
+} from '~/server/utils/contentSubmissionEditUrl'
 import {
   resolveMaxModerationChatIds,
   type ContentOpsSettings,
@@ -813,6 +816,12 @@ export async function handleInuuSubTelegramCallback(
     let publishLabel = 'Одобрено'
     let publishedEvent = false
     let publishPath: string | null = null
+    const { data: cityRow } = await client
+      .from('cities')
+      .select('slug')
+      .eq('id', String((submission as any).city_id))
+      .maybeSingle()
+    const citySlug = String((cityRow as any)?.slug || '').trim()
     try {
       const published = await publishContentSubmission(event, parsed.submissionId)
       await client
@@ -821,7 +830,10 @@ export async function handleInuuSubTelegramCallback(
         .eq('id', parsed.submissionId)
       if (published.entityType === 'event') {
         publishedEvent = true
-        publishPath = `/events/${published.entitySlug}`
+        publishPath = buildPublicEventPageUrl(event, {
+          citySlug,
+          eventSlug: published.entitySlug,
+        })
         publishLabel = published.alreadyPublished
           ? 'Уже опубликовано — оцените приоритет'
           : `Опубликовано — оцените приоритет`
@@ -911,6 +923,7 @@ export async function handleInuuSubTelegramCallback(
 
     const publishedEntityId = (submission as any).published_entity_id
     const publishedEntityType = (submission as any).published_entity_type
+    let scoreStatusSuffix: string | null = null
     if (publishedEntityType === 'event' && publishedEntityId) {
       await client
         .from('events')
@@ -919,6 +932,22 @@ export async function handleInuuSubTelegramCallback(
           updated_at: new Date().toISOString(),
         } as any)
         .eq('id', String(publishedEntityId))
+
+      const { data: cityRow } = await client
+        .from('cities')
+        .select('slug')
+        .eq('id', String((submission as any).city_id))
+        .maybeSingle()
+      const { data: eventRow } = await client
+        .from('events')
+        .select('slug')
+        .eq('id', String(publishedEntityId))
+        .maybeSingle()
+      const publishUrl = buildPublicEventPageUrl(event, {
+        citySlug: String((cityRow as any)?.slug || ''),
+        eventSlug: String((eventRow as any)?.slug || ''),
+      })
+      if (publishUrl) scoreStatusSuffix = `✅ Опубликовано на сайте\n${publishUrl}`
     }
 
     await updateContentSubmissionModerationCardInChat(event, {
@@ -927,6 +956,7 @@ export async function handleInuuSubTelegramCallback(
       chatId: String(args.chatId),
       messageId: args.messageId,
       keyboard: { inline_keyboard: [] },
+      statusSuffix: scoreStatusSuffix,
     }).catch((err) => console.error('[inuuContentModeration] score card:', err))
     return { alertText: `Оценка ${parsed.score} сохранена`, showAlert: false }
   }

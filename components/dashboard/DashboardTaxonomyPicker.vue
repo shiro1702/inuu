@@ -186,13 +186,27 @@ function clearCategory() {
   search.value = ''
 }
 
+function buildCreateUrl(): string {
+  const base = apiBase.value
+  if (!base) return ''
+  if (!props.moderationSubmissionId.trim()) return base
+  const params = new URLSearchParams()
+  params.set('kind', props.kind)
+  params.set('submissionId', props.moderationSubmissionId.trim())
+  return `${base}?${params.toString()}`
+}
+
 async function createFromSearch() {
   const name = search.value.trim()
-  if (!name || !apiBase.value) return
+  const url = buildCreateUrl()
+  if (!name || !url) return
   try {
-    const res = await fetch(apiBase.value, {
+    const res = await fetch(url, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: {
+        'content-type': 'application/json',
+        ...(props.fetchHeaders || {}),
+      },
       body: JSON.stringify({ name }),
     })
     const payload = await res.json() as { ok?: boolean; item?: TaxonomyItem }

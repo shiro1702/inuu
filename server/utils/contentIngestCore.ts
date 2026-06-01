@@ -11,6 +11,10 @@ import {
 } from '~/server/utils/cityIngestSettings'
 import { filterUpcomingEvents } from '~/server/utils/eventStartsAt'
 import { resolveIngestCoverMediaUrl } from '~/server/utils/contentCoverMedia'
+import {
+  extractPrimaryImageFromHtml,
+  fetchHtmlForImageExtract,
+} from '~/server/utils/pageImageExtract'
 import { resolveIngestSourceContext, resolveIngestSourceOrganization } from '~/server/utils/ingestSourceContext'
 import { resolveCityBySlug } from '~/server/utils/inuuCity'
 import { loadCityParseTaxonomy, resolveParsedTaxonomy } from '~/server/utils/cityContentTaxonomy'
@@ -416,6 +420,19 @@ export async function runContentIngest(
     ? { rawText: input.rawText, urls: [], enrichedUrls: [] as string[] }
     : await enrichRawTextWithUrls(input.rawText)
 
+  let effectiveCoverMediaUrl = input.coverMediaUrl?.trim() || null
+  if (!effectiveCoverMediaUrl && enriched.urls.length) {
+    for (const url of enriched.urls.slice(0, 3)) {
+      const page = await fetchHtmlForImageExtract(url)
+      if (!page) continue
+      const image = extractPrimaryImageFromHtml(page.html, page.finalUrl)
+      if (image) {
+        effectiveCoverMediaUrl = image
+        break
+      }
+    }
+  }
+
   if (input.skipPrefilter !== true) {
     const prefilterEnabled = citySlugHint
       ? await resolveCityPrefilterEnabled(event, citySlugHint)
@@ -640,7 +657,7 @@ export async function runContentIngest(
     : await resolveCityBySlug(event, citySlug)
 
   const coverSource =
-    input.coverMediaUrl?.trim()
+    effectiveCoverMediaUrl
     || events.map((ev) => String(ev.cover_media_url || '').trim()).find(Boolean)
     || null
 

@@ -1,5 +1,7 @@
 import type { H3Event } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
+import { resolveIngestCoverMediaUrl } from '~/server/utils/contentCoverMedia'
+import { fetchTelegramPostCoverUrl } from '~/server/utils/telegramPostCover'
 
 const TELEGRAM_API = (token: string) => `https://api.telegram.org/bot${token}`
 
@@ -12,6 +14,11 @@ export type TelegramPhotoSize = {
 
 export type TelegramMessageWithMedia = {
   photo?: TelegramPhotoSize[]
+  document?: {
+    file_id?: string
+    mime_type?: string
+    file_name?: string
+  }
 }
 
 export function pickLargestTelegramPhotoFileId(photos?: TelegramPhotoSize[]): string | null {
@@ -78,6 +85,14 @@ export async function uploadTelegramPhotoToContentStorage(
   }
 }
 
+function pickTelegramDocumentImageFileId(message: TelegramMessageWithMedia): string | null {
+  const doc = message.document
+  if (!doc?.file_id) return null
+  const mime = String(doc.mime_type || '').toLowerCase()
+  if (!mime.startsWith('image/')) return null
+  return String(doc.file_id).trim()
+}
+
 export async function ingestTelegramMessageCover(
   event: H3Event,
   args: {
@@ -87,7 +102,9 @@ export async function ingestTelegramMessageCover(
     sourceExternalId: string
   },
 ): Promise<string | null> {
-  const fileId = pickLargestTelegramPhotoFileId(args.message.photo)
+  const fileId =
+    pickLargestTelegramPhotoFileId(args.message.photo)
+    || pickTelegramDocumentImageFileId(args.message)
   if (!fileId) return null
   return uploadTelegramPhotoToContentStorage(event, {
     botToken: args.botToken,
@@ -95,4 +112,34 @@ export async function ingestTelegramMessageCover(
     cityId: args.cityId,
     key: args.sourceExternalId,
   })
+}
+
+/** Photo from message → storage; else og:image / preview poster from t.me link. */
+export async function resolveTelegramIngestCover(
+  event: H3Event,
+  args: {
+    botToken: string
+    message: TelegramMessageWithMedia
+    cityId: string
+    sourceExternalId: string
+    sourceUrl?: string | null
+  },
+): Promise<string | null> {
+  const fromBot = await ingestTelegramMessageCover(event, {
+    botToken: args.botToken,
+    message: args.message,
+    cityId: args.cityId,
+    sourceExternalId: args.sourceExternalId,
+  })
+  if (fromBot) return fromBot
+
+  const remotePoster = await fetchTelegramPostCoverUrl(args.sourceUrl)
+  if (!remotePoster) return null
+
+  const resolved = await resolveIngestCoverMediaUrl(event, {
+    sourceUrl: remotePoster,
+    cityId: args.cityId,
+    key: args.sourceExternalId,
+  })
+  return resolved?.url ?? remotePoster
 }

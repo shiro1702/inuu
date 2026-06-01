@@ -8,6 +8,7 @@ export type ContentSubmissionPayloadPatch = {
   descriptionShort?: string | null
   descriptionFull?: string | null
   coverMediaUrl?: string | null
+  mediaUrls?: string[]
   categorySlug?: string | null
   registrationUrl?: string | null
   topicTags?: string[]
@@ -50,6 +51,17 @@ export async function patchContentSubmissionRecord(
   }
   if (typeof args.body.coverMediaUrl === 'string') {
     payload.cover_media_url = args.body.coverMediaUrl.trim() || null
+  }
+  if (Array.isArray(args.body.mediaUrls)) {
+    const cover = typeof payload.cover_media_url === 'string' ? payload.cover_media_url.trim() : ''
+    const urls = Array.from(
+      new Set(
+        args.body.mediaUrls
+          .map((x) => String(x || '').trim())
+          .filter((x) => x.length > 0 && x !== cover),
+      ),
+    ).slice(0, 12)
+    payload.media_urls = urls
   }
   if (typeof args.body.categorySlug === 'string') {
     payload.category_slug = await ensureCityEventCategory(event, args.cityId, args.body.categorySlug.trim())
