@@ -43,7 +43,7 @@
 
 **Правила промпта:**
 
-- В system prompt — **текущая дата/время** (иначе «завтра» ломается).
+- В system prompt — **`publication_date`** (дата поста) **и** **текущая дата** + день недели (`ru-RU`) — см. [25-groq-event-extraction-prompt.md](./25-groq-event-extraction-prompt.md).
 - Пост со **несколькими разными** мероприятиями → `parse_kind=digest`, массив `events[]` — [11](./11-digest-parsing-and-curated-picks.md).
 - Одно мероприятие, несколько дат → `single` + `recurrence.dates[]`.
 

@@ -7,6 +7,7 @@
 | [FEATURE_MATRIX.md](./FEATURE_MATRIX.md) | Все фичи по группам + чекбоксы + ссылки на спеки |
 | [ACTIVE_TASKS.md](./ACTIVE_TASKS.md) | **Активная очередь** (≤3 задачи на чат) — вместо кэша в Cursor |
 | [TASK-003-public-org-venue-storefront.md](./TASK-003-public-org-venue-storefront.md) | Runbook исполнения TASK-003 (org/venue, CTA, stories) |
+| [TASK-008-web-parsing-pipeline.md](./TASK-008-web-parsing-pipeline.md) | Runbook web crawl TASK-008–010 (classifier, rules, alerts) |
 
 ## Как пользоваться
 
@@ -36,7 +37,7 @@
 | 4 | 1–2 мес | P3 — nice-to-have / сезон | выс |
 | 5 | 2+ мес, высокий риск | — | — |
 
-**Последнее обновление матрицы:** 31.05.2026 (брейншторм 31.05 → спеки 21–24)
+**Последнее обновление матрицы:** 01.06.2026 (web pipeline TASK-008–010, спеки 25–29)
 
 ## Брейнштормы → трекер
 
@@ -44,3 +45,4 @@
 |--------|------------------------|
 | [30.05.2026](../../fix/brainstorm/30.05.2026.md) | §4–§13, спеки 13–20 |
 | [31.05.2026](../../fix/brainstorm/31.05.2026.md) | §2 TMA/сайт, §4 AI sanitizer, §5 helpdesk, §7 intent/voice, §9 билеты MVP, §13 рулетка |
+| [01.06.2026](../../fix/brainstorm/01.06.2026.md) | §1–§13 парсинг/VK/web, §18–§22 share/TMA, §21–§22 NLP admin — спеки **25–29** |

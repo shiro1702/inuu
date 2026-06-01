@@ -6,6 +6,8 @@
 
 **Статус:** спека; пересекается с [04-telegram-bot-content-moderation.md](./04-telegram-bot-content-moderation.md), [18-ticketing-full-flow.md](./18-ticketing-full-flow.md).
 
+**NLP-админка (Tool Calling):** [29-nlp-admin-and-organizer-agent.md](./29-nlp-admin-and-organizer-agent.md) (брейншторм [01.06.2026](../../../fix/brainstorm/01.06.2026.md)).
+
 ---
 
 ## Разделение: чат vs Mini App

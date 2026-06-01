@@ -2,7 +2,7 @@
 
 Документ фиксирует рабочий контур быстрого наполнения афиши, согласованный из брейнштормов `28.05.2026.md` и `30.05.2026.md` (индекс: [fix/brainstorm/30.05.2026.md](../../../fix/brainstorm/30.05.2026.md)), приведённый к архитектуре `Nuxt 3 + Supabase + Telegram Mini App`.
 
-Расширения (userbot, пре-фильтр, `post_type`, vision): **[16-parsing-pipeline-extensions.md](./16-parsing-pipeline-extensions.md)**. Источники и web-cron: **[17-ingest-sources-context.md](./17-ingest-sources-context.md)**.
+Расширения (userbot, пре-фильтр, `post_type`, vision): **[16-parsing-pipeline-extensions.md](./16-parsing-pipeline-extensions.md)**. Источники и web-cron: **[17-ingest-sources-context.md](./17-ingest-sources-context.md)**. Промпт Groq, VK/TG/web-воркеры: **[25](./25-groq-event-extraction-prompt.md)**, **[27](./27-ingest-workers-vk-telegram-web.md)**.
 
 ---
 
@@ -22,7 +22,10 @@
 | Источник | Канал | Статус в MVP |
 |----------|-------|--------------|
 | `bot_submit` | Партнер/пользователь отправляет текст/ссылку/медиа в `@inuu_bot` | Да |
-| `telegram_parse` | Скрипт читает список whitelisted TG-каналов и формирует черновики | Да (ограниченный список источников) |
+| `telegram_parse` | Userbot / worker читает whitelisted TG-каналы | Да |
+| `telegram_web` | Публичные каналы через `t.me/s/` (cheerio) | Да — [27](./27-ingest-workers-vk-telegram-web.md) |
+| `vk_parse` | VK `wall.get` + пре-фильтр | Да — [27](./27-ingest-workers-vk-telegram-web.md) |
+| `web_cron` | Обход сайтов org (классификатор + rules) | В работе — [26](./26-web-scraping-classifier-and-rules.md) |
 | `manual_editor` | Ручной ввод редактором (`/event` или dashboard) | Да |
 
 Важно: Instagram и внешние агрегаторные шлюзы не блокируют MVP-конвейер, подключаются позже отдельными интеграциями.

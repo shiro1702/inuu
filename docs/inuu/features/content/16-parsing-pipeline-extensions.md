@@ -1,8 +1,8 @@
 # Расширения конвейера парсинга
 
-**Источник:** брейншторм [30.05.2026](../../../fix/brainstorm/30.05.2026.md).
+**Источник:** брейнштормы [30.05.2026](../../../fix/brainstorm/30.05.2026.md), [01.06.2026](../../../fix/brainstorm/01.06.2026.md).
 
-**База:** [08-event-sourcing-and-moderation-pipeline.md](./08-event-sourcing-and-moderation-pipeline.md), [10-telegram-sources-without-bot-access.md](./10-telegram-sources-without-bot-access.md).
+**База:** [08-event-sourcing-and-moderation-pipeline.md](./08-event-sourcing-and-moderation-pipeline.md), [10-telegram-sources-without-bot-access.md](./10-telegram-sources-without-bot-access.md), [25-groq-event-extraction-prompt.md](./25-groq-event-extraction-prompt.md), [27-ingest-workers-vk-telegram-web.md](./27-ingest-workers-vk-telegram-web.md).
 
 ---
 

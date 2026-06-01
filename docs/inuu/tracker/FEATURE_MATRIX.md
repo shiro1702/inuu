@@ -74,13 +74,18 @@
 | [x] | Пре-фильтр ключевых слов до Groq | 2 | P1 | — | [16-parsing-pipeline-extensions.md](../features/content/16-parsing-pipeline-extensions.md) |
 | [ ] | `post_type`: new / cancellation / update / trash | 3 | P1 | — | [16-parsing-pipeline-extensions.md](../features/content/16-parsing-pipeline-extensions.md) |
 | [ ] | Vision: сверка текст ↔ афиша (`conflict_alert`) | 3 | P1 | — | [16-parsing-pipeline-extensions.md](../features/content/16-parsing-pipeline-extensions.md) |
-| [x] | Web CRON парсинг сайтов | 4 | P1 | сред | [17-ingest-sources-context.md](../features/content/17-ingest-sources-context.md) |
+| [x] | Web CRON парсинг сайтов (MVP: plain text на index URL) | 4 | P1 | сред | [17-ingest-sources-context.md](../features/content/17-ingest-sources-context.md), TASK-002 |
+| [~] | Web: `parsing_strategy` / `parsing_rules` + `scraping_alerts` | 3 | P1 | — | [26](../features/content/26-web-scraping-classifier-and-rules.md), [TASK-008](./ACTIVE_TASKS.md) |
+| [~] | Web: Groq classifier (`page_type`) + router | 4 | P1 | — | [26](../features/content/26-web-scraping-classifier-and-rules.md), [TASK-009](./ACTIVE_TASKS.md) |
+| [~] | Web: cheerio fast lane + auto-healing rules | 4 | P1 | — | [26](../features/content/26-web-scraping-classifier-and-rules.md), [TASK-010](./ACTIVE_TASKS.md) |
+| [ ] | Groq event prompt: `publication_date` + CTA/age/lineup | 2 | P1 | — | [25-groq-event-extraction-prompt.md](../features/content/25-groq-event-extraction-prompt.md) |
 | [x] | Контекст источника в промпте (театр / клуб / …) | 2 | P1 | — | [17-ingest-sources-context.md](../features/content/17-ingest-sources-context.md) |
 | [ ] | AI-санитар парсинга (title, price, category, vibe) | 2 | P1 | — | [22-ai-bot-concierge-and-intent.md](../features/content/22-ai-bot-concierge-and-intent.md), [16-parsing-pipeline-extensions.md](../features/content/16-parsing-pipeline-extensions.md) |
 | [ ] | TL;DR + vibe emoji на карточке события | 2 | P1 | — | [22-ai-bot-concierge-and-intent.md](../features/content/22-ai-bot-concierge-and-intent.md), [13-ai-content-horizon.md](../features/content/13-ai-content-horizon.md) |
 | [ ] | Сжатие афиш WebP при ingest | 2 | P1 | — | [24-mvp-launch-checklist-ulan-ude.md](../features/content/24-mvp-launch-checklist-ulan-ude.md) |
 | [ ] | Groq: каскад 8b/70b + graceful 429 | 2 | P1 | — | [24-mvp-launch-checklist-ulan-ude.md](../features/content/24-mvp-launch-checklist-ulan-ude.md), [11-tech-stack.md](../11-tech-stack.md) |
-| [ ] | VK wall ingest | 3 | P2 | — | [16-parsing-pipeline-extensions.md](../features/content/16-parsing-pipeline-extensions.md) |
+| [ ] | VK wall ingest | 3 | P2 | — | [27-ingest-workers-vk-telegram-web.md](../features/content/27-ingest-workers-vk-telegram-web.md) |
+| [ ] | Telegram public: `t.me/s/` HTML worker | 2 | P2 | — | [27-ingest-workers-vk-telegram-web.md](../features/content/27-ingest-workers-vk-telegram-web.md) |
 
 ---
 
@@ -149,7 +154,7 @@
 | [x] | Manager / admin city overview pages | 2 | P1 | — | [implementation/03-ai-ingest-and-global-dashboards.md](../implementation/03-ai-ingest-and-global-dashboards.md) |
 | [x] | Content queue: approve, publish, notify TG | 3 | P0 | — | [implementation/04-dashboard-pages-ai-and-city-ops.md](../implementation/04-dashboard-pages-ai-and-city-ops.md) |
 | [x] | Per-city parser / moderation chat IDs | 2 | P0 | — | [implementation/04-dashboard-pages-ai-and-city-ops.md](../implementation/04-dashboard-pages-ai-and-city-ops.md) |
-| [ ] | Регистрация источников (web + approve профиля org) | 4 | P1 | — | [17-ingest-sources-context.md](../features/content/17-ingest-sources-context.md) |
+| [x] | Регистрация источников (web + approve профиля org) | 4 | P1 | — | [17-ingest-sources-context.md](../features/content/17-ingest-sources-context.md) |
 | [ ] | Runbook-sync: UI = [MANAGER_CONTENT_RUNBOOK](../runbooks/MANAGER_CONTENT_RUNBOOK_RU.md) | 1 | P2 | — | [runbooks/MANAGER_CONTENT_RUNBOOK_RU.md](../runbooks/MANAGER_CONTENT_RUNBOOK_RU.md) |
 
 ---
@@ -229,14 +234,14 @@
 
 ---
 
-## Сводка (на 31.05.2026)
+## Сводка (на 01.06.2026)
 
 | | Кол-во |
 |---|--------|
-| Всего строк | 130 |
-| `[x]` сделано | 51 |
-| `[~]` в работе | 0 |
-| `[ ]` в плане | 79 |
+| Всего строк | 135 |
+| `[x]` сделано | 52 |
+| `[~]` в работе | 3 |
+| `[ ]` в плане | 80 |
 
 > **Примечание:** `[x]` = есть рабочий код или MVP закрыт по спеке; `[~]` = идёт реализация; `[ ]` = не начато или только спека. Строки «снято» (§11) не входят в «в плане». При расхождении с кодом — править здесь первым делом.
 
@@ -245,4 +250,6 @@
 - [04-features-priority.md](../04-features-priority.md) — приоритеты волн A–E  
 - [03-recommended-mvp.md](../features/content/03-recommended-mvp.md) — фазы контента (в т.ч. **1g** из 31.05)  
 - [fix/brainstorm/30.05.2026.md](../../fix/brainstorm/30.05.2026.md) — индекс брейншторма 30.05  
-- [fix/brainstorm/31.05.2026.md](../../fix/brainstorm/31.05.2026.md) — индекс брейншторма 31.05 (спеки 21–24)
+- [fix/brainstorm/31.05.2026.md](../../fix/brainstorm/31.05.2026.md) — индекс брейншторма 31.05 (спеки 21–24)  
+- [fix/brainstorm/01.06.2026.md](../../fix/brainstorm/01.06.2026.md) — индекс 01.06 (спеки 25–29, web pipeline)  
+- [tracker/TASK-008-web-parsing-pipeline.md](./TASK-008-web-parsing-pipeline.md) — runbook web crawl 008–010

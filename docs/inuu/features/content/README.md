@@ -49,7 +49,17 @@ Seed: `supabase/migrations/019_inuu_seed_ulan_ude.sql`. Редакция как 
 | [23-bot-roles-ops-support.md](./23-bot-roles-ops-support.md) | Бот B2C / B2B / admin, helpdesk, scanner |
 | [24-mvp-launch-checklist-ulan-ude.md](./24-mvp-launch-checklist-ulan-ude.md) | MVP чеклист, must/cut, лимиты Groq/Vercel |
 
-Индекс сырого лога: [fix/brainstorm/30.05.2026.md](../../../fix/brainstorm/30.05.2026.md), [31.05.2026.md](../../../fix/brainstorm/31.05.2026.md).
+### Из брейншторма 01.06.2026
+
+| Файл | Тема |
+|------|------|
+| [25-groq-event-extraction-prompt.md](./25-groq-event-extraction-prompt.md) | Промпт Groq: даты публикации, поля JSON, теги, дедуп |
+| [26-web-scraping-classifier-and-rules.md](./26-web-scraping-classifier-and-rules.md) | Web: классификатор, CSS-rules, self-healing |
+| [27-ingest-workers-vk-telegram-web.md](./27-ingest-workers-vk-telegram-web.md) | Воркеры VK / `t.me/s/` / сайты |
+| [28-omnichannel-share-and-tma-funnel.md](./28-omnichannel-share-and-tma-funnel.md) | Share TG/MAX/Web, deep links, канал → TMA |
+| [29-nlp-admin-and-organizer-agent.md](./29-nlp-admin-and-organizer-agent.md) | LLM Tool Calling: менеджер и организатор |
+
+Индекс сырого лога: [fix/brainstorm/30.05.2026.md](../../../fix/brainstorm/30.05.2026.md), [31.05.2026.md](../../../fix/brainstorm/31.05.2026.md), [01.06.2026.md](../../../fix/brainstorm/01.06.2026.md).
 
 ## Связанные спеки
 

@@ -1,6 +1,8 @@
 # Источники ingest: контекст, web-cron, теневые организации
 
-**Источник:** брейншторм [30.05.2026](../../../fix/brainstorm/30.05.2026.md) (30.05 15:04–16:30).
+**Источник:** брейнштормы [30.05.2026](../../../fix/brainstorm/30.05.2026.md), [01.06.2026](../../../fix/brainstorm/01.06.2026.md).
+
+**Расширения web:** [26-web-scraping-classifier-and-rules.md](./26-web-scraping-classifier-and-rules.md). Воркеры: [27-ingest-workers-vk-telegram-web.md](./27-ingest-workers-vk-telegram-web.md).
 
 ---
 
@@ -28,8 +30,11 @@
 | `url` | Сайт или `@channel` |
 | `organization_id` | Привязка к org |
 | `context_type` | `club`, `theater`, `standup`, `library`, … — **в system prompt** |
-| `parsing_rules` | JSON: селекторы, если не pure-LLM |
+| `parsing_rules` | JSON: CSS-селекторы ([26](./26-web-scraping-classifier-and-rules.md)) |
+| `parsing_strategy` | Кэш типа страницы после классификатора (`single_event`, `event_list_links`, …) |
 | `external_id_strategy` | `url` \| `fingerprint` |
+
+Таблица **`scraping_alerts`**: источник не распарсился (`unknown`, сломанные rules) — для dashboard менеджера.
 
 ### Контекст в промпте
 

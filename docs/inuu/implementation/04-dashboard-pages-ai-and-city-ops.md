@@ -28,8 +28,14 @@
    - parse-only
    - ingest (без persist)
    - ingest + persist
-4. Создать новость вручную в `editorial_posts`.
-5. Управлять очередью `content_submissions`:
+   - source kinds: `telegram_parse`, `web_cron`, `bot_submit`, `manual_editor`
+4. Управлять ingest-источниками (`DashboardIngestSourcesPanel`):
+   - web cron: URL, `context_type`, org (или теневая), cron toggle
+   - Telegram userbot: `@channel`, `context_type`, org
+   - пре-фильтр до Groq (toggle на город)
+   - test crawl / create shadow org
+5. Создать новость вручную в `editorial_posts`.
+6. Управлять очередью `content_submissions`:
    - фильтр по статусам
    - approve/reject/needs_revision
    - score 1..5
@@ -86,7 +92,17 @@
 - `GET /api/dashboard/manager/cities`
 - `GET /api/dashboard/manager/cities/:slug/overview`
 - `GET /api/dashboard/manager/cities/:slug/content-settings`
-- `PUT /api/dashboard/manager/cities/:slug/content-settings`
+- `PUT /api/dashboard/manager/cities/:slug/content-settings` (partial update; `ingest.prefilter_enabled`)
+- `GET /api/dashboard/manager/cities/:slug/ingest-sources`
+- `GET /api/dashboard/manager/cities/:slug/shops`
+- `POST /api/dashboard/manager/cities/:slug/ingest-sources/web`
+- `PUT /api/dashboard/manager/cities/:slug/ingest-sources/web/:id`
+- `DELETE /api/dashboard/manager/cities/:slug/ingest-sources/web/:id`
+- `POST /api/dashboard/manager/cities/:slug/ingest-sources/web/:id/test-crawl`
+- `POST /api/dashboard/manager/cities/:slug/ingest-sources/web/:id/create-shadow-org`
+- `POST /api/dashboard/manager/cities/:slug/ingest-sources/telegram`
+- `PUT /api/dashboard/manager/cities/:slug/ingest-sources/telegram/:id`
+- `DELETE /api/dashboard/manager/cities/:slug/ingest-sources/telegram/:id`
 - `POST /api/dashboard/manager/cities/:slug/editorial-news`
 - `GET /api/dashboard/manager/cities/:slug/content-queue`
 - `POST /api/dashboard/manager/cities/:slug/content-queue/action`

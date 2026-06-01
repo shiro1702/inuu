@@ -1,6 +1,8 @@
 # Mini App и сайт: wireframes MVP
 
-**Источник:** брейншторм [31.05.2026](../../../fix/brainstorm/31.05.2026.md) (31.05 07:22–07:31).
+**Источник:** брейнштормы [31.05.2026](../../../fix/brainstorm/31.05.2026.md), [01.06.2026](../../../fix/brainstorm/01.06.2026.md).
+
+**Share / deep links / MAX:** [28-omnichannel-share-and-tma-funnel.md](./28-omnichannel-share-and-tma-funnel.md).
 
 **Статус:** спека UX; реализация — после стабильного каталога [03-recommended-mvp.md](./03-recommended-mvp.md).
 
@@ -67,7 +69,7 @@
 
 Активный билет: название, место, дата, **крупный QR**; автояркость экрана 100%.
 
-Кнопки: **[ Поделиться ]**, **[ Поддержка / Возврат ]** → [23-bot-roles-ops-support.md](./23-bot-roles-ops-support.md).
+Кнопки: **[ Поделиться ]** → [28](./28-omnichannel-share-and-tma-funnel.md) (`useShare`), **[ Поддержка / Возврат ]** → [23-bot-roles-ops-support.md](./23-bot-roles-ops-support.md).
 
 ---
 
