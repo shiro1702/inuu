@@ -1,6 +1,12 @@
 import { createError, type H3Event } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import type { EventParseResult } from '~/server/utils/ai/eventParseSchema'
+import {
+  editorialPostTypeFromPayload,
+  isEditorialPayload,
+  type EditorialParseResult,
+} from '~/server/utils/ai/editorialParseSchema'
+import { editorialMissingOrg, findVenueInCity } from '~/server/utils/editorialOrgResolve'
 import { slugifyTaxonomy } from '~/server/utils/cityContentTaxonomy'
 import { listEventStartsAtFromPayload } from '~/server/utils/eventStartsAt'
 import { resolveSubmissionDescriptions } from '~/server/utils/eventParseDescriptions'
@@ -12,6 +18,7 @@ import {
 } from '~/server/utils/eventSeries'
 import { resolveIngestSourceOrganization } from '~/server/utils/ingestSourceContext'
 import { findShopIdByParsedSourceUrl } from '~/server/utils/resolvePublicOrganization'
+import { createStoryCampaign, slidesFromEditorialStory } from '~/server/utils/storyCampaignWrite'
 
 function slugifyTitle(input: string): string {
   return slugifyTaxonomy(input).slice(0, 80) || `item-${Date.now()}`
@@ -29,12 +36,201 @@ function isMissingEventsSourceColumnsError(error: { code?: string; message?: str
 }
 
 export type PublishSubmissionResult = {
-  entityType: 'event' | 'editorial_post'
+  entityType: 'event' | 'editorial_post' | 'story_campaign'
   entityId: string
   entitySlug: string
   alreadyPublished: boolean
   publishedEventCount?: number
   seriesSlug?: string | null
+}
+
+async function resolveSubmissionShopId(
+  event: H3Event,
+  args: {
+    client: Awaited<ReturnType<typeof serverSupabaseServiceRole>>
+    cityId: string
+    citySlug: string
+    payload: EventParseResult & Record<string, unknown>
+    submission: Record<string, unknown>
+    editorialShopId: string | null
+  },
+): Promise<string | null> {
+  const payloadOrgId =
+    args.payload.organization && typeof args.payload.organization === 'object'
+    && (args.payload.organization as { id?: unknown }).id
+      ? String((args.payload.organization as { id: unknown }).id).trim()
+      : ''
+
+  let shopId = payloadOrgId || args.editorialShopId
+  if (!payloadOrgId) {
+    const publishSourceUrl =
+      String(args.submission.source_url || args.payload.source?.url || '').trim() || null
+    const publishSourceKind =
+      String(args.submission.source_kind || args.payload.source?.kind || '').trim() || null
+
+    if (args.citySlug && publishSourceUrl) {
+      const linked = await resolveIngestSourceOrganization(event, {
+        citySlug: args.citySlug,
+        sourceUrl: publishSourceUrl,
+        sourceKind: publishSourceKind,
+      })
+      if (linked?.organizationId) {
+        shopId = linked.organizationId
+      } else {
+        const shadowShopId = await findShopIdByParsedSourceUrl(args.client, args.cityId, publishSourceUrl)
+        if (shadowShopId) shopId = shadowShopId
+      }
+    }
+  }
+  return shopId
+}
+
+async function publishEditorialFromPayload(
+  event: H3Event,
+  args: {
+    client: Awaited<ReturnType<typeof serverSupabaseServiceRole>>
+    submissionId: string
+    cityId: string
+    shopId: string | null
+    payload: EditorialParseResult
+    submission: Record<string, unknown>
+  },
+): Promise<PublishSubmissionResult> {
+  if (editorialMissingOrg(args.payload)) {
+    throw createError({ statusCode: 400, statusMessage: 'Organization is required to publish editorial content' })
+  }
+
+  const title = String(args.payload.title || '').trim()
+  const descriptionFull = String(args.payload.description_full || args.payload.description_short || '').trim()
+  const descriptionShort = String(args.payload.description_short || descriptionFull).slice(0, 280)
+
+  if (title.length < 3) {
+    throw createError({ statusCode: 400, statusMessage: 'Submission title is too short to publish' })
+  }
+  if (descriptionFull.length < 10) {
+    throw createError({ statusCode: 400, statusMessage: 'Submission description is too short to publish' })
+  }
+
+  const venue = await findVenueInCity(event, {
+    cityId: args.cityId,
+    venueName: args.payload.venue?.name || null,
+    venueId: args.payload.venue?.id || null,
+  })
+
+  const mediaUrls = [
+    ...(args.payload.cover_media_url ? [args.payload.cover_media_url] : []),
+    ...(Array.isArray(args.payload.media_urls) ? args.payload.media_urls : []),
+  ].filter((url, i, arr) => arr.indexOf(url) === i)
+
+  const postSlug = `${slugifyTitle(title)}-${String(args.submissionId).slice(0, 8)}`
+  const postType = editorialPostTypeFromPayload(args.payload)
+
+  const { data: post, error: postError } = await args.client
+    .from('editorial_posts')
+    .insert({
+      city_id: args.cityId,
+      shop_id: args.shopId,
+      slug: postSlug,
+      title,
+      body: descriptionFull,
+      excerpt: descriptionShort || null,
+      cover_media_url: args.payload.cover_media_url || null,
+      video_url: args.payload.video_url || null,
+      media_urls: mediaUrls,
+      post_type: postType,
+      topic_tags: args.payload.topic_tags || [],
+      publication_date: args.payload.publication_date || null,
+      linked_entity_type: venue?.id ? 'venue' : null,
+      linked_entity_id: venue?.id || null,
+      is_published: true,
+      published_at: new Date().toISOString(),
+    } as any)
+    .select('id,slug')
+    .maybeSingle()
+
+  if (postError || !post?.id) {
+    throw createError({
+      statusCode: 500,
+      statusMessage: postError?.message || 'Failed to publish editorial post',
+    })
+  }
+
+  await args.client
+    .from('content_submissions')
+    .update({
+      status: 'approved',
+      published_entity_type: 'editorial_post',
+      published_entity_id: post.id,
+      updated_at: new Date().toISOString(),
+    } as any)
+    .eq('id', args.submissionId)
+
+  return {
+    entityType: 'editorial_post',
+    entityId: String(post.id),
+    entitySlug: String((post as any).slug),
+    alreadyPublished: false,
+  }
+}
+
+async function publishStoryFromPayload(
+  event: H3Event,
+  args: {
+    client: Awaited<ReturnType<typeof serverSupabaseServiceRole>>
+    submissionId: string
+    cityId: string
+    shopId: string | null
+    payload: EditorialParseResult
+  },
+): Promise<PublishSubmissionResult> {
+  if (!args.shopId) {
+    throw createError({ statusCode: 400, statusMessage: 'Organization is required to publish story' })
+  }
+  if (editorialMissingOrg(args.payload)) {
+    throw createError({ statusCode: 400, statusMessage: 'Organization is required to publish story' })
+  }
+
+  const title = String(args.payload.story?.title || args.payload.title || '').trim()
+  const fallbackUrls = [
+    ...(args.payload.cover_media_url ? [args.payload.cover_media_url] : []),
+    ...(args.payload.video_url ? [args.payload.video_url] : []),
+    ...(Array.isArray(args.payload.media_urls) ? args.payload.media_urls : []),
+  ].filter(Boolean)
+
+  const slides = slidesFromEditorialStory(args.payload.story?.slides || [], fallbackUrls)
+  if (!slides.length) {
+    throw createError({ statusCode: 400, statusMessage: 'Story needs at least one slide with media' })
+  }
+
+  const { campaignId } = await createStoryCampaign(event, {
+    cityId: args.cityId,
+    shopId: args.shopId,
+    title,
+    previewUrl: args.payload.cover_media_url || slides[0]?.mediaUrl || null,
+    placement: 'top_bar',
+    isActive: true,
+    validFrom: new Date().toISOString(),
+    validUntil: null,
+    authorType: 'organization',
+    slides,
+  })
+
+  await args.client
+    .from('content_submissions')
+    .update({
+      status: 'approved',
+      published_entity_type: 'story_campaign',
+      published_entity_id: campaignId,
+      updated_at: new Date().toISOString(),
+    } as any)
+    .eq('id', args.submissionId)
+
+  return {
+    entityType: 'story_campaign',
+    entityId: campaignId,
+    entitySlug: campaignId,
+    alreadyPublished: false,
+  }
 }
 
 function stripEventRowFields(
@@ -103,32 +299,45 @@ export async function publishContentSubmission(
   const publishedId = (submission as any).published_entity_id
   const publishedType = (submission as any).published_entity_type
   if (publishedId && publishedType) {
-    const table = publishedType === 'editorial_post' ? 'editorial_posts' : 'events'
+    const table =
+      publishedType === 'editorial_post'
+        ? 'editorial_posts'
+        : publishedType === 'story_campaign'
+          ? 'story_campaigns'
+          : 'events'
     const { data: existing } = await client
       .from(table)
-      .select('id,slug,series_slug')
+      .select('id,slug,series_slug,title')
       .eq('id', publishedId)
       .maybeSingle()
     if (existing?.id) {
+      const entityType =
+        publishedType === 'editorial_post'
+          ? 'editorial_post'
+          : publishedType === 'story_campaign'
+            ? 'story_campaign'
+            : 'event'
       return {
-        entityType: publishedType === 'editorial_post' ? 'editorial_post' : 'event',
+        entityType,
         entityId: String(existing.id),
-        entitySlug: String((existing as any).slug || ''),
+        entitySlug: String((existing as any).slug || (existing as any).id || ''),
         alreadyPublished: true,
         seriesSlug: (existing as any).series_slug || null,
       }
     }
   }
 
-  const payload = parsePayload((submission as any).payload)
+  const rawPayload = (submission as any).payload
   const cityId = String((submission as any).city_id)
-  const eventKind = String(payload.event_kind || (submission as any).kind || 'event')
+  const submissionKind = String((submission as any).kind || 'event')
 
   const { data: city } = await client
     .from('cities')
     .select('id,slug,timezone')
     .eq('id', cityId)
     .maybeSingle()
+
+  const citySlug = String((city as any)?.slug || '').trim()
 
   const { data: editorialShop } = await client
     .from('shops')
@@ -138,31 +347,57 @@ export async function publishContentSubmission(
     .maybeSingle()
 
   const editorialShopId = (editorialShop as any)?.id ? String((editorialShop as any).id) : null
-  const payloadOrgId =
-    payload.organization && typeof payload.organization === 'object' && (payload.organization as { id?: unknown }).id
-      ? String((payload.organization as { id: unknown }).id).trim()
-      : ''
 
-  let shopId = payloadOrgId || editorialShopId
-  if (!payloadOrgId) {
-    const publishSourceUrl = String((submission as any).source_url || payload.source?.url || '').trim() || null
-    const publishSourceKind = String((submission as any).source_kind || payload.source?.kind || '').trim() || null
-    const citySlugForOrg = String((city as any)?.slug || payload.city_slug || '').trim()
+  if (isEditorialPayload(rawPayload)) {
+    const editorialPayload = rawPayload as EditorialParseResult
+    const shopId = await resolveSubmissionShopId(event, {
+      client,
+      cityId,
+      citySlug,
+      payload: editorialPayload as unknown as EventParseResult & Record<string, unknown>,
+      submission: submission as Record<string, unknown>,
+      editorialShopId,
+    })
 
-    if (citySlugForOrg && publishSourceUrl) {
-      const linked = await resolveIngestSourceOrganization(event, {
-        citySlug: citySlugForOrg,
-        sourceUrl: publishSourceUrl,
-        sourceKind: publishSourceKind,
+    if (submissionKind === 'story' || editorialPayload.content_type === 'story') {
+      return publishStoryFromPayload(event, {
+        client,
+        submissionId,
+        cityId,
+        shopId,
+        payload: editorialPayload,
       })
-      if (linked?.organizationId) {
-        shopId = linked.organizationId
-      } else {
-        const shadowShopId = await findShopIdByParsedSourceUrl(client, cityId, publishSourceUrl)
-        if (shadowShopId) shopId = shadowShopId
-      }
+    }
+
+    if (
+      submissionKind === 'venue_review'
+      || submissionKind === 'venue_post'
+      || submissionKind === 'news'
+      || ['venue_review', 'venue_post', 'news'].includes(editorialPayload.content_type)
+    ) {
+      return publishEditorialFromPayload(event, {
+        client,
+        submissionId,
+        cityId,
+        shopId,
+        payload: editorialPayload,
+        submission: submission as Record<string, unknown>,
+      })
     }
   }
+
+  const payload = parsePayload(rawPayload)
+  const eventKind = String(payload.event_kind || submissionKind || 'event')
+
+  const shopId = await resolveSubmissionShopId(event, {
+    client,
+    cityId,
+    citySlug,
+    payload,
+    submission: submission as Record<string, unknown>,
+    editorialShopId,
+  })
+
   const title = String(payload.title || '').trim()
   const { descriptionShort, descriptionFull } = resolveSubmissionDescriptions(payload)
   if (title.length < 3) {

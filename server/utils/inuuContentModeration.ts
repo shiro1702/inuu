@@ -1,6 +1,10 @@
 import { createError, type H3Event } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import type { EventParseResult } from '~/server/utils/ai/eventParseSchema'
+import {
+  isEditorialPayload,
+  type EditorialParseResult,
+} from '~/server/utils/ai/editorialParseSchema'
 import { formatTopicTagsAsHashtags } from '~/server/utils/ingestSourceDisplayName'
 import { formatDescriptionsForModeration } from '~/server/utils/eventParseDescriptions'
 import { publishContentSubmission } from '~/server/utils/contentSubmissionPublish'
@@ -49,7 +53,14 @@ const CONTENT_SUBMISSION_STATUS_EMOJI: Record<string, string> = {
 }
 
 const MODERATION_CARD_SELECT =
-  'id,city_id,status,payload,source_kind,moderation_chat_id,moderation_message_id,reviewed_by_username,reviewed_at,reject_reason_code,editorial_score'
+  'id,city_id,kind,status,payload,source_kind,moderation_chat_id,moderation_message_id,reviewed_by_username,reviewed_at,reject_reason_code,editorial_score'
+
+const EDITORIAL_KIND_LABELS: Record<string, string> = {
+  venue_review: 'Обзор места',
+  venue_post: 'Пост о месте',
+  news: 'Новость',
+  story: 'Story',
+}
 
 export function formatContentSubmissionStatusLabel(status: string): string {
   const key = String(status || 'pending').trim()
@@ -143,15 +154,74 @@ export function formatSubmissionEditMessageLines(submissionId: string): string[]
   ].filter(Boolean) as string[]
 }
 
+export function formatEditorialSubmissionCard(args: {
+  submissionId: string
+  cityName: string
+  citySlug: string
+  status: string
+  sourceKind: string | null
+  kind?: string | null
+  payload: EditorialParseResult
+  meta?: ContentSubmissionCardMeta
+  needsOrg?: boolean
+}): string {
+  const p = args.payload
+  const kindLabel = EDITORIAL_KIND_LABELS[String(args.kind || p.content_type)] || p.content_type
+  const venueName = p.venue?.name || '—'
+  const orgName = p.organization?.name || '—'
+  const orgLine = p.organization?.id
+    ? `🏢 ${orgName}`
+    : `🏢 ${orgName} ⚠️ не привязана`
+  const pubDate = p.publication_date ? `📆 Публикация: ${p.publication_date}` : null
+  const tags = formatTopicTagsAsHashtags(Array.isArray(p.topic_tags) ? p.topic_tags : [])
+  const meta = args.meta || {}
+
+  const lines = [
+    ...formatSubmissionIdHeader(args.submissionId),
+    `Тип: ${kindLabel}`,
+    `Город: ${args.cityName} (${args.citySlug})`,
+    `Статус: ${formatContentSubmissionStatusLabel(args.status)}`,
+    `Источник: ${args.sourceKind || p.source?.kind || '—'}`,
+    '────────────────',
+    String(p.title || 'Без названия'),
+    pubDate,
+    `📍 ${venueName}`,
+    orgLine,
+    p.video_url ? '🎬 Видео прикреплено' : null,
+    `🏷 ${tags}`,
+    p.source?.url ? `🔗 ${p.source.url}` : null,
+    '────────────────',
+    ...formatDescriptionsForModeration(p as unknown as Record<string, unknown>),
+    '────────────────',
+    formatContentSubmissionStatusFooter({ status: args.status, ...meta }),
+    args.needsOrg ? '⚠️ Укажите организацию перед модерацией' : null,
+    meta.statusSuffix || null,
+  ]
+
+  if (p.content_type === 'story' && p.story?.slides?.length) {
+    lines.splice(7, 0, `📱 Слайдов: ${p.story.slides.length}`)
+  }
+
+  return lines.filter(Boolean).join('\n')
+}
+
 export function formatContentSubmissionCard(args: {
   submissionId: string
   cityName: string
   citySlug: string
   status: string
   sourceKind: string | null
+  kind?: string | null
   payload: EventParseResult | Record<string, unknown>
   meta?: ContentSubmissionCardMeta
 }): string {
+  if (isEditorialPayload(args.payload)) {
+    return formatEditorialSubmissionCard({
+      ...args,
+      payload: args.payload,
+    })
+  }
+
   const p = args.payload as EventParseResult
   const dates = Array.isArray(p.recurrence?.dates) ? p.recurrence.dates : []
   const dateLine = dates.length
@@ -242,6 +312,7 @@ async function buildContentSubmissionCardText(
     citySlug: String((city as any)?.slug || ''),
     status: String(submission.status || 'pending'),
     sourceKind: submission.source_kind ? String(submission.source_kind) : null,
+    kind: (submission as any).kind ? String((submission as any).kind) : null,
     payload: ((submission.payload || {}) as EventParseResult),
     meta: {
       reviewedByUsername: submission.reviewed_by_username ? String(submission.reviewed_by_username) : null,
@@ -837,10 +908,14 @@ export async function handleInuuSubTelegramCallback(
         publishLabel = published.alreadyPublished
           ? 'Уже опубликовано — оцените приоритет'
           : `Опубликовано — оцените приоритет`
+      } else if (published.entityType === 'story_campaign') {
+        publishLabel = published.alreadyPublished
+          ? 'Story уже опубликована'
+          : 'Story опубликована на главной'
       } else {
         publishLabel = published.alreadyPublished
-          ? 'Новость уже была опубликована'
-          : 'Новость опубликована'
+          ? 'Материал уже был опубликован'
+          : 'Материал опубликован'
       }
     } catch (err) {
       console.error('[inuuContentModeration] publish on approve:', err)
@@ -863,7 +938,7 @@ export async function handleInuuSubTelegramCallback(
     } else {
       const newsSuffix = publishPath
         ? `✅ Опубликовано на сайте\n${publishPath}`
-        : '✅ Новость опубликована'
+        : '✅ Материал опубликован'
       await updateContentSubmissionModerationCardInChat(event, {
         submissionId: parsed.submissionId,
         botToken: args.botToken,

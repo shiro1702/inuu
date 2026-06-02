@@ -45,6 +45,7 @@ export type InuuTelegramMessage = {
   message_id?: number
   text?: string
   caption?: string
+  video?: { file_id?: string; mime_type?: string; duration?: number }
   photo?: Array<{ file_id?: string; width?: number; height?: number }>
   chat?: { id: number; type?: string; username?: string; title?: string }
   from?: { id?: number; username?: string }

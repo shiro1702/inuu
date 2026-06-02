@@ -14,6 +14,7 @@ export type TelegramPhotoSize = {
 
 export type TelegramMessageWithMedia = {
   photo?: TelegramPhotoSize[]
+  video?: { file_id?: string; mime_type?: string; duration?: number }
   document?: {
     file_id?: string
     mime_type?: string
@@ -43,10 +44,20 @@ async function telegramGetFilePath(botToken: string, fileId: string): Promise<st
   return path
 }
 
-function guessExtension(filePath: string): string {
+function guessExtension(filePath: string, fallback = 'jpg'): string {
   const ext = filePath.split('.').pop()?.toLowerCase()
   if (ext === 'jpg' || ext === 'jpeg' || ext === 'png' || ext === 'webp') return ext === 'jpeg' ? 'jpg' : ext
-  return 'jpg'
+  if (ext === 'mp4' || ext === 'mov' || ext === 'webm') return ext
+  return fallback
+}
+
+function contentTypeForExt(ext: string): string {
+  if (ext === 'png') return 'image/png'
+  if (ext === 'webp') return 'image/webp'
+  if (ext === 'mp4') return 'video/mp4'
+  if (ext === 'webm') return 'video/webm'
+  if (ext === 'mov') return 'video/quicktime'
+  return 'image/jpeg'
 }
 
 export async function uploadTelegramPhotoToContentStorage(
@@ -69,7 +80,7 @@ export async function uploadTelegramPhotoToContentStorage(
     const objectPath = `inuu-content/${args.cityId}/${Date.now()}-${safeKey}.${ext}`
 
     const client = await serverSupabaseServiceRole(event)
-    const contentType = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg'
+    const contentType = contentTypeForExt(ext)
     const upload = await client.storage.from('organization-media').upload(objectPath, bytes, {
       contentType,
       upsert: true,
@@ -83,6 +94,70 @@ export async function uploadTelegramPhotoToContentStorage(
     console.error('[telegramContentMedia] upload failed:', err)
     return null
   }
+}
+
+const MAX_VIDEO_BYTES = 48 * 1024 * 1024
+
+export async function uploadTelegramFileToContentStorage(
+  event: H3Event,
+  args: { botToken: string; fileId: string; cityId: string; key: string; maxBytes?: number },
+): Promise<string | null> {
+  try {
+    const filePath = await telegramGetFilePath(args.botToken, args.fileId)
+    const fileRes = await fetch(`https://api.telegram.org/file/bot${args.botToken}/${filePath}`)
+    if (!fileRes.ok) throw new Error(`Telegram file download: ${fileRes.status}`)
+    const bytes = Buffer.from(await fileRes.arrayBuffer())
+    const limit = args.maxBytes ?? 5 * 1024 * 1024
+    if (!bytes.byteLength || bytes.byteLength > limit) {
+      throw new Error('Telegram file too large')
+    }
+
+    const ext = guessExtension(filePath, 'mp4')
+    const safeKey = args.key.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 64)
+    const objectPath = `inuu-content/${args.cityId}/${Date.now()}-${safeKey}.${ext}`
+
+    const client = await serverSupabaseServiceRole(event)
+    const upload = await client.storage.from('organization-media').upload(objectPath, bytes, {
+      contentType: contentTypeForExt(ext),
+      upsert: true,
+    })
+    if (upload.error) throw new Error(upload.error.message || 'Storage upload failed')
+
+    return client.storage.from('organization-media').getPublicUrl(objectPath).data.publicUrl || null
+  } catch (err) {
+    console.error('[telegramContentMedia] file upload failed:', err)
+    return null
+  }
+}
+
+function pickTelegramVideoFileId(message: TelegramMessageWithMedia): string | null {
+  const video = message.video?.file_id
+  if (video && String(video).trim()) return String(video).trim()
+  const doc = message.document
+  if (!doc?.file_id) return null
+  const mime = String(doc.mime_type || '').toLowerCase()
+  if (!mime.startsWith('video/')) return null
+  return String(doc.file_id).trim()
+}
+
+export async function ingestTelegramMessageVideo(
+  event: H3Event,
+  args: {
+    botToken: string
+    message: TelegramMessageWithMedia
+    cityId: string
+    sourceExternalId: string
+  },
+): Promise<string | null> {
+  const fileId = pickTelegramVideoFileId(args.message)
+  if (!fileId) return null
+  return uploadTelegramFileToContentStorage(event, {
+    botToken: args.botToken,
+    fileId,
+    cityId: args.cityId,
+    key: `${args.sourceExternalId}-video`,
+    maxBytes: MAX_VIDEO_BYTES,
+  })
 }
 
 function pickTelegramDocumentImageFileId(message: TelegramMessageWithMedia): string | null {

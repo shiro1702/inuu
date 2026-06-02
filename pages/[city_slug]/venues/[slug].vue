@@ -15,6 +15,33 @@
       Позвонить
     </a>
 
+    <section v-if="editorialItems.length">
+      <h2 class="text-lg font-semibold text-gray-900">Обзоры и материалы</h2>
+      <div class="mt-4 space-y-6">
+        <article
+          v-for="post in editorialItems"
+          :key="post.id"
+          class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
+        >
+          <h3 class="text-base font-semibold text-gray-900">{{ post.title }}</h3>
+          <p v-if="post.excerpt" class="mt-2 text-sm text-gray-600">{{ post.excerpt }}</p>
+          <video
+            v-if="post.video_url"
+            :src="post.video_url"
+            class="mt-3 max-h-80 w-full rounded-lg bg-black"
+            controls
+            playsinline
+          />
+          <img
+            v-else-if="post.cover_media_url"
+            :src="post.cover_media_url"
+            :alt="post.title"
+            class="mt-3 max-h-64 w-full rounded-lg object-cover"
+          >
+        </article>
+      </div>
+    </section>
+
     <section>
       <h2 class="text-lg font-semibold text-gray-900">События здесь</h2>
       <div v-if="upcomingEvents.length" class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -54,23 +81,39 @@ const route = useRoute()
 const { slug: citySlug, cityBasePath } = useCity()
 const venueSlug = computed(() => String(route.params.slug || ''))
 
+type EditorialItem = {
+  id: string
+  title: string
+  excerpt?: string | null
+  video_url?: string | null
+  cover_media_url?: string | null
+}
+
 const pending = ref(true)
 const venue = ref<Record<string, any> | null>(null)
 const upcomingEvents = ref<UpcomingEvent[]>([])
+const editorialItems = ref<EditorialItem[]>([])
 
 watch([citySlug, venueSlug], async () => {
   pending.value = true
   try {
-    const res = await $fetch<{
-      ok: boolean
-      venue?: Record<string, any>
-      upcomingEvents?: UpcomingEvent[]
-    }>(`/api/cities/${citySlug.value}/venues/${venueSlug.value}`)
-    venue.value = res?.venue ?? null
-    upcomingEvents.value = res?.upcomingEvents ?? []
+    const [detailRes, editorialRes] = await Promise.all([
+      $fetch<{
+        ok: boolean
+        venue?: Record<string, any>
+        upcomingEvents?: UpcomingEvent[]
+      }>(`/api/cities/${citySlug.value}/venues/${venueSlug.value}`),
+      $fetch<{ ok: boolean; items?: EditorialItem[] }>(
+        `/api/cities/${citySlug.value}/venues/${venueSlug.value}/editorial`,
+      ).catch(() => ({ ok: false, items: [] })),
+    ])
+    venue.value = detailRes?.venue ?? null
+    upcomingEvents.value = detailRes?.upcomingEvents ?? []
+    editorialItems.value = editorialRes?.items ?? []
   } catch {
     venue.value = null
     upcomingEvents.value = []
+    editorialItems.value = []
   } finally {
     pending.value = false
   }

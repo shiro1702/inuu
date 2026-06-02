@@ -25,6 +25,10 @@ import { isShopFeatureEnabled } from '~/server/utils/features'
 import { applyReviewPromptTelegramCallback, processDueReviewPrompts } from '~/server/utils/reviewPromptFlow'
 import { parseReviewTokenCallback } from '~/server/utils/reviewPromptParse'
 import { tryHandleInuuParserSourceTelegramMessage, tryHandleInuuPickTelegramMessage, handleInuuPickTelegramCallback, type InuuTelegramMessage } from '~/server/utils/inuuContentBot'
+import {
+  tryHandleInuuManagerChatMessage,
+  handleInuuManagerTelegramCallback,
+} from '~/server/utils/inuuManagerChatBot'
 import { handleInuuSubTelegramCallback, handleInuuDigestTelegramCallback } from '~/server/utils/inuuContentModeration'
 import { handleInuuNotifyTelegramCallback, handleSubscribeCommand } from '~/server/utils/cityNotifySubscriptions'
 
@@ -883,6 +887,9 @@ export default defineEventHandler(async (event) => {
           'Доступные команды:',
           '• /start — старт',
           '• /bindcity <token> — привязка Telegram-группы к city settings',
+          '• /review, /place — обзор места (manager chat)',
+          '• /post — пост о месте',
+          '• /story — story-кампания',
           '• /bind <token> — legacy-привязка manager_group_chat для ресторана',
           '',
           'Где взять token:',
@@ -891,6 +898,15 @@ export default defineEventHandler(async (event) => {
       })
       return { ok: true }
     }
+
+    const managerHandledInText = await tryHandleInuuManagerChatMessage(event, {
+      botToken,
+      message: body.message as InuuTelegramMessage,
+    }).catch((err) => {
+      console.error('[webhook] manager chat message:', err)
+      return false
+    })
+    if (managerHandledInText) return { ok: true }
 
     const parserHandledInText = await tryHandleInuuParserSourceTelegramMessage(event, {
       botToken,
@@ -922,6 +938,15 @@ export default defineEventHandler(async (event) => {
       return false
     })
     if (pickHandled) return { ok: true }
+
+    const managerHandled = await tryHandleInuuManagerChatMessage(event, {
+      botToken,
+      message: body.message as InuuTelegramMessage,
+    }).catch((err) => {
+      console.error('[webhook] manager chat message:', err)
+      return false
+    })
+    if (managerHandled) return { ok: true }
 
     const parserHandled = await tryHandleInuuParserSourceTelegramMessage(event, {
       botToken,
@@ -1102,6 +1127,42 @@ export default defineEventHandler(async (event) => {
       await telegram(botToken, 'answerCallbackQuery', {
         callback_query_id: query.id,
         text: 'Не удалось обновить подборку',
+        show_alert: true,
+      })
+    }
+    return { ok: true }
+  }
+
+  if (query.data.startsWith('inuu:mgr:')) {
+    const chatId = Number(query.message.chat.id)
+    const messageId = Number(query.message.message_id)
+    const fromId = Number(query.from?.id)
+    if (!Number.isFinite(chatId) || !Number.isFinite(messageId) || !Number.isFinite(fromId)) {
+      await telegram(botToken, 'answerCallbackQuery', {
+        callback_query_id: query.id,
+        text: 'Некорректный запрос',
+        show_alert: false,
+      })
+      return { ok: true }
+    }
+    try {
+      const result = await handleInuuManagerTelegramCallback(event, {
+        botToken,
+        data: String(query.data),
+        chatId,
+        messageId,
+        fromId,
+      })
+      await telegram(botToken, 'answerCallbackQuery', {
+        callback_query_id: query.id,
+        text: result.alertText,
+        show_alert: result.showAlert,
+      })
+    } catch (err) {
+      console.error('webhook inuu:mgr failed:', err)
+      await telegram(botToken, 'answerCallbackQuery', {
+        callback_query_id: query.id,
+        text: 'Не удалось применить действие',
         show_alert: true,
       })
     }
