@@ -123,7 +123,7 @@
 | [ ] | Полный CRUD редакции (events, lists, news) в dashboard | 4 | P1 | — | [03-recommended-mvp.md](../features/content/03-recommended-mvp.md) |
 | [ ] | Promo-блоки в подборках (не event) | 3 | P2 | сред | [14-digests-curated-admin-smm.md](../features/content/14-digests-curated-admin-smm.md) |
 | [ ] | Admin «тиндер» для сборки дайджеста | 4 | P2 | — | [14-digests-curated-admin-smm.md](../features/content/14-digests-curated-admin-smm.md) |
-| [ ] | Cron авто-черновики дайджестов (праздники, ⭐4–5) | 3 | P2 | — | [14-digests-curated-admin-smm.md](../features/content/14-digests-curated-admin-smm.md) |
+| [x] | Cron авто-черновики дайджестов (праздники, ⭐4–5) | 3 | P2 | — | [14-digests-curated-admin-smm.md](../features/content/14-digests-curated-admin-smm.md) |
 | [x] | Stories города на главной (city stories API → UI) | 3 | P1 | выс | [04-features-priority.md](../04-features-priority.md) |
 | [ ] | HTML→image экспорт для Instagram | 4 | P2 | сред | [14-digests-curated-admin-smm.md](../features/content/14-digests-curated-admin-smm.md) |
 | [x] | Обзоры/посты о местах через manager chat (AI, видео, org) | 4 | P1 | сред | [30-manager-chat-place-editorial.md](../features/content/30-manager-chat-place-editorial.md) |
@@ -238,14 +238,14 @@
 
 ---
 
-## Сводка (на 01.06.2026)
+## Сводка (на 02.06.2026)
 
 | | Кол-во |
 |---|--------|
 | Всего строк | 139 |
-| `[x]` сделано | 59 |
+| `[x]` сделано | 60 |
 | `[~]` в работе | 0 |
-| `[ ]` в плане | 80 |
+| `[ ]` в плане | 79 |
 
 > **Примечание:** `[x]` = есть рабочий код или MVP закрыт по спеке; `[~]` = идёт реализация; `[ ]` = не начато или только спека. Строки «снято» (§11) не входят в «в плане». При расхождении с кодом — править здесь первым делом.
 

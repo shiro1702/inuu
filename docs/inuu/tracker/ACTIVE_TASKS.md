@@ -48,7 +48,7 @@
 
 **Отложено:** TASK-005 (санитар/TL;DR), TASK-006 (guides без AI-дайджеста — см. TASK-012).
 
-**В очереди:** TASK-012 — AI-подборки и дайджест недели (cron + Groq).
+**Закрыто:** TASK-012 — AI-подборки и дайджест недели (cron + Groq).
 
 Индекс брейншторма: [01.06.2026](../../fix/brainstorm/01.06.2026.md).
 
@@ -56,29 +56,9 @@
 
 ## Активные задачи
 
-> **Очередь:** 1 задача (`todo`) · лимит 3.
+> **Очередь:** 0 задач · лимит 3.
 
-### TASK-012 · AI-подборки и дайджест недели
-- **Статус:** `todo`
-- **Матрица:** §6 «Cron авто-черновики дайджестов» · §6 «Публичные подборки» (частично)
-- **Цель:** автоматически собирать weekly-черновик `week-YYYY-wNN` и уметь делать кастомные AI-подборки по тегам/категориям; Groq — заголовок и вводный текст.
-- **Спеки:** [14-digests-curated-admin-smm.md](../features/content/14-digests-curated-admin-smm.md), [11-digest-parsing-and-curated-picks.md](../features/content/11-digest-parsing-and-curated-picks.md), [06-bot-digest-subscriptions.md](../features/content/06-bot-digest-subscriptions.md)
-- **In scope:**
-  - Cron (например, чт 10:00 по TZ города): события **пт–вс**, `editorial_score >= 4`, лимит N карточек
-  - Создание/обновление `curated_lists` slug `week-YYYY-wNN` + `curated_list_items` (`is_published = false` до approve)
-  - Кастомная выборка вне weekly digest: по `topic_tags` и/или `category_slug` (режимы OR/AND для тегов), результат в отдельный slug (например, `custom-<date>-<hash>`)
-  - Маркировка режима в metadata подборки: `selection_mode = weekly | custom`
-  - Groq: `title`, `description` подборки по списку событий (без галлюцинаций — только факты из БД)
-  - Уведомление в manager/moderation chat: ссылка на список и команды для ручной доработки (`/pick list week` или `/pick list <slug>`)
-  - Переиспользовать `curatedListPeriod.ts`, `/pick` и существующую публикацию подборок
-- **Out of scope:** Admin Mini App «тиндер»; promo/custom_block в подборке; HTML→image для Instagram; персональный пятничный дайджест пользователям; push при publish подборки (отдельная задача); новые UI-экраны в dashboard
-- **Ключевые файлы:** `server/utils/curatedListPeriod.ts`, `server/api/cron/` (новый endpoint), `inuuContentBot.ts` (`/pick`), `curated_lists` / `curated_list_items`
-- **Критерии готовности:**
-  - После cron в БД есть черновик `week-YYYY-wNN` с ≥5 событиями (если столько есть в окне)
-  - По запросу кастомных фильтров создаётся отдельный черновик подборки с корректной выборкой по тегам/категориям
-  - В чат менеджера приходит сообщение с превью и slug
-  - Менеджер может опубликовать weekly и custom подборки через существующий flow (`/pick` или dashboard) без ручного перебора всей афиши
-- **Заметки:** ручная сборка `/pick week|month` уже есть; TASK-006 (guides API) не включает AI/cron — не дублировать. Зависимость: желателен наполненный каталог событий (TASK-004). Кастомные подборки делать как отдельный режим в рамках TASK-012, без вынесения в новую задачу.
+Активных задач нет.
 
 ---
 
@@ -153,7 +133,8 @@
 | TASK-009 | Groq classifier + router в web cron | 01.06.2026 | `groqWebPageClassifier.ts`, `webCrawlRouter.ts`, `NUXT_WEB_CLASSIFIER_ENABLED` |
 | TASK-010 | parsing_rules fast lane + alerts UI | 01.06.2026 | `webParsingRulesApply.ts`, `scraping_alerts` API, `parsedEvents` in ingest |
 | TASK-011 | Manager chat: обзоры мест, посты и stories | 01.06.2026 | [30-manager-chat-place-editorial.md](../features/content/30-manager-chat-place-editorial.md) |
+| TASK-012 | AI-подборки и дайджест недели | 02.06.2026 | `city-digest.post.ts`, `curatedListSelection.ts`, `groqCuratedListCopy.ts`, `/pick list <slug>` |
 
 ---
 
-**Последнее обновление:** 01.06.2026 · активных: **1** (TASK-012 todo) · отложено: **004–006** · архив: **011** done
+**Последнее обновление:** 02.06.2026 · активных: **0** · отложено: **004–006** · архив: **012** done

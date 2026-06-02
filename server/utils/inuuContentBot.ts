@@ -203,15 +203,27 @@ function formatIngestReply(result: Awaited<ReturnType<typeof runContentIngest>>)
   return lines.filter(Boolean).join('\n')
 }
 
-function parsePickCommand(text: string): { action: 'pick' | 'list'; period: CuratedPeriod } | null {
-  const parts = text.trim().split(/\s+/).map((p) => p.toLowerCase())
-  if (parts[0] !== '/pick') return null
-  const period = parts[1] === 'month' ? 'month' : 'week'
-  const action = parts[1] === 'list' || parts[2] === 'list' ? 'list' : 'pick'
-  if (parts[1] === 'list') {
-    return { action: 'list', period: parts[2] === 'month' ? 'month' : 'week' }
+function parsePickCommand(text: string): {
+  action: 'pick' | 'list'
+  period: CuratedPeriod
+  listSlug?: string | null
+} | null {
+  const parts = text.trim().split(/\s+/).filter(Boolean)
+  if (String(parts[0] || '').toLowerCase() !== '/pick') return null
+
+  const p1 = String(parts[1] || '').toLowerCase()
+  if (p1 === 'list') {
+    const target = String(parts[2] || '').trim().toLowerCase()
+    if (target === 'month') return { action: 'list', period: 'month', listSlug: null }
+    if (target && target !== 'week') return { action: 'list', period: 'week', listSlug: target }
+    return { action: 'list', period: 'week', listSlug: null }
   }
-  return { action, period }
+
+  return {
+    action: 'pick',
+    period: p1 === 'month' ? 'month' : 'week',
+    listSlug: null,
+  }
 }
 
 async function loadPeriodEvents(
@@ -307,22 +319,19 @@ export async function tryHandleInuuPickTelegramMessage(
   if (!pickCmd) return false
 
   if (pickCmd.action === 'list') {
-    const { meta } = await loadPeriodEvents(event, {
-      cityId: city.id,
-      period: pickCmd.period,
-      timeZone: city.timezone,
-    })
+    const fallbackMeta = resolvePeriodListMeta({ period: pickCmd.period, timeZone: city.timezone })
+    const targetSlug = pickCmd.listSlug || fallbackMeta.slug
     const { data: list } = await client
       .from('curated_lists')
       .select('id,title,slug')
       .eq('city_id', city.id)
-      .eq('slug', meta.slug)
+      .eq('slug', targetSlug)
       .maybeSingle()
 
     if (!list?.id) {
       await telegramSend(args.botToken, 'sendMessage', {
         chat_id: chatId,
-        text: `Подборка ${meta.slug} пока пуста. Используйте /pick ${pickCmd.period}`,
+        text: `Подборка ${targetSlug} пока пуста. Используйте /pick ${pickCmd.period}`,
         reply_to_message_id: args.message.message_id,
       })
       return true
@@ -412,6 +421,51 @@ export function parseInuuPickCallback(data: string): {
     return { action: 'toggle', eventId: parts[3], period }
   }
   return null
+}
+
+export async function sendCuratedListDraftNotification(
+  event: H3Event,
+  args: {
+    botToken: string
+    cityId: string
+    cityName: string
+    slug: string
+    mode: 'weekly' | 'custom'
+  },
+): Promise<{ sent: number; targets: number; reason?: string }> {
+  const token = String(args.botToken || '').trim()
+  if (!token) return { sent: 0, targets: 0, reason: 'bot_token_missing' }
+  const settings = await loadCityTelegramOpsSettings(event, args.cityId)
+  let chatIds = resolveTelegramModerationChatIds(settings)
+  if (!chatIds.length) {
+    const config = useRuntimeConfig(event)
+    const fallback = String((config as any).inuuEditorialModerationChatId || process.env.NUXT_INUU_EDITORIAL_MODERATION_CHAT_ID || '').trim()
+    if (fallback) chatIds = [fallback]
+  }
+  if (!chatIds.length) return { sent: 0, targets: 0, reason: 'chat_ids_missing' }
+
+  const uniqueChatIds = [...new Set(chatIds.map((id) => String(id).trim()).filter(Boolean))]
+  const modeLabel = args.mode === 'weekly' ? 'weekly' : 'custom'
+  const text = [
+    `🧠 Черновик подборки создан (${modeLabel})`,
+    `Город: ${args.cityName}`,
+    `Список: /lists/${args.slug}`,
+    'Команды:',
+    '• /pick list week',
+    `• /pick list ${args.slug}`,
+  ].join('\n')
+  let sent = 0
+  for (const chatId of uniqueChatIds) {
+    await telegramSend(token, 'sendMessage', {
+      chat_id: chatId,
+      text,
+    }).then(() => {
+      sent += 1
+    }).catch((err) => {
+      console.error('[inuuContentBot] curated notification failed:', err)
+    })
+  }
+  return { sent, targets: uniqueChatIds.length }
 }
 
 export async function handleInuuPickTelegramCallback(

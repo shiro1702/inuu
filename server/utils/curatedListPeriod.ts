@@ -97,6 +97,9 @@ export async function upsertCuratedListForPeriod(
     meta: PeriodListMeta
     batchId?: string | null
     publish?: boolean
+    description?: string
+    selectionMode?: 'weekly' | 'custom'
+    sourceMetadata?: Record<string, unknown> | null
   },
 ): Promise<{ listId: string; slug: string }> {
   const client = await serverSupabaseServiceRole(event)
@@ -113,14 +116,18 @@ export async function upsertCuratedListForPeriod(
     period_end: args.meta.periodEnd,
     auto: true,
     batch_id: args.batchId || null,
+    selection_mode: args.selectionMode || 'weekly',
+    ...(args.sourceMetadata || {}),
   }
+  const description = args.description
+    || `Подборка ${args.meta.period === 'week' ? 'недели' : 'месяца'}`
 
   if (existing?.id) {
     await client
       .from('curated_lists')
       .update({
         title: args.meta.title,
-        description: `Подборка ${args.meta.period === 'week' ? 'недели' : 'месяца'}`,
+        description,
         is_published: args.publish !== false,
         source_metadata: sourceMetadata,
         updated_at: new Date().toISOString(),
@@ -135,7 +142,7 @@ export async function upsertCuratedListForPeriod(
       city_id: args.cityId,
       slug: args.meta.slug,
       title: args.meta.title,
-      description: `Подборка ${args.meta.period === 'week' ? 'недели' : 'месяца'}`,
+      description,
       is_published: args.publish !== false,
       sort_order: args.meta.period === 'week' ? 10 : 20,
       source_metadata: sourceMetadata,
@@ -147,6 +154,59 @@ export async function upsertCuratedListForPeriod(
     throw new Error(error?.message || 'Failed to create curated list')
   }
 
+  return { listId: String(created.id), slug: String((created as any).slug) }
+}
+
+export async function upsertCuratedListBySlug(
+  event: H3Event,
+  args: {
+    cityId: string
+    slug: string
+    title: string
+    description: string
+    publish?: boolean
+    sortOrder?: number
+    sourceMetadata?: Record<string, unknown> | null
+  },
+): Promise<{ listId: string; slug: string }> {
+  const client = await serverSupabaseServiceRole(event)
+  const { data: existing } = await client
+    .from('curated_lists')
+    .select('id,slug')
+    .eq('city_id', args.cityId)
+    .eq('slug', args.slug)
+    .maybeSingle()
+
+  if (existing?.id) {
+    await client
+      .from('curated_lists')
+      .update({
+        title: args.title,
+        description: args.description,
+        is_published: args.publish === true,
+        source_metadata: args.sourceMetadata || {},
+        updated_at: new Date().toISOString(),
+      } as any)
+      .eq('id', existing.id)
+    return { listId: String(existing.id), slug: String(existing.slug) }
+  }
+
+  const { data: created, error } = await client
+    .from('curated_lists')
+    .insert({
+      city_id: args.cityId,
+      slug: args.slug,
+      title: args.title,
+      description: args.description,
+      is_published: args.publish === true,
+      sort_order: typeof args.sortOrder === 'number' ? args.sortOrder : 15,
+      source_metadata: args.sourceMetadata || {},
+    } as any)
+    .select('id,slug')
+    .maybeSingle()
+  if (error || !created?.id) {
+    throw new Error(error?.message || 'Failed to create custom curated list')
+  }
   return { listId: String(created.id), slug: String((created as any).slug) }
 }
 
