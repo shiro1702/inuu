@@ -55,6 +55,7 @@
 | [x] | Страница организатора / источника + подписка | 3 | P1 | сред | [15-event-detail-series-venues.md](../features/content/15-event-detail-series-venues.md) |
 | [x] | Теневые профили org из парсера + claim | 4 | P1 | выс | [17-ingest-sources-context.md](../features/content/17-ingest-sources-context.md) |
 | [ ] | Вайб-фильтры («для свидания», «с ноутбуком») | 3 | P2 | — | [verticals/events-and-venues.md](../verticals/events-and-venues.md) |
+| [x] | Блок обзоров на странице venue | 2 | P2 | — | [30-manager-chat-place-editorial.md](../features/content/30-manager-chat-place-editorial.md) |
 
 ---
 
@@ -125,6 +126,8 @@
 | [ ] | Cron авто-черновики дайджестов (праздники, ⭐4–5) | 3 | P2 | — | [14-digests-curated-admin-smm.md](../features/content/14-digests-curated-admin-smm.md) |
 | [x] | Stories города на главной (city stories API → UI) | 3 | P1 | выс | [04-features-priority.md](../04-features-priority.md) |
 | [ ] | HTML→image экспорт для Instagram | 4 | P2 | сред | [14-digests-curated-admin-smm.md](../features/content/14-digests-curated-admin-smm.md) |
+| [x] | Обзоры/посты о местах через manager chat (AI, видео, org) | 4 | P1 | сред | [30-manager-chat-place-editorial.md](../features/content/30-manager-chat-place-editorial.md) |
+| [x] | Stories через manager chat (слайды, org) | 3 | P1 | выс | [30-manager-chat-place-editorial.md](../features/content/30-manager-chat-place-editorial.md) |
 
 ---
 
@@ -239,8 +242,8 @@
 
 | | Кол-во |
 |---|--------|
-| Всего строк | 136 |
-| `[x]` сделано | 56 |
+| Всего строк | 139 |
+| `[x]` сделано | 59 |
 | `[~]` в работе | 0 |
 | `[ ]` в плане | 80 |
 

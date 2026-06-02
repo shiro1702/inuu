@@ -46,7 +46,9 @@
 
 **Следующий фокус:** вернуть **TASK-004** (каталог источников Улан-Удэ) после smoke на 2 `cron_enabled` URL и `NUXT_WEB_CLASSIFIER_ENABLED=true` на dev.
 
-**Отложено:** TASK-005–006 (санитар/TL;DR, guides).
+**Отложено:** TASK-005 (санитар/TL;DR), TASK-006 (guides без AI-дайджеста — см. TASK-012).
+
+**В очереди:** TASK-012 — AI-подборки и дайджест недели (cron + Groq).
 
 Индекс брейншторма: [01.06.2026](../../fix/brainstorm/01.06.2026.md).
 
@@ -54,9 +56,29 @@
 
 ## Активные задачи
 
-> **Очередь:** 0 задач · волна 2b завершена · следующий кандидат: **TASK-004** (из paused).
+> **Очередь:** 1 задача (`todo`) · лимит 3.
 
-_Нет активных задач. Чтобы взять TASK-004 — перенести из [Отложено](#отложено-волна-2a--контент--наполнение) в активные (лимит 3)._
+### TASK-012 · AI-подборки и дайджест недели
+- **Статус:** `todo`
+- **Матрица:** §6 «Cron авто-черновики дайджестов» · §6 «Публичные подборки» (частично)
+- **Цель:** автоматически собирать weekly-черновик `week-YYYY-wNN` и уметь делать кастомные AI-подборки по тегам/категориям; Groq — заголовок и вводный текст.
+- **Спеки:** [14-digests-curated-admin-smm.md](../features/content/14-digests-curated-admin-smm.md), [11-digest-parsing-and-curated-picks.md](../features/content/11-digest-parsing-and-curated-picks.md), [06-bot-digest-subscriptions.md](../features/content/06-bot-digest-subscriptions.md)
+- **In scope:**
+  - Cron (например, чт 10:00 по TZ города): события **пт–вс**, `editorial_score >= 4`, лимит N карточек
+  - Создание/обновление `curated_lists` slug `week-YYYY-wNN` + `curated_list_items` (`is_published = false` до approve)
+  - Кастомная выборка вне weekly digest: по `topic_tags` и/или `category_slug` (режимы OR/AND для тегов), результат в отдельный slug (например, `custom-<date>-<hash>`)
+  - Маркировка режима в metadata подборки: `selection_mode = weekly | custom`
+  - Groq: `title`, `description` подборки по списку событий (без галлюцинаций — только факты из БД)
+  - Уведомление в manager/moderation chat: ссылка на список и команды для ручной доработки (`/pick list week` или `/pick list <slug>`)
+  - Переиспользовать `curatedListPeriod.ts`, `/pick` и существующую публикацию подборок
+- **Out of scope:** Admin Mini App «тиндер»; promo/custom_block в подборке; HTML→image для Instagram; персональный пятничный дайджест пользователям; push при publish подборки (отдельная задача); новые UI-экраны в dashboard
+- **Ключевые файлы:** `server/utils/curatedListPeriod.ts`, `server/api/cron/` (новый endpoint), `inuuContentBot.ts` (`/pick`), `curated_lists` / `curated_list_items`
+- **Критерии готовности:**
+  - После cron в БД есть черновик `week-YYYY-wNN` с ≥5 событиями (если столько есть в окне)
+  - По запросу кастомных фильтров создаётся отдельный черновик подборки с корректной выборкой по тегам/категориям
+  - В чат менеджера приходит сообщение с превью и slug
+  - Менеджер может опубликовать weekly и custom подборки через существующий flow (`/pick` или dashboard) без ручного перебора всей афиши
+- **Заметки:** ручная сборка `/pick week|month` уже есть; TASK-006 (guides API) не включает AI/cron — не дублировать. Зависимость: желателен наполненный каталог событий (TASK-004). Кастомные подборки делать как отдельный режим в рамках TASK-012, без вынесения в новую задачу.
 
 ---
 
@@ -68,7 +90,7 @@ _Нет активных задач. Чтобы взять TASK-004 — пере
 |----|----------|-----------------|---------------|
 | TASK-004 | Каталог источников Улан-Удэ + backfill | Приоритет: довести web crawl до classifier/rules | **Сейчас** — 008–010 done |
 | TASK-005 | Санитар + TL;DR / vibe на карточках | Не блокирует web pipeline | После первых approve из 004 или параллельно |
-| TASK-006 | Guides + cron-черновики подборок | Редакционный слой после афиши | TASK-004 частично закрыт |
+| TASK-006 | Guides + публичный editorial API | Редакционный слой; AI-дайджест → TASK-012 | TASK-004 частично или параллельно 012 |
 
 <details>
 <summary>TASK-004 — полный scope (свернуто)</summary>
@@ -92,9 +114,9 @@ _Нет активных задач. Чтобы взять TASK-004 — пере
 <details>
 <summary>TASK-006 — полный scope (свернуто)</summary>
 
-- **Матрица:** §6 guides API · cron дайджестов
-- **Спеки:** [14](../features/content/14-digests-curated-admin-smm.md), [03](../features/content/03-recommended-mvp.md)
-- **In scope:** `/guides`, editorial API, cron `week-YYYY-wNN` черновик
+- **Матрица:** §6 guides API · публичные страницы editorial
+- **Спеки:** [03](../features/content/03-recommended-mvp.md), [14](../features/content/14-digests-curated-admin-smm.md) (без cron)
+- **In scope:** `/guides`, editorial API; **без** AI/cron дайджеста (см. TASK-012)
 
 </details>
 
@@ -112,6 +134,7 @@ _Нет активных задач. Чтобы взять TASK-004 — пере
 | — | Сжатие афиш WebP при ingest | §4 | [24](../features/content/24-mvp-launch-checklist-ulan-ude.md) |
 | — | Bot: QR + helpdesk + scanner | §5, §9 | [23](../features/content/23-bot-roles-ops-support.md) |
 | — | Mini App tab bar, checkout | §2 | [21](../features/content/21-mini-app-and-web-wireframes.md) |
+| TASK-012 | AI cron: черновик `week-YYYY-wNN` + Groq intro | §6 | [14](../features/content/14-digests-curated-admin-smm.md), [11](../features/content/11-digest-parsing-and-curated-picks.md) |
 
 Индексы брейнштормов: [30.05.2026](../../fix/brainstorm/30.05.2026.md), [31.05.2026](../../fix/brainstorm/31.05.2026.md), [01.06.2026](../../fix/brainstorm/01.06.2026.md).
 
@@ -129,7 +152,8 @@ _Нет активных задач. Чтобы взять TASK-004 — пере
 | TASK-008 | Web ingest: схема + HTML sanitize | 01.06.2026 | `039_web_parsing_strategy.sql`, `webPageSanitizer.ts`, `webPageFetch.ts` |
 | TASK-009 | Groq classifier + router в web cron | 01.06.2026 | `groqWebPageClassifier.ts`, `webCrawlRouter.ts`, `NUXT_WEB_CLASSIFIER_ENABLED` |
 | TASK-010 | parsing_rules fast lane + alerts UI | 01.06.2026 | `webParsingRulesApply.ts`, `scraping_alerts` API, `parsedEvents` in ingest |
+| TASK-011 | Manager chat: обзоры мест, посты и stories | 01.06.2026 | [30-manager-chat-place-editorial.md](../features/content/30-manager-chat-place-editorial.md) |
 
 ---
 
-**Последнее обновление:** 01.06.2026 · активных: **0** · отложено: **004–006** · архив: **008–010** done
+**Последнее обновление:** 01.06.2026 · активных: **1** (TASK-012 todo) · отложено: **004–006** · архив: **011** done
