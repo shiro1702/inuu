@@ -32,15 +32,59 @@ export type PublicSimilarEvent = {
   source_metadata?: unknown
 }
 
+function collectMediaUrls(raw: unknown): string[] {
+  const pushUnique = (urls: string[], value: unknown) => {
+    const normalized = String(value || '').trim()
+    if (!normalized) return
+    if (!/^https?:\/\//i.test(normalized)) return
+    if (!urls.includes(normalized)) urls.push(normalized)
+  }
+
+  const out: string[] = []
+  if (Array.isArray(raw)) {
+    for (const value of raw) pushUnique(out, value)
+    return out
+  }
+
+  if (typeof raw !== 'string') return out
+  const value = raw.trim()
+  if (!value) return out
+
+  if (value.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(value)
+      if (Array.isArray(parsed)) {
+        for (const item of parsed) pushUnique(out, item)
+        return out
+      }
+    } catch {
+      // Falls back to delimiter-based split below.
+    }
+  }
+
+  const chunks = value
+    .split(/[\n,;]+/g)
+    .map((item) => item.trim())
+    .filter(Boolean)
+  for (const item of chunks) pushUnique(out, item)
+  return out
+}
+
 function parseSourceMetadata(raw: unknown): EventSourceMetadata {
   if (!raw || typeof raw !== 'object') return {}
   const o = raw as Record<string, unknown>
   const tags = Array.isArray(o.topic_tags)
     ? o.topic_tags.map((x) => String(x || '').trim()).filter(Boolean)
     : []
-  const media = Array.isArray(o.media_urls)
-    ? o.media_urls.map((x) => String(x || '').trim()).filter(Boolean)
-    : []
+  const media = [
+    ...collectMediaUrls(o.media_urls),
+    ...collectMediaUrls(o.media_url),
+    ...collectMediaUrls(o.poster_url),
+    ...collectMediaUrls(o.image_url),
+    ...collectMediaUrls(o.cover_media_url),
+    ...collectMediaUrls(o.poster),
+    ...collectMediaUrls(o.image),
+  ].filter((url, index, list) => list.indexOf(url) === index)
   return {
     topic_tags: tags,
     registration_url: typeof o.registration_url === 'string' ? o.registration_url : null,

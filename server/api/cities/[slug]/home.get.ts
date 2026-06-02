@@ -6,6 +6,7 @@ import { prepareEventsListForDisplay } from '~/server/utils/eventListDisplay'
 
 const HOME_EVENTS_LIMIT = 6
 const HOME_EVENTS_FETCH_POOL = 48
+const HOME_CURATED_LISTS_LIMIT = 4
 
 export default defineEventHandler(async (event) => {
   setResponseHeader(event, 'Cache-Control', 'public, max-age=60, s-maxage=120, stale-while-revalidate=300')
@@ -42,11 +43,11 @@ export default defineEventHandler(async (event) => {
       .limit(12),
     client
       .from('curated_lists')
-      .select('id,slug,title,description,sort_order')
+      .select('id,slug,title,description,sort_order,created_at')
       .eq('city_id', city.id)
       .eq('is_published', true)
-      .order('sort_order', { ascending: true })
-      .limit(6),
+      .order('created_at', { ascending: false })
+      .limit(HOME_CURATED_LISTS_LIMIT),
     client
       .from('hot_slots')
       .select('id,starts_at,expires_at,price,discount_price,provider_id,service_id')

@@ -12,7 +12,7 @@ import {
   type PublicEventSession,
 } from '~/server/utils/eventPublicDetail'
 
-const OPTIONAL_ORGANIZATION_TIMEOUT_MS = 1200
+const OPTIONAL_ORGANIZATION_TIMEOUT_MS = 350
 
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, fallback: T): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | null = null

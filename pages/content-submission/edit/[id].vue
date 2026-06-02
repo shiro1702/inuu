@@ -44,7 +44,7 @@
 
       <fieldset class="space-y-3">
         <legend class="text-sm font-medium text-gray-700">Афиша</legend>
-        <EventMediaCarousel :urls="previewGalleryUrls" :alt="form.title || 'Афиша события'" />
+        <CityEventMediaCarousel :urls="previewGalleryUrls" :alt="form.title || 'Афиша события'" />
         <label class="block space-y-1 text-sm">
           <span class="text-gray-600">URL обложки</span>
           <input

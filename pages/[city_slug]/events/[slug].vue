@@ -4,7 +4,7 @@
   <article v-else class="mx-auto max-w-3xl space-y-6">
     <NuxtLink :to="`${cityBasePath}/events`" class="text-sm text-primary hover:underline">← Афиша</NuxtLink>
 
-    <EventMediaCarousel :urls="mediaGallery" :alt="event.title" />
+    <CityEventMediaCarousel :urls="mediaGallery" :alt="event.title" />
 
     <header class="space-y-3">
       <div class="flex flex-wrap items-center gap-2">

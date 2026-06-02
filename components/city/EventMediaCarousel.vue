@@ -9,10 +9,19 @@
     <template v-else>
       <div class="relative aspect-[16/10]">
         <img
+          v-if="!imageFailed"
           :src="urls[activeIndex]"
           :alt="alt"
           class="h-full w-full object-cover"
+          referrerpolicy="no-referrer"
+          @error="handleImageError"
         />
+        <div
+          v-else
+          class="flex h-full items-center justify-center bg-gradient-to-br from-indigo-100 to-violet-100"
+        >
+          <span class="text-sm text-gray-500">Афиша недоступна</span>
+        </div>
         <button
           v-if="urls.length > 1"
           type="button"
@@ -60,9 +69,13 @@ const props = withDefaults(
 )
 
 const activeIndex = ref(0)
+const imageFailed = ref(false)
+const failedIndexes = ref<Set<number>>(new Set())
 
 watch(() => props.urls, () => {
   activeIndex.value = 0
+  imageFailed.value = false
+  failedIndexes.value = new Set()
 })
 
 function prev() {
@@ -75,5 +88,24 @@ function next() {
   const n = props.urls.length
   if (n < 2) return
   activeIndex.value = (activeIndex.value + 1) % n
+}
+
+function handleImageError() {
+  const n = props.urls.length
+  failedIndexes.value.add(activeIndex.value)
+  if (n < 2) {
+    imageFailed.value = true
+    return
+  }
+  if (failedIndexes.value.size >= n) {
+    imageFailed.value = true
+    return
+  }
+  // Fallback to the next candidate URL if current one fails to load.
+  let nextIndex = (activeIndex.value + 1) % n
+  while (failedIndexes.value.has(nextIndex) && failedIndexes.value.size < n) {
+    nextIndex = (nextIndex + 1) % n
+  }
+  activeIndex.value = nextIndex
 }
 </script>

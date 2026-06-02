@@ -33,7 +33,12 @@
     />
 
     <section v-if="home?.curatedLists?.length">
-      <h2 class="mb-3 text-lg font-semibold text-gray-900">Подборки</h2>
+      <div class="mb-4 flex items-center justify-between gap-2">
+        <h2 class="text-lg font-semibold text-gray-900">Подборки</h2>
+        <NuxtLink :to="`${cityBasePath}/lists`" class="text-sm font-medium text-primary hover:underline">
+          Все подборки
+        </NuxtLink>
+      </div>
       <div class="grid gap-3 sm:grid-cols-2">
         <NuxtLink
           v-for="list in home.curatedLists"
@@ -59,8 +64,8 @@
           v-for="event in home.events"
           :key="event.id"
           :event="event"
-          :sale-mode="(event as any).saleMode"
-          :cta="(event as any).cta"
+          :sale-mode="event.saleMode"
+          :cta="event.cta"
         />
       </div>
       <p v-else class="text-sm text-gray-500">Скоро появятся новые события.</p>

@@ -137,15 +137,10 @@ export async function resolveIngestSourceOrganization(
 
   const client = await serverSupabaseServiceRole(event)
   const kind = String(args.sourceKind || '').trim()
+  const webUrl = normalizeWebUrl(args.sourceUrl)
 
-  const tgKey = extractTelegramSourceKey(args.sourceUrl)
-  if (tgKey) {
-    const fromWeb = await resolveWebSourceOrganizationByTelegramChannel(client, cityId, tgKey)
-    if (fromWeb) return fromWeb
-  }
-
+  // Fast path for web sources: exact URL match is cheaper than scanning all web sources by tg channel.
   if (kind === 'web_cron' || kind === 'manual_editor') {
-    const webUrl = normalizeWebUrl(args.sourceUrl)
     if (webUrl) {
       const { data } = await client
         .from('city_web_sources')
@@ -158,6 +153,12 @@ export async function resolveIngestSourceOrganization(
       )
       if (linked) return linked
     }
+  }
+
+  const tgKey = extractTelegramSourceKey(args.sourceUrl)
+  if (tgKey) {
+    const fromWeb = await resolveWebSourceOrganizationByTelegramChannel(client, cityId, tgKey)
+    if (fromWeb) return fromWeb
   }
 
   if (tgKey) {
