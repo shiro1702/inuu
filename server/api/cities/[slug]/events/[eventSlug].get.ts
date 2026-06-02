@@ -12,6 +12,22 @@ import {
   type PublicEventSession,
 } from '~/server/utils/eventPublicDetail'
 
+const OPTIONAL_ORGANIZATION_TIMEOUT_MS = 1200
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, fallback: T): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | null = null
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((resolve) => {
+        timer = setTimeout(() => resolve(fallback), timeoutMs)
+      }),
+    ])
+  } finally {
+    if (timer) clearTimeout(timer)
+  }
+}
+
 export default defineEventHandler(async (event) => {
   setResponseHeader(event, 'Cache-Control', 'public, max-age=60, s-maxage=120')
   const slug = typeof event.context.params?.slug === 'string' ? event.context.params.slug : ''
@@ -38,62 +54,66 @@ export default defineEventHandler(async (event) => {
 
   const meta = parseSourceMetadata((data as any).source_metadata)
   const topicTags = meta.topic_tags || []
-  const tags = await resolveCityTagLabels(client, city.id, topicTags)
-
-  let category: { slug: string; name: string } | null = null
-  if ((data as any).category_id) {
-    const { data: cat } = await client
-      .from('event_categories')
-      .select('slug,name')
-      .eq('id', (data as any).category_id)
-      .maybeSingle()
-    if (cat?.slug) {
-      category = { slug: String(cat.slug), name: String(cat.name) }
-    }
-  }
+  const categoryId = (data as any).category_id ? String((data as any).category_id) : null
 
   const mediaGallery = buildEventMediaGallery(data as any)
-
-  let seriesSessions: PublicEventSession[] = []
+  const shopId = (data as any).shop_id ? String((data as any).shop_id) : null
   const seriesSlug = (data as any).series_slug
-  if (seriesSlug) {
-    const nowIso = new Date().toISOString()
-    const { data: siblings } = await client
+  const displayLinks = resolveEventDisplayLinks(data as any)
+
+  const tagsPromise = resolveCityTagLabels(client, city.id, topicTags)
+  const categoryPromise = categoryId
+    ? client
+      .from('event_categories')
+      .select('slug,name')
+      .eq('id', categoryId)
+      .maybeSingle()
+      .then(({ data: cat }) => (cat?.slug ? { slug: String(cat.slug), name: String(cat.name) } : null))
+    : Promise.resolve(null)
+  const seriesSessionsPromise = seriesSlug
+    ? client
       .from('events')
       .select('slug,starts_at')
       .eq('city_id', city.id)
       .eq('series_slug', seriesSlug)
       .eq('is_published', true)
-      .gte('starts_at', nowIso)
+      .gte('starts_at', new Date().toISOString())
       .order('starts_at', { ascending: true })
-
-    seriesSessions = (siblings ?? []).map((row: any) => ({
-      slug: String(row.slug),
-      starts_at: String(row.starts_at),
-      isCurrent: String(row.slug) === eventSlug,
-    }))
-  }
-
-  const similarEvents = await loadSimilarPublishedEvents(client, {
+      .then(({ data: siblings }) => (siblings ?? []).map((row: any) => ({
+        slug: String(row.slug),
+        starts_at: String(row.starts_at),
+        isCurrent: String(row.slug) === eventSlug,
+      })))
+    : Promise.resolve([] as PublicEventSession[])
+  const similarEventsPromise = loadSimilarPublishedEvents(client, {
     cityId: city.id,
     excludeSlug: eventSlug,
     topicTags,
-    categoryId: (data as any).category_id ? String((data as any).category_id) : null,
-    shopId: (data as any).shop_id ? String((data as any).shop_id) : null,
+    categoryId,
+    shopId,
     limit: 6,
   })
+  const organizationPromise = withTimeout(
+    resolvePublicEventOrganization({
+      client,
+      event,
+      cityId: city.id,
+      citySlug: slug,
+      shopId,
+      sourceMetadata: (data as any).source_metadata,
+      sourceChannel: (data as any).source_channel,
+    }).catch(() => null),
+    OPTIONAL_ORGANIZATION_TIMEOUT_MS,
+    null,
+  )
 
-  const displayLinks = resolveEventDisplayLinks(data as any)
-  const shopId = (data as any).shop_id ? String((data as any).shop_id) : null
-  const organization = await resolvePublicEventOrganization({
-    client,
-    event,
-    cityId: city.id,
-    citySlug: slug,
-    shopId,
-    sourceMetadata: (data as any).source_metadata,
-    sourceChannel: (data as any).source_channel,
-  })
+  const [tags, category, seriesSessions, similarEvents, organization] = await Promise.all([
+    tagsPromise,
+    categoryPromise,
+    seriesSessionsPromise,
+    similarEventsPromise,
+    organizationPromise,
+  ])
 
   const venueRow = (data as any).venues
   const venue = venueRow?.slug
