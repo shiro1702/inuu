@@ -60,7 +60,13 @@ Seed: `supabase/migrations/019_inuu_seed_ulan_ude.sql`. Редакция как 
 | [28-omnichannel-share-and-tma-funnel.md](./28-omnichannel-share-and-tma-funnel.md) | Share TG/MAX/Web, deep links, канал → TMA |
 | [29-nlp-admin-and-organizer-agent.md](./29-nlp-admin-and-organizer-agent.md) | LLM Tool Calling: менеджер и организатор |
 
-Индекс сырого лога: [fix/brainstorm/30.05.2026.md](../../../fix/brainstorm/30.05.2026.md), [31.05.2026.md](../../../fix/brainstorm/31.05.2026.md), [01.06.2026.md](../../../fix/brainstorm/01.06.2026.md).
+### Из брейншторма 02.05.2026 (сессия 01–02.06)
+
+| Файл | Тема |
+|------|------|
+| [31-content-tags-vibes-taxonomy.md](./31-content-tags-vibes-taxonomy.md) | Категории vs теги-вайбы, мастер-список с эмодзи, единый фильтр |
+
+Индекс сырого лога: [fix/brainstorm/30.05.2026.md](../../../fix/brainstorm/30.05.2026.md), [31.05.2026.md](../../../fix/brainstorm/31.05.2026.md), [01.06.2026.md](../../../fix/brainstorm/01.06.2026.md), [02.05.2026.md](../../../fix/brainstorm/02.05.2026.md).
 
 ## Связанные спеки
 

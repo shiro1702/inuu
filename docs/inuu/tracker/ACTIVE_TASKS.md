@@ -50,15 +50,50 @@
 
 **Закрыто:** TASK-012 — AI-подборки и дайджест недели (cron + Groq).
 
-Индекс брейншторма: [01.06.2026](../../fix/brainstorm/01.06.2026.md).
+**Следующий фокус (контент/UX):** TASK-013 — мастер-список **тегов-вайбов** из [02.05.2026](../../fix/brainstorm/02.05.2026.md).
+
+Индексы брейнштормов: [01.06.2026](../../fix/brainstorm/01.06.2026.md), [02.05.2026](../../fix/brainstorm/02.05.2026.md).
 
 ---
 
 ## Активные задачи
 
-> **Очередь:** 0 задач · лимит 3.
+> **Очередь:** 1 задача · лимит 3.
 
-Активных задач нет.
+### TASK-013 · Мастер-список тегов-вайбов (taxonomy)
+
+- **Статус:** `todo`
+- **Матрица:** §3 «Вайб-фильтры» · §4 санитар/Groq теги · §6 `topic_tags` на подборках
+- **Цель:** единый словарь «вайбов» (эмодзи + slug) для событий, editorial, подборок и Groq — категории остаются отдельно
+- **Спеки:** [31-content-tags-vibes-taxonomy.md](../features/content/31-content-tags-vibes-taxonomy.md), [12-afisha-tag-subscriptions.md](../features/content/12-afisha-tag-subscriptions.md), [16-parsing-pipeline-extensions.md](../features/content/16-parsing-pipeline-extensions.md)
+- **In scope:**
+  - Seed `city_content_tags` (~50 slug из спеки 31: вайбы, аудитория, утилита, формат, гастро + legacy `food`…`city`)
+  - Промпт Groq: 1 категория + до 5 тегов только из whitelist
+  - `resolveParsedTaxonomy` / `ensureCityContentTags` — новые slug не отбрасываются
+  - `name` в БД с эмодзи для chip'ов на афише
+- **Out of scope:** смарт-лента mixed content, push «сообщить когда», рилсы Max CDN, сезонные CSS-темы, last-minute deals
+- **Ключевые файлы:** `supabase/migrations/`, `server/utils/cityContentTaxonomy.ts`, `server/utils/ai/eventParsePrompt.ts`, `eventParseSchema.ts`
+- **Критерии готовности:** чеклист в [31](../features/content/31-content-tags-vibes-taxonomy.md#критерии-готовности-mvp-таксономии)
+- **Заметки:** в продукте «вайб» = тег в `topic_tags`; UI не различает группы — только эмодзи в `name`
+
+<details>
+<summary>Мастер-список тегов (кратко — полный в спеке 31)</summary>
+
+**Вайбы:** chill, lampovo, zen, drive, loud, active, aesthetic, romance, premium, underground, speakeasy, retro, smart, trash-fun  
+
+**Аудитория:** date, friends, solo, kids, dog-friendly, networking  
+
+**Утилита:** free, discount, open-air, late-night, new-venue, invite-only  
+
+**Формат на площадке:** live-music, dj-set, karaoke, open-mic, workshop, board-games, cinema-bar, market  
+
+**Гастро:** cocktails, craft-beer, wine, brunch, vegan, street-food, grill, desserts  
+
+**Формат карточки:** fmt-place, fmt-event, fmt-collection, fmt-video, fmt-news, fmt-giveaway  
+
+**Legacy (не удалять):** food, culture, family, nightlife, sport, beauty, tourism, city
+
+</details>
 
 ---
 
@@ -116,7 +151,7 @@
 | — | Mini App tab bar, checkout | §2 | [21](../features/content/21-mini-app-and-web-wireframes.md) |
 | TASK-012 | AI cron: черновик `week-YYYY-wNN` + Groq intro | §6 | [14](../features/content/14-digests-curated-admin-smm.md), [11](../features/content/11-digest-parsing-and-curated-picks.md) |
 
-Индексы брейнштормов: [30.05.2026](../../fix/brainstorm/30.05.2026.md), [31.05.2026](../../fix/brainstorm/31.05.2026.md), [01.06.2026](../../fix/brainstorm/01.06.2026.md).
+Индексы брейнштормов: [30.05.2026](../../fix/brainstorm/30.05.2026.md), [31.05.2026](../../fix/brainstorm/31.05.2026.md), [01.06.2026](../../fix/brainstorm/01.06.2026.md), [02.05.2026](../../fix/brainstorm/02.05.2026.md).
 
 ---
 
@@ -137,4 +172,4 @@
 
 ---
 
-**Последнее обновление:** 02.06.2026 · активных: **0** · отложено: **004–006** · архив: **012** done
+**Последнее обновление:** 02.06.2026 · активных: **013** (`todo`) · отложено: **004–006** · архив: **012** done

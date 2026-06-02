@@ -41,6 +41,7 @@
 | [ ] | Избранное + «Мои планы» + push за сутки | 3 | P1 | низ | [verticals/events-and-venues.md](../verticals/events-and-venues.md) |
 | [ ] | Плашки ОТМЕНЕНО / SOLD OUT (не скрывать карточку) | 2 | P1 | — | [16-parsing-pipeline-extensions.md](../features/content/16-parsing-pipeline-extensions.md) |
 | [ ] | «Позвать друга» (share deep link) | 2 | P2 | низ | [15-event-detail-series-venues.md](../features/content/15-event-detail-series-venues.md) |
+| [ ] | UGC: «Сообщить об отмене/ошибке» (3 флага → скрыть) | 2 | P1 | — | [16-parsing-pipeline-extensions.md](../features/content/16-parsing-pipeline-extensions.md) |
 | [ ] | Карта событий / venues на карте | 4 | P2 | — | [04-features-priority.md](../04-features-priority.md) |
 | [ ] | Тиндер-свайпы для пользователей | 4 | P3 | низ | [14-digests-curated-admin-smm.md](../features/content/14-digests-curated-admin-smm.md) |
 
@@ -54,7 +55,7 @@
 | [x] | Афиша всех событий на странице venue | 2 | P1 | сред | [15-event-detail-series-venues.md](../features/content/15-event-detail-series-venues.md) |
 | [x] | Страница организатора / источника + подписка | 3 | P1 | сред | [15-event-detail-series-venues.md](../features/content/15-event-detail-series-venues.md) |
 | [x] | Теневые профили org из парсера + claim | 4 | P1 | выс | [17-ingest-sources-context.md](../features/content/17-ingest-sources-context.md) |
-| [ ] | Вайб-фильтры («для свидания», «с ноутбуком») | 3 | P2 | — | [verticals/events-and-venues.md](../verticals/events-and-venues.md) |
+| [ ] | Вайб-фильтры и смарт-чипы (мастер-список тегов) | 3 | P1 | — | [31-content-tags-vibes-taxonomy.md](../features/content/31-content-tags-vibes-taxonomy.md) |
 | [x] | Блок обзоров на странице venue | 2 | P2 | — | [30-manager-chat-place-editorial.md](../features/content/30-manager-chat-place-editorial.md) |
 
 ---
@@ -87,6 +88,7 @@
 | [ ] | Groq: каскад 8b/70b + graceful 429 | 2 | P1 | — | [24-mvp-launch-checklist-ulan-ude.md](../features/content/24-mvp-launch-checklist-ulan-ude.md), [11-tech-stack.md](../11-tech-stack.md) |
 | [ ] | VK wall ingest | 3 | P2 | — | [27-ingest-workers-vk-telegram-web.md](../features/content/27-ingest-workers-vk-telegram-web.md) |
 | [ ] | Telegram public: `t.me/s/` HTML worker | 2 | P2 | — | [27-ingest-workers-vk-telegram-web.md](../features/content/27-ingest-workers-vk-telegram-web.md) |
+| [ ] | AI-чек источников перед выходными (404, «отмена» на сайте) | 3 | P1 | — | [16-parsing-pipeline-extensions.md](../features/content/16-parsing-pipeline-extensions.md), [02.05.2026](../../fix/brainstorm/02.05.2026.md) |
 
 ---
 
@@ -128,6 +130,8 @@
 | [ ] | HTML→image экспорт для Instagram | 4 | P2 | сред | [14-digests-curated-admin-smm.md](../features/content/14-digests-curated-admin-smm.md) |
 | [x] | Обзоры/посты о местах через manager chat (AI, видео, org) | 4 | P1 | сред | [30-manager-chat-place-editorial.md](../features/content/30-manager-chat-place-editorial.md) |
 | [x] | Stories через manager chat (слайды, org) | 3 | P1 | выс | [30-manager-chat-place-editorial.md](../features/content/30-manager-chat-place-editorial.md) |
+| [ ] | `topic_tags` на подборках + наследование вайбов в дайджесте | 2 | P1 | — | [31-content-tags-vibes-taxonomy.md](../features/content/31-content-tags-vibes-taxonomy.md) |
+| [ ] | Смарт-лента: фильтр по тегам (events + editorial + lists) | 3 | P1 | — | [31-content-tags-vibes-taxonomy.md](../features/content/31-content-tags-vibes-taxonomy.md) |
 
 ---
 
@@ -139,6 +143,7 @@
 | [x] | Кнопка «Получать подборку в боте» с афиши | 2 | P1 | — | [12-afisha-tag-subscriptions.md](../features/content/12-afisha-tag-subscriptions.md) |
 | [x] | `/subscribe` + callbacks `inuu:notify:*` | 3 | P1 | — | [12-afisha-tag-subscriptions.md](../features/content/12-afisha-tag-subscriptions.md) |
 | [ ] | Push при publish события (match по тегам) | 3 | P1 | выс | [06-bot-digest-subscriptions.md](../features/content/06-bot-digest-subscriptions.md) |
+| [ ] | Подписка «сообщить, когда» (артист / тема / формат) | 3 | P1 | выс | [06-bot-digest-subscriptions.md](../features/content/06-bot-digest-subscriptions.md), [02.05.2026](../../fix/brainstorm/02.05.2026.md) |
 | [ ] | Push при publish подборки / новости | 3 | P1 | сред | [06-bot-digest-subscriptions.md](../features/content/06-bot-digest-subscriptions.md) |
 | [ ] | Напоминания −24ч / −2ч + QR в чате | 2 | P1 | — | [23-bot-roles-ops-support.md](../features/content/23-bot-roles-ops-support.md) |
 | [ ] | AI intent router + NL-консьерж в боте | 4 | P1 | сред | [22-ai-bot-concierge-and-intent.md](../features/content/22-ai-bot-concierge-and-intent.md), [13-ai-content-horizon.md](../features/content/13-ai-content-horizon.md) |
@@ -206,6 +211,7 @@
 | [ ] | EventPass B2C (без серв. сбора, скидка волны) | 3 | P2 | выс | [06-monetization.md](../06-monetization.md) |
 | [ ] | Баннеры / натив в подборках | 3 | P3 | выс | [06-monetization.md](../06-monetization.md) |
 | [ ] | CPA на parsed-события (внешние билеты) | 2 | P2 | сред | [17-ingest-sources-context.md](../features/content/17-ingest-sources-context.md) |
+| [ ] | Last-minute deals (орг → flash-рассылка со скидкой) | 3 | P2 | выс | [06-monetization.md](../06-monetization.md), [02.05.2026](../../fix/brainstorm/02.05.2026.md) |
 | [ ] | ~~Бронь столов~~ | — | — | — | **снято** (брейншторм 30.05) |
 | [ ] | ~~Интеграция такси~~ | — | — | — | **снято** (брейншторм 30.05) |
 
@@ -235,6 +241,10 @@
 | [ ] | Рулетка «случайные выходные» | 2 | P2 | — | [22-ai-bot-concierge-and-intent.md](../features/content/22-ai-bot-concierge-and-intent.md), [20-bot-engagement-backlog.md](../features/content/20-bot-engagement-backlog.md) |
 | [ ] | Нишевые TG-каналы (стратегия «Дерево») | 3 | P3 | сред | [13-ai-content-horizon.md](../features/content/13-ai-content-horizon.md) |
 | [ ] | Stories-матрица автоконтента | 4 | P2 | — | [14-digests-curated-admin-smm.md](../features/content/14-digests-curated-admin-smm.md) |
+| [ ] | Видео-обзоры / рилсы (Max CDN, партнёрка, не парсинг IG) | 4 | P2 | сред | [31-content-tags-vibes-taxonomy.md](../features/content/31-content-tags-vibes-taxonomy.md), [verticals/news-and-editorial.md](../verticals/news-and-editorial.md) |
+| [ ] | Реферальная программа пользователей (амбассадоры) | 3 | P3 | низ | [20-bot-engagement-backlog.md](../features/content/20-bot-engagement-backlog.md), [02.05.2026](../../fix/brainstorm/02.05.2026.md) |
+| [ ] | Сезонные UI-темы Mini App (календарь праздников) | 2 | P3 | — | [21-mini-app-and-web-wireframes.md](../features/content/21-mini-app-and-web-wireframes.md), [02.05.2026](../../fix/brainstorm/02.05.2026.md) |
+| [ ] | Закрытые подборки (студенты / нишевые аудитории) | 2 | P3 | низ | [14-digests-curated-admin-smm.md](../features/content/14-digests-curated-admin-smm.md), [02.05.2026](../../fix/brainstorm/02.05.2026.md) |
 
 ---
 
@@ -242,10 +252,10 @@
 
 | | Кол-во |
 |---|--------|
-| Всего строк | 139 |
+| Всего строк | 149 |
 | `[x]` сделано | 60 |
 | `[~]` в работе | 0 |
-| `[ ]` в плане | 79 |
+| `[ ]` в плане | 89 |
 
 > **Примечание:** `[x]` = есть рабочий код или MVP закрыт по спеке; `[~]` = идёт реализация; `[ ]` = не начато или только спека. Строки «снято» (§11) не входят в «в плане». При расхождении с кодом — править здесь первым делом.
 
@@ -256,4 +266,5 @@
 - [fix/brainstorm/30.05.2026.md](../../fix/brainstorm/30.05.2026.md) — индекс брейншторма 30.05  
 - [fix/brainstorm/31.05.2026.md](../../fix/brainstorm/31.05.2026.md) — индекс брейншторма 31.05 (спеки 21–24)  
 - [fix/brainstorm/01.06.2026.md](../../fix/brainstorm/01.06.2026.md) — индекс 01.06 (спеки 25–29, web pipeline)  
+- [fix/brainstorm/02.05.2026.md](../../fix/brainstorm/02.05.2026.md) — индекс 02.06: вайбы, рилсы Max, лайфстайл-лента  
 - [tracker/TASK-008-web-parsing-pipeline.md](./TASK-008-web-parsing-pipeline.md) — runbook web crawl 008–010

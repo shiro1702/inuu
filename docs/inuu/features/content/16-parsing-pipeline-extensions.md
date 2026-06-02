@@ -1,6 +1,6 @@
 # Расширения конвейера парсинга
 
-**Источник:** брейнштормы [30.05.2026](../../../fix/brainstorm/30.05.2026.md), [01.06.2026](../../../fix/brainstorm/01.06.2026.md).
+**Источник:** брейнштормы [30.05.2026](../../../fix/brainstorm/30.05.2026.md), [01.06.2026](../../../fix/brainstorm/01.06.2026.md), [02.05.2026](../../../fix/brainstorm/02.05.2026.md).
 
 **База:** [08-event-sourcing-and-moderation-pipeline.md](./08-event-sourcing-and-moderation-pipeline.md), [10-telegram-sources-without-bot-access.md](./10-telegram-sources-without-bot-access.md), [25-groq-event-extraction-prompt.md](./25-groq-event-extraction-prompt.md), [27-ingest-workers-vk-telegram-web.md](./27-ingest-workers-vk-telegram-web.md).
 
@@ -45,7 +45,7 @@
 
 ### 4. Теги и категории
 
-- Groq: 1 категория + 1–5 тегов из словаря БД (подставляется в system prompt).
+- Groq: 1 категория + 1–5 тегов из словаря БД (подставляется в system prompt). Мастер-список вайбов: [31-content-tags-vibes-taxonomy.md](./31-content-tags-vibes-taxonomy.md).
 - Редактирование тегов — **только Mini App**, не inline multi-select ([04](./04-telegram-bot-content-moderation.md)).
 
 Approve с рангом: кнопки **«Одобрить (5⭐)»** — один callback (rank + status).
