@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  ingestPostTypeLabel,
   moderationStatusForPostType,
   normalizeIngestPostType,
   shouldSkipPersistForPostType,
@@ -22,6 +23,10 @@ describe('eventIngestPostType', () => {
     expect(moderationStatusForPostType('cancellation', 'pending')).toBe('needs_revision')
     expect(moderationStatusForPostType('update', 'pending')).toBe('needs_revision')
     expect(moderationStatusForPostType('new_event', 'pending')).toBe('pending')
+  })
+
+  it('labels cancellation for moderation cards', () => {
+    expect(ingestPostTypeLabel('cancellation')).toBe('Отмена / закрытие')
   })
 })
 

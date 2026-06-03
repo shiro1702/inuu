@@ -74,6 +74,8 @@ export default defineEventHandler(async (event) => {
       moderationStatus: result.moderationStatus,
       duplicates: result.duplicates,
       persisted: result.persisted,
+      skippedByPostType: result.skippedByPostType === true,
+      ingestPostType: result.ingestPostType ?? null,
       model: result.model,
       latencyMs: result.latencyMs,
       enrichedUrls: result.enrichedUrls,

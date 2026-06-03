@@ -907,6 +907,7 @@ export async function runContentIngest(
     latencyMs: parseOutput.latencyMs,
     enrichedUrls: enriched.enrichedUrls,
     skippedByPrefilter: false,
+    ingestPostType,
   }
 
   if (

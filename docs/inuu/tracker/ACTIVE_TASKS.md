@@ -42,75 +42,24 @@
 
 ## Текущий вектор (03.06.2026)
 
-**Волна 3a в работе:** TASK-004 (источники + runbook) · TASK-005 · TASK-018 — код в репо; backfill/cron smoke — вручную по [TASK-004-ulan-ude-sources-backfill.md](./TASK-004-ulan-ude-sources-backfill.md).
+**Волна 3a закрыта:** TASK-004, 005, 018 → архив.
 
-**Следующая волна 3b:** TASK-019–021 (запланировано ниже) — после закрытия 3a / smoke TASK-004.
+**Следующая волна 3b:** TASK-019–021 (запланировано ниже) — можно брать в активные (лимит 3).
 
 Индексы брейнштормов: [01.06.2026](../../fix/brainstorm/01.06.2026.md), [02.05.2026](../../fix/brainstorm/02.05.2026.md), [03.06.2026](../../fix/brainstorm/03.06.2026.md).
 
 ---
 
-## Активные задачи · Волна 3a
+## Активные задачи
 
-> **Очередь:** 3 задачи · лимит 3 · **TASK-004** size **L**.
-
-### TASK-004 · Каталог источников Улан-Удэ + backfill
-
-- **Статус:** `in_progress`
-- **Размер:** L
-- **Матрица:** §4 Ingestion · §8 «Регистрация источников»
-- **Цель:** whitelist TG/web для Улан-Удэ и первичное наполнение афиши из ingest
-- **Спеки:** [10](../features/content/10-telegram-sources-without-bot-access.md), [17](../features/content/17-ingest-sources-context.md), [TASK-004 runbook](./TASK-004-ulan-ude-sources-backfill.md)
-- **In scope:**
-  - Seed 12–20 TG + 4–6 web (`045_wave3a_ulan_ude_ingest_sources.sql`)
-  - 2 web `cron_enabled` для smoke classifier/rules
-  - Smoke seed ≥15 published events
-  - Runbook backfill userbot + cron
-- **Out of scope:** VK worker, `t.me/s/` отдельный воркер (027), venue editorial (017)
-- **Ключевые файлы:** `supabase/migrations/045_*.sql`, `workers/telegram-userbot/`, `server/api/cron/web-sources-crawl.post.ts`
-- **Критерии готовности:** чеклист в runbook TASK-004
-- **Заметки:** миграция и runbook готовы; осталось — подписка userbot, smoke cron, approve ≥15 из очереди
-
-### TASK-005 · Санитар + TL;DR + vibe на карточках
-
-- **Статус:** `in_progress`
-- **Размер:** M
-- **Матрица:** §4 «AI-санитар» · «TL;DR + vibe emoji»
-- **Цель:** карточка афиши показывает короткий pitch и emoji-вайб из Groq
-- **Спеки:** [22](../features/content/22-ai-bot-concierge-and-intent.md), [16](../features/content/16-parsing-pipeline-extensions.md), [13](../features/content/13-ai-content-horizon.md)
-- **In scope:**
-  - `events.tldr`, `events.vibe_emoji` (`046_events_tldr_vibe.sql`)
-  - Поля в `eventParseSchema` + prompt + publish + `CityEventCard`
-- **Out of scope:** отдельный второй LLM-вызов «санитар», SEO-рерайт страниц
-- **Ключевые файлы:** `eventParseSchema.ts`, `eventParsePrompt.ts`, `contentSubmissionPublish.ts`, `CityEventCard.vue`
-- **Критерии готовности:**
-  - [ ] После approve в БД есть `tldr` или `vibe_emoji` на тестовом событии
-  - [ ] Карточка на `/events` показывает emoji + TL;DR
-- **Заметки:** санитар = те же поля Groq на этапе parse (без второго запроса)
-
-### TASK-018 · Groq event: `publication_date` + `post_type`
-
-- **Статус:** `in_progress`
-- **Размер:** S
-- **Матрица:** §4 `post_type` · Groq `publication_date`
-- **Цель:** парсер различает отмену/перенос/мусор; даты «завтра» от даты поста
-- **Спеки:** [25](../features/content/25-groq-event-extraction-prompt.md), [16](../features/content/16-parsing-pipeline-extensions.md)
-- **In scope:**
-  - `post_type` + `publication_date` в digest JSON
-  - `trash` → skip persist; `cancellation`/`update` → needs_revision + карточка модерации
-- **Out of scope:** авто-отмена события в БД по fuzzy match
-- **Ключевые файлы:** `eventParseSchema.ts`, `groqEventParser.ts`, `contentIngestCore.ts`, `eventIngestPostType.ts`
-- **Критерии готовности:**
-  - [ ] Тестовый JSON `post_type: trash` не создаёт submission
-  - [ ] `cancellation` попадает в очередь с меткой типа поста
-- **Заметки:** `tests/eventIngestPostType.spec.ts`
+> **Слоты свободны** (0/3). Старт 3b: `@ACTIVE_TASKS.md` + взять TASK-019 в `in_progress`.
 
 ---
 
 ## Запланировано · Волна 3b — «Качество ingest + карточка»
 
-> Статус `todo` · **не в лимите 3 активных** · старт после волны 3a (минимум: smoke web cron + первые approve из TASK-004).  
-> Очередь волны: **3 задачи** (по одной в активных или параллельно, если 3a закрыта).
+> Статус `todo` · **не в лимите 3 активных** · старт после волны 3a.  
+> Очередь волны: **3 задачи** (по одной в активных или параллельно).
 
 ### TASK-019 · WebP афиш + Groq cascade 429
 
@@ -195,7 +144,10 @@
 | TASK-006 | Guides + editorial API + dashboard CRUD | 03.06.2026 | `editorialDashboard.ts`, `/guides` |
 | TASK-014 | Read later, venue-блок, scroll beacon | 03.06.2026 | `043`, `044` |
 | TASK-015 | Groq content multiplier | 03.06.2026 | `groqEditorialContentPack.ts` |
+| TASK-004 | Каталог источников Улан-Удэ + backfill | 03.06.2026 | `045_wave3a_ulan_ude_ingest_sources.sql`, [runbook](./TASK-004-ulan-ude-sources-backfill.md) |
+| TASK-005 | Санитар + TL;DR + vibe на карточках | 03.06.2026 | `046_events_tldr_vibe.sql`, `CityEventCard.vue`, Groq parse/publish |
+| TASK-018 | Groq `publication_date` + `post_type` | 03.06.2026 | `eventIngestPostType.ts`, `contentIngestCore.ts`, `tests/eventIngestPostType.spec.ts` |
 
 ---
 
-**Последнее обновление:** 03.06.2026 · активных: **004–005, 018** (3a) · запланировано: **019–021** (3b, `todo`) · бэклог: **3c+**
+**Последнее обновление:** 03.06.2026 · активных: **0** · запланировано: **019–021** (3b, `todo`) · бэклог: **3c+**
