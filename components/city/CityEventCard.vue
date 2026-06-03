@@ -6,12 +6,16 @@
       :to="`${cityBasePath}/events/${event.slug}`"
       class="block"
     >
-      <div
-        v-if="event.cover_media_url"
-        class="aspect-[16/9] bg-cover bg-center"
-        :style="{ backgroundImage: `url(${event.cover_media_url})` }"
-      />
-      <div v-else class="aspect-[16/9] bg-gradient-to-br from-indigo-100 to-violet-50" />
+      <div class="relative w-full overflow-hidden" :style="posterFrameStyle">
+        <img
+          v-if="event.cover_media_url"
+          :src="event.cover_media_url"
+          :alt="event.title"
+          class="absolute inset-0 h-full w-full object-cover object-center"
+          loading="lazy"
+        />
+        <div v-else class="absolute inset-0 bg-gradient-to-br from-indigo-100 to-violet-50" />
+      </div>
       <div class="p-4">
         <p class="text-xs font-medium uppercase tracking-wide text-indigo-600">
           {{ formattedDate }}
@@ -49,6 +53,8 @@
 
 <script setup lang="ts">
 import type { EventCta, EventSaleMode } from '~/types/storefront'
+
+const posterFrameStyle = { aspectRatio: '768 / 480' } as const
 
 const props = defineProps<{
   event: {

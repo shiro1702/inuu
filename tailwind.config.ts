@@ -19,6 +19,10 @@ export default <Partial<Config>>{
         xl: 'var(--radius-modal, 16px)',
         '2xl': 'var(--radius-card, 14px)',
       },
+      aspectRatio: {
+        /** Афиша события: 768×480 px (8:5) */
+        poster: '768 / 480',
+      },
     },
   },
 }

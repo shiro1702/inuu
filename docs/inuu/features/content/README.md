@@ -35,6 +35,7 @@ Seed: `supabase/migrations/019_inuu_seed_ulan_ude.sql`. Редакция как 
 | [14-digests-curated-admin-smm.md](./14-digests-curated-admin-smm.md) | Подборки: admin-тиндер, cron, Stories, SMM export |
 | [15-event-detail-series-venues.md](./15-event-detail-series-venues.md) | Карточка события, серии дат, места, источники |
 | [16-parsing-pipeline-extensions.md](./16-parsing-pipeline-extensions.md) | Userbot, пре-фильтр, post_type, vision |
+| [32-stable-cover-media-pipeline.md](./32-stable-cover-media-pipeline.md) | **Афиши:** mirror в storage, `registration_url`, anti-telesco |
 | [17-ingest-sources-context.md](./17-ingest-sources-context.md) | Web-cron, native/parsed, теневые org |
 | [WEB_URL_PARSER_RU.md](../../runbooks/WEB_URL_PARSER_RU.md) | Runbook: dashboard, добавление URL, pipeline |
 | [18-ticketing-full-flow.md](./18-ticketing-full-flow.md) | Билеты, волны цен, QR, возвраты |
