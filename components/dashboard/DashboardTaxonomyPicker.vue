@@ -32,18 +32,37 @@
       />
       <div
         v-if="openDropdown && (filteredOptions.length || canCreate)"
-        class="absolute z-20 mt-1 max-h-52 w-full overflow-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
+        class="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
       >
-        <button
-          v-for="opt in filteredOptions"
-          :key="opt.slug"
-          type="button"
-          class="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-gray-50"
-          @mousedown.prevent="selectOption(opt)"
-        >
-          <span>{{ opt.name }}</span>
-          <span class="font-mono text-xs text-gray-400">{{ opt.slug }}</span>
-        </button>
+        <template v-if="kind === 'tags' && groupedFilteredOptions.length">
+          <div v-for="group in groupedFilteredOptions" :key="group.id">
+            <p class="sticky top-0 bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-500">
+              {{ group.label }}
+            </p>
+            <button
+              v-for="opt in group.items"
+              :key="opt.slug"
+              type="button"
+              class="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-gray-50"
+              @mousedown.prevent="selectOption(opt)"
+            >
+              <span>{{ opt.name }}</span>
+              <span class="font-mono text-xs text-gray-400">{{ opt.slug }}</span>
+            </button>
+          </div>
+        </template>
+        <template v-else>
+          <button
+            v-for="opt in filteredOptions"
+            :key="opt.slug"
+            type="button"
+            class="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-gray-50"
+            @mousedown.prevent="selectOption(opt)"
+          >
+            <span>{{ opt.name }}</span>
+            <span class="font-mono text-xs text-gray-400">{{ opt.slug }}</span>
+          </button>
+        </template>
         <button
           v-if="canCreate"
           type="button"
@@ -61,7 +80,27 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 
-type TaxonomyItem = { slug: string; name: string }
+type TaxonomyItem = { slug: string; name: string; tagGroup?: string }
+
+const TAG_GROUP_LABELS: Record<string, string> = {
+  vibes: 'Вайб и атмосфера',
+  audience: 'Для кого',
+  utility: 'Условия',
+  format: 'На площадке',
+  gastro: 'Еда и напитки',
+  'content-format': 'Тип контента',
+  legacy: 'Темы',
+}
+
+const TAG_GROUP_ORDER = [
+  'vibes',
+  'audience',
+  'utility',
+  'format',
+  'gastro',
+  'content-format',
+  'legacy',
+]
 
 const props = withDefaults(
   defineProps<{
@@ -136,6 +175,22 @@ const canCreate = computed(() => {
   if (q.length < 2) return false
   const lower = q.toLowerCase()
   return !options.value.some((o) => o.slug === lower || o.name.toLowerCase() === lower)
+})
+
+const groupedFilteredOptions = computed(() => {
+  if (props.kind !== 'tags') return []
+  const byGroup = new Map<string, TaxonomyItem[]>()
+  for (const opt of filteredOptions.value) {
+    const groupId = opt.tagGroup || 'legacy'
+    const list = byGroup.get(groupId) || []
+    list.push(opt)
+    byGroup.set(groupId, list)
+  }
+  return TAG_GROUP_ORDER.filter((id) => byGroup.has(id)).map((id) => ({
+    id,
+    label: TAG_GROUP_LABELS[id] || id,
+    items: byGroup.get(id) || [],
+  }))
 })
 
 async function loadOptions() {

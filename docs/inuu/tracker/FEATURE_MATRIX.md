@@ -55,7 +55,7 @@
 | [x] | Афиша всех событий на странице venue | 2 | P1 | сред | [15-event-detail-series-venues.md](../features/content/15-event-detail-series-venues.md) |
 | [x] | Страница организатора / источника + подписка | 3 | P1 | сред | [15-event-detail-series-venues.md](../features/content/15-event-detail-series-venues.md) |
 | [x] | Теневые профили org из парсера + claim | 4 | P1 | выс | [17-ingest-sources-context.md](../features/content/17-ingest-sources-context.md) |
-| [ ] | Вайб-фильтры и смарт-чипы (мастер-список тегов) | 3 | P1 | — | [31-content-tags-vibes-taxonomy.md](../features/content/31-content-tags-vibes-taxonomy.md) |
+| [x] | Вайб-фильтры и смарт-чипы (мастер-список тегов) | 3 | P1 | — | [31-content-tags-vibes-taxonomy.md](../features/content/31-content-tags-vibes-taxonomy.md) |
 | [x] | Блок обзоров на странице venue | 2 | P2 | — | [30-manager-chat-place-editorial.md](../features/content/30-manager-chat-place-editorial.md) |
 
 ---
@@ -269,9 +269,9 @@
 | | Кол-во |
 |---|--------|
 | Всего строк | 167 |
-| `[x]` сделано | 60 |
-| `[~]` в работе | 3 |
-| `[ ]` в плане | 104 |
+| `[x]` сделано | 61 |
+| `[~]` в работе | 2 |
+| `[ ]` в плане | 103 |
 
 > **Примечание:** `[x]` = есть рабочий код или MVP закрыт по спеке; `[~]` = идёт реализация; `[ ]` = не начато или только спека. Строки «снято» (§11) не входят в «в плане». При расхождении с кодом — править здесь первым делом.
 

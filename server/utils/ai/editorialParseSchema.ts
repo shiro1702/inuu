@@ -94,7 +94,15 @@ export const editorialParseInputSchema = z.object({
   videoUrl: z.string().trim().url().max(2000).optional().nullable(),
   hints: z
     .object({
-      availableTags: z.array(z.string()).optional(),
+      availableTags: z
+        .array(
+          z.object({
+            slug: z.string(),
+            name: z.string(),
+            tagGroup: z.string().optional(),
+          }),
+        )
+        .optional(),
     })
     .optional(),
 })

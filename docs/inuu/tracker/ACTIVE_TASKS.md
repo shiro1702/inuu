@@ -50,7 +50,7 @@
 
 **Закрыто:** TASK-012 — AI-подборки и дайджест недели (cron + Groq).
 
-**Следующий фокус (контент/UX):** TASK-014 — редакционные статьи, read later, публичный guides API (брейншторм [03.06.2026](../../fix/brainstorm/03.06.2026.md)). Параллельно TASK-013 (taxonomy) и TASK-015 (Groq multiplier).
+**Следующий фокус (контент/UX):** TASK-014 — редакционные статьи, read later, публичный guides API (брейншторм [03.06.2026](../../fix/brainstorm/03.06.2026.md)). TASK-015 (Groq multiplier) — whitelist тегов готов (TASK-013).
 
 Индексы брейнштормов: [01.06.2026](../../fix/brainstorm/01.06.2026.md), [02.05.2026](../../fix/brainstorm/02.05.2026.md), [03.06.2026](../../fix/brainstorm/03.06.2026.md).
 
@@ -58,7 +58,7 @@
 
 ## Активные задачи
 
-> **Очередь:** 3 задачи · лимит 3.
+> **Очередь:** 2 задачи · лимит 3.
 
 ### TASK-014 · Редакционные статьи: API, read later, venue-блок
 
@@ -92,41 +92,6 @@
 - **Ключевые файлы:** `server/api/ai/parse-editorial`, manager chat handlers, `server/utils/groqEditorial*.ts`
 - **Критерии готовности:** чеклист в [34](../features/content/34-groq-editorial-content-multiplier.md#критерии-готовности-task-015)
 - **Заметки:** зависит от TASK-013 (whitelist) и TASK-014 (куда публиковать на витрине)
-
-### TASK-013 · Мастер-список тегов-вайбов (taxonomy)
-
-- **Статус:** `todo`
-- **Матрица:** §3 «Вайб-фильтры» · §4 санитар/Groq теги · §6 `topic_tags` на подборках
-- **Цель:** единый словарь «вайбов» (эмодзи + slug) для событий, editorial, подборок и Groq — категории остаются отдельно
-- **Спеки:** [31-content-tags-vibes-taxonomy.md](../features/content/31-content-tags-vibes-taxonomy.md), [12-afisha-tag-subscriptions.md](../features/content/12-afisha-tag-subscriptions.md), [16-parsing-pipeline-extensions.md](../features/content/16-parsing-pipeline-extensions.md)
-- **In scope:**
-  - Seed `city_content_tags` (~50 slug из спеки 31: вайбы, аудитория, утилита, формат, гастро + legacy `food`…`city`)
-  - Промпт Groq: 1 категория + до 5 тегов только из whitelist
-  - `resolveParsedTaxonomy` / `ensureCityContentTags` — новые slug не отбрасываются
-  - `name` в БД с эмодзи для chip'ов на афише
-- **Out of scope:** смарт-лента mixed content, push «сообщить когда», рилсы Max CDN, сезонные CSS-темы, last-minute deals
-- **Ключевые файлы:** `supabase/migrations/`, `server/utils/cityContentTaxonomy.ts`, `server/utils/ai/eventParsePrompt.ts`, `eventParseSchema.ts`
-- **Критерии готовности:** чеклист в [31](../features/content/31-content-tags-vibes-taxonomy.md#критерии-готовности-mvp-таксономии)
-- **Заметки:** в продукте «вайб» = тег в `topic_tags`; UI не различает группы — только эмодзи в `name`
-
-<details>
-<summary>Мастер-список тегов (кратко — полный в спеке 31)</summary>
-
-**Вайбы:** chill, lampovo, zen, drive, loud, active, aesthetic, romance, premium, underground, speakeasy, retro, smart, trash-fun  
-
-**Аудитория:** date, friends, solo, kids, dog-friendly, networking  
-
-**Утилита:** free, discount, open-air, late-night, new-venue, invite-only  
-
-**Формат на площадке:** live-music, dj-set, karaoke, open-mic, workshop, board-games, cinema-bar, market  
-
-**Гастро:** cocktails, craft-beer, wine, brunch, vegan, street-food, grill, desserts  
-
-**Формат карточки:** fmt-place, fmt-event, fmt-collection, fmt-video, fmt-news, fmt-giveaway  
-
-**Legacy (не удалять):** food, culture, family, nightlife, sport, beauty, tourism, city
-
-</details>
 
 ---
 
@@ -204,7 +169,8 @@
 | TASK-010 | parsing_rules fast lane + alerts UI | 01.06.2026 | `webParsingRulesApply.ts`, `scraping_alerts` API, `parsedEvents` in ingest |
 | TASK-011 | Manager chat: обзоры мест, посты и stories | 01.06.2026 | [30-manager-chat-place-editorial.md](../features/content/30-manager-chat-place-editorial.md) |
 | TASK-012 | AI-подборки и дайджест недели | 02.06.2026 | `city-digest.post.ts`, `curatedListSelection.ts`, `groqCuratedListCopy.ts`, `/pick list <slug>` |
+| TASK-013 | Мастер-список тегов-вайбов (taxonomy) | 03.06.2026 | `042_city_content_tags_vibes_seed.sql`, `contentTagCatalog.ts`, grouped UI |
 
 ---
 
-**Последнее обновление:** 03.06.2026 · активных: **013** (`todo`), **014** (`in_progress`), **015** (`todo`) · отложено: **004–006** · архив: **012** done
+**Последнее обновление:** 03.06.2026 · активных: **014** (`in_progress`), **015** (`todo`) · отложено: **004–006** · архив: **012–013** done

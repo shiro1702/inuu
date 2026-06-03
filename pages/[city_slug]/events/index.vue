@@ -22,12 +22,12 @@
         </div>
       </div>
 
-      <div v-if="tags.length">
+      <div v-if="tagGroups.length || tags.length">
         <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
           <p class="text-xs font-medium uppercase tracking-wide text-gray-500">Теги</p>
           <p v-if="tagFilters.length > 1" class="text-xs text-gray-400">показаны события с любым из выбранных</p>
         </div>
-        <div class="flex flex-wrap gap-2">
+        <div class="mb-3">
           <button
             type="button"
             class="rounded-full px-3 py-1.5 text-sm font-medium transition"
@@ -38,23 +38,32 @@
           >
             Все
           </button>
-          <button
-            v-for="tag in tags"
-            :key="tag.slug"
-            type="button"
-            class="inline-flex items-center gap-1.5 rounded-full py-1.5 pl-3 pr-2 text-sm font-medium transition"
-            :class="isTagActive(tag.slug)
-              ? 'bg-indigo-100 text-indigo-800 ring-1 ring-indigo-200'
-              : 'border border-gray-200 bg-white text-gray-700 hover:border-indigo-200 hover:text-indigo-800'"
-            @click="toggleTag(tag.slug)"
-          >
-            <span>#{{ tag.name }}</span>
-            <span
-              class="inline-flex h-4 w-4 items-center justify-center text-base leading-none transition-transform duration-150"
-              :class="isTagActive(tag.slug) ? 'rotate-45' : ''"
-              aria-hidden="true"
-            >+</span>
-          </button>
+        </div>
+        <div
+          v-for="group in tagGroups"
+          :key="group.id"
+          class="mb-3"
+        >
+          <p class="mb-1.5 text-xs font-medium text-gray-500">{{ group.label }}</p>
+          <div class="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+            <button
+              v-for="tag in group.items"
+              :key="tag.slug"
+              type="button"
+              class="inline-flex shrink-0 items-center gap-1.5 rounded-full py-1.5 pl-3 pr-2 text-sm font-medium transition"
+              :class="isTagActive(tag.slug)
+                ? 'bg-indigo-100 text-indigo-800 ring-1 ring-indigo-200'
+                : 'border border-gray-200 bg-white text-gray-700 hover:border-indigo-200 hover:text-indigo-800'"
+              @click="toggleTag(tag.slug)"
+            >
+              <span>{{ tag.name }}</span>
+              <span
+                class="inline-flex h-4 w-4 items-center justify-center text-base leading-none transition-transform duration-150"
+                :class="isTagActive(tag.slug) ? 'rotate-45' : ''"
+                aria-hidden="true"
+              >+</span>
+            </button>
+          </div>
         </div>
 
         <div v-if="tagFilters.length" class="mt-3 flex flex-wrap items-center gap-3">
@@ -104,7 +113,8 @@ import { parseTagSlugsFromQuery } from '~/utils/eventListDisplay'
 
 definePageMeta({ layout: 'city' })
 
-type TagItem = { slug: string; name: string }
+type TagItem = { slug: string; name: string; tagGroup?: string }
+type TagGroup = { id: string; label: string; items: TagItem[] }
 type DatePresetId = 'all' | 'today' | 'tomorrow' | 'week'
 
 const route = useRoute()
@@ -118,6 +128,7 @@ const config = useRuntimeConfig()
 const pending = ref(true)
 const items = ref<Array<Record<string, any>>>([])
 const tags = ref<TagItem[]>([])
+const tagGroups = ref<TagGroup[]>([])
 const subscribedToSelection = ref(false)
 const subscribePending = ref(false)
 const subscribeError = ref('')
@@ -236,12 +247,14 @@ function buildSubscriptionQuery() {
 
 async function loadTags() {
   try {
-    const res = await $fetch<{ ok: boolean; items?: TagItem[] }>(
+    const res = await $fetch<{ ok: boolean; items?: TagItem[]; groups?: TagGroup[] }>(
       `/api/cities/${slug.value}/content-tags`,
     )
     tags.value = res?.items ?? []
+    tagGroups.value = res?.groups?.length ? res.groups : []
   } catch {
     tags.value = []
+    tagGroups.value = []
   }
 }
 

@@ -27,7 +27,7 @@ export default defineEventHandler(async (event) => {
     const taxonomy = await loadCityParseTaxonomy(event, city.id)
     hints = {
       ...hints,
-      availableTags: taxonomy.tags.map((t) => (typeof t === 'string' ? t : t.slug)),
+      availableTags: taxonomy.tags,
     }
   }
 

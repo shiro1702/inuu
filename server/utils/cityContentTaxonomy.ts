@@ -1,8 +1,13 @@
 import type { H3Event } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
-import { EVENT_PARSE_TAGS } from '~/server/utils/ai/eventParseSchema'
+import {
+  getMasterContentTag,
+  isMasterContentTagSlug,
+  masterTagsAsTaxonomy,
+  type TaxonomyTagWithGroup,
+} from '~/server/utils/contentTagCatalog'
 
-export type TaxonomyTag = { slug: string; name: string }
+export type TaxonomyTag = TaxonomyTagWithGroup
 export type TaxonomyCategory = { slug: string; name: string }
 
 export function slugifyTaxonomy(input: string): string {
@@ -32,30 +37,34 @@ function displayNameFromSlug(slug: string): string {
     .join(' ')
 }
 
+function mapRowToTag(row: { slug: string; name?: string; tag_group?: string }): TaxonomyTag {
+  return {
+    slug: String(row.slug),
+    name: String(row.name || row.slug),
+    tagGroup: String(row.tag_group || getMasterContentTag(String(row.slug))?.tagGroup || 'legacy'),
+  }
+}
+
 export async function listCityContentTags(
   event: H3Event,
   cityId: string,
   query?: string,
 ): Promise<TaxonomyTag[]> {
   const client = await serverSupabaseServiceRole(event)
-  let db = client
+  const { data, error } = await client
     .from('city_content_tags')
-    .select('slug,name,sort_order')
+    .select('slug,name,sort_order,tag_group')
     .eq('city_id', cityId)
     .order('sort_order', { ascending: true })
     .order('name', { ascending: true })
     .limit(200)
 
-  const { data, error } = await db
   if (error) {
     console.error('[cityContentTaxonomy] list tags failed:', error)
-    return EVENT_PARSE_TAGS.map((slug) => ({ slug, name: displayNameFromSlug(slug) }))
+    return masterTagsAsTaxonomy()
   }
 
-  let items = (data ?? []).map((row: any) => ({
-    slug: String(row.slug),
-    name: String(row.name || row.slug),
-  }))
+  let items = (data ?? []).map((row: any) => mapRowToTag(row))
 
   const q = String(query || '').trim().toLowerCase()
   if (q) {
@@ -89,12 +98,16 @@ export async function ensureCityContentTags(
   const existingSet = new Set((existing ?? []).map((row: any) => String(row.slug)))
   const toCreate = normalized.filter((slug) => !existingSet.has(slug))
   if (toCreate.length) {
-    const rows = toCreate.map((slug, index) => ({
-      city_id: cityId,
-      slug,
-      name: displayNameFromSlug(slug),
-      sort_order: 1000 + index,
-    }))
+    const rows = toCreate.map((slug, index) => {
+      const master = getMasterContentTag(slug)
+      return {
+        city_id: cityId,
+        slug,
+        name: master?.name || displayNameFromSlug(slug),
+        sort_order: master?.sortOrder ?? 1000 + index,
+        tag_group: master?.tagGroup ?? 'legacy',
+      }
+    })
     const { error } = await client.from('city_content_tags').insert(rows as any)
     if (error) console.error('[cityContentTaxonomy] ensure tags insert:', error)
   }
@@ -111,6 +124,7 @@ export async function createCityContentTag(
   if (slug.length < 2) {
     throw new Error('Tag name is too short')
   }
+  const master = getMasterContentTag(slug)
   const client = await serverSupabaseServiceRole(event)
   const { data, error } = await client
     .from('city_content_tags')
@@ -118,18 +132,19 @@ export async function createCityContentTag(
       {
         city_id: cityId,
         slug,
-        name: name.trim() || displayNameFromSlug(slug),
-        sort_order: 999,
+        name: name.trim() || master?.name || displayNameFromSlug(slug),
+        sort_order: master?.sortOrder ?? 999,
+        tag_group: master?.tagGroup ?? 'legacy',
       } as any,
       { onConflict: 'city_id,slug' },
     )
-    .select('slug,name')
+    .select('slug,name,tag_group')
     .maybeSingle()
 
   if (error || !data) {
     throw new Error(error?.message || 'Failed to create tag')
   }
-  return { slug: String((data as any).slug), name: String((data as any).name) }
+  return mapRowToTag(data as any)
 }
 
 export async function listCityEventCategories(
@@ -250,27 +265,25 @@ export async function resolveParsedTaxonomy(
   cityId: string,
   args: { topicTags: string[]; categorySlug: string | null; contextType?: string | null },
 ): Promise<{ topicTags: string[]; categorySlug: string | null }> {
-  const [tags, categories] = await Promise.all([
-    listCityContentTags(event, cityId),
-    listCityEventCategories(event, cityId),
-  ])
-  const knownTagSlugs = new Set(tags.map((t) => t.slug))
+  const categories = await listCityEventCategories(event, cityId)
   const knownCategorySlugs = new Set(categories.map((c) => c.slug))
 
   let topicTags = Array.from(
     new Set(
       args.topicTags
         .map((x) => slugifyTaxonomy(String(x || '')))
-        .filter((x) => x.length >= 2),
+        .filter((x) => x.length >= 2 && isMasterContentTagSlug(x)),
     ),
-  )
-    .filter((slug) => knownTagSlugs.has(slug))
-    .slice(0, 5)
+  ).slice(0, 5)
 
   if (!topicTags.length) {
     const ctx = String(args.contextType || 'general').trim().toLowerCase()
     const defaults = CONTEXT_DEFAULT_TOPIC_TAGS[ctx] || []
-    topicTags = defaults.filter((slug) => knownTagSlugs.has(slug)).slice(0, 5)
+    topicTags = defaults.filter((slug) => isMasterContentTagSlug(slug)).slice(0, 5)
+  }
+
+  if (topicTags.length) {
+    await ensureCityContentTags(event, cityId, topicTags)
   }
 
   const catSlug = args.categorySlug ? slugifyTaxonomy(args.categorySlug) : null

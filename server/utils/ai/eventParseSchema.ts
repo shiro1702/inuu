@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { MASTER_CONTENT_TAGS } from '~/server/utils/contentTagCatalog'
 import { CONTENT_INTAKE_CHANNELS } from '~/server/utils/contentSubmissionIntake'
 
 export const SOURCE_KINDS = ['bot_submit', 'telegram_parse', 'manual_editor', 'web_cron'] as const
@@ -104,7 +105,13 @@ const eventParseHintsSchema = z
     preferDigest: z.boolean().optional(),
     contextType: z.string().trim().max(32).nullable().optional(),
     availableTags: z
-      .array(z.object({ slug: z.string(), name: z.string() }))
+      .array(
+        z.object({
+          slug: z.string(),
+          name: z.string(),
+          tagGroup: z.string().optional(),
+        }),
+      )
       .max(100)
       .optional(),
     availableCategories: z
@@ -170,13 +177,5 @@ export function detectPreferDigest(rawText: string): boolean {
   return false
 }
 
-export const EVENT_PARSE_TAGS = [
-  'food',
-  'culture',
-  'family',
-  'nightlife',
-  'sport',
-  'beauty',
-  'tourism',
-  'city',
-] as const
+/** @deprecated use MASTER_CONTENT_TAG_SLUGS — kept for imports */
+export const EVENT_PARSE_TAGS = MASTER_CONTENT_TAGS.map((t) => t.slug) as readonly string[]

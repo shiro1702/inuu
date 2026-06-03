@@ -163,7 +163,7 @@ export async function createManagerEditorialDraft(
     coverMediaUrl,
     videoUrl,
     hints: {
-      availableTags: taxonomy.tags.map((t) => (typeof t === 'string' ? t : t.slug)),
+      availableTags: taxonomy.tags,
     },
   })
 

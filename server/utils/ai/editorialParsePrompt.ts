@@ -1,4 +1,5 @@
 import type { EditorialParseInput } from '~/server/utils/ai/editorialParseSchema'
+import { formatTagsForGroqPrompt } from '~/server/utils/contentTagCatalog'
 
 function formatRuDate(d: Date, timeZone: string): { isoDate: string; weekday: string } {
   const isoDate = d.toLocaleDateString('en-CA', { timeZone })
@@ -26,7 +27,7 @@ export function buildEditorialParseSystemPrompt(input: EditorialParseInput): str
     'organization.name — название заведения/организатора из текста; organization.id не заполняй.',
     'venue — конкретное место на карте города, если это обзор заведения.',
     Array.isArray(input.hints?.availableTags) && input.hints.availableTags.length
-      ? `Теги города (выбери 1–5): ${JSON.stringify(input.hints.availableTags)}`
+      ? `topic_tags: выбери 1–5 slug ТОЛЬКО из справочника (по группам):\n${formatTagsForGroqPrompt(input.hints.availableTags)}\nНовые slug запрещены.`
       : '',
   ]
     .filter(Boolean)

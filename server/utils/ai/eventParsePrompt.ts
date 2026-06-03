@@ -1,4 +1,5 @@
 import type { EventParseInput } from '~/server/utils/ai/eventParseSchema'
+import { formatTagsForGroqPrompt } from '~/server/utils/contentTagCatalog'
 import type { IngestContextType } from '~/server/utils/ingestSourcesDashboardShared'
 
 const CONTEXT_PROMPTS: Record<IngestContextType, string> = {
@@ -22,7 +23,10 @@ function resolveContextType(input: EventParseInput): IngestContextType {
 }
 
 export function buildEventParseSystemPrompt(input: EventParseInput): string {
-  const tagList = input.hints?.availableTags?.map((t) => t.slug).join(', ') || ''
+  const availableTags = input.hints?.availableTags || []
+  const tagList = availableTags.length
+    ? formatTagsForGroqPrompt(availableTags)
+    : ''
   const categoryList = input.hints?.availableCategories?.map((c) => c.slug).join(', ') || ''
   const preferDigest = input.hints?.preferDigest === true
   const contextType = resolveContextType(input)
@@ -32,7 +36,7 @@ export function buildEventParseSystemPrompt(input: EventParseInput): string {
     'Запрещено выдумывать факты: если не найдено — ставь null или пустой массив.',
     CONTEXT_PROMPTS[contextType],
     tagList
-      ? `topic_tags: выбери 1–5 slug ТОЛЬКО из справочника [${tagList}]. Новые slug запрещены. Для стендапа/клуба используй nightlife; для культурных событий — culture. Не оставляй topic_tags пустым, если событие явно развлекательное.`
+      ? `topic_tags: выбери 1–5 slug ТОЛЬКО из справочника (по группам):\n${tagList}\nНовые slug запрещены. Для стендапа/клуба — nightlife; для культурных — culture. Не оставляй topic_tags пустым, если событие явно развлекательное.`
       : 'topic_tags: до 5 slug латиницей, только реально подходящие теме.',
     categoryList
       ? `category_slug: один slug ТОЛЬКО из [${categoryList}] или null если ничего не подходит. Новые slug запрещены.`
