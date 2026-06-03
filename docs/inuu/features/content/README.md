@@ -67,7 +67,16 @@ Seed: `supabase/migrations/019_inuu_seed_ulan_ude.sql`. Редакция как 
 |------|------|
 | [31-content-tags-vibes-taxonomy.md](./31-content-tags-vibes-taxonomy.md) | Категории vs теги-вайбы, мастер-список с эмодзи, единый фильтр |
 
-Индекс сырого лога: [fix/brainstorm/30.05.2026.md](../../../fix/brainstorm/30.05.2026.md), [31.05.2026.md](../../../fix/brainstorm/31.05.2026.md), [01.06.2026.md](../../../fix/brainstorm/01.06.2026.md), [02.05.2026.md](../../../fix/brainstorm/02.05.2026.md).
+### Из брейншторма 03.06.2026
+
+| Файл | Тема |
+|------|------|
+| [33-editorial-articles-longreads-retention.md](./33-editorial-articles-longreads-retention.md) | Статьи / лонгриды, read later, блоки, retention-бот |
+| [34-groq-editorial-content-multiplier.md](./34-groq-editorial-content-multiplier.md) | Groq pipeline, content multiplier (6 форматов) |
+| [35-html-carousel-video-studio.md](./35-html-carousel-video-studio.md) | HTML-карусели, шаблоны, client-side video |
+| [36-bot-vibes-editorial-delivery.md](./36-bot-vibes-editorial-delivery.md) | Карусели editorial по вайбам, онбординг, opt-out |
+
+Индекс сырого лога: [fix/brainstorm/30.05.2026.md](../../../fix/brainstorm/30.05.2026.md), [31.05.2026.md](../../../fix/brainstorm/31.05.2026.md), [01.06.2026.md](../../../fix/brainstorm/01.06.2026.md), [02.05.2026.md](../../../fix/brainstorm/02.05.2026.md), [03.06.2026.md](../../../fix/brainstorm/03.06.2026.md).
 
 ## Связанные спеки
 

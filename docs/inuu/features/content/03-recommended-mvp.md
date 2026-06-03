@@ -109,6 +109,18 @@
 | P1 | Intent NL-поиск в боте | [22](./22-ai-bot-concierge-and-intent.md) |
 | P2 | RAG-профиль, голос, группы | [22](./22-ai-bot-concierge-and-intent.md) |
 
+### Фаза 1h — «Статьи, retention, Groq multiplier» (из брейншторма 03.06)
+
+Индекс: [fix/brainstorm/03.06.2026.md](../../../fix/brainstorm/03.06.2026.md).
+
+| Приоритет | Тема | Спека | Задача |
+|-----------|------|--------|--------|
+| P1 | Публичный editorial API, read later, venue-блок | [33](./33-editorial-articles-longreads-retention.md) | TASK-014 |
+| P1 | Groq editorial pipeline + content multiplier | [34](./34-groq-editorial-content-multiplier.md) | TASK-015 |
+| P1 | Taxonomy вайбов (блокер для multiplier) | [31](./31-content-tags-vibes-taxonomy.md) | TASK-013 |
+| P2 | HTML carousel studio + client video | [35](./35-html-carousel-video-studio.md) | backlog |
+| P2 | Доставка editorial по вайбам в TG | [36](./36-bot-vibes-editorial-delivery.md) | backlog |
+
 ### Фаза 3 — «Каналы»
 
 - Автопост в TG при publish  

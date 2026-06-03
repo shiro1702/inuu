@@ -106,6 +106,7 @@
 | [x] | `/pick week\|month` — сбор подборки inline | 3 | P1 | — | [11-digest-parsing-and-curated-picks.md](../features/content/11-digest-parsing-and-curated-picks.md) |
 | [ ] | `/submit` для партнёров (публичная предложка) | 3 | P1 | — | [04-telegram-bot-content-moderation.md](../features/content/04-telegram-bot-content-moderation.md) |
 | [ ] | `/news`, `/event` для редакции (без очереди) | 2 | P2 | — | [05-bot-news-dialog-script.md](../features/content/05-bot-news-dialog-script.md) |
+| [ ] | Groq editorial: forward / URL / voice → preview → publish | 4 | P1 | — | [34-groq-editorial-content-multiplier.md](../features/content/34-groq-editorial-content-multiplier.md), TASK-015 |
 | [ ] | Approve с рангом одной кнопкой «Одобрить 5⭐» | 1 | P2 | — | [16-parsing-pipeline-extensions.md](../features/content/16-parsing-pipeline-extensions.md) |
 | [ ] | Редактирование тегов в Mini App (словарь из БД) | 3 | P1 | — | [16-parsing-pipeline-extensions.md](../features/content/16-parsing-pipeline-extensions.md) |
 | [ ] | Bot helpdesk: forward + reply из admin chat | 3 | P1 | — | [23-bot-roles-ops-support.md](../features/content/23-bot-roles-ops-support.md) |
@@ -121,13 +122,22 @@
 | [x] | Авто-подборка периода при digest approve_all | 2 | P1 | — | [11-digest-parsing-and-curated-picks.md](../features/content/11-digest-parsing-and-curated-picks.md) |
 | [x] | Создание новости в dashboard (`editorial-news`) | 2 | P1 | — | [09-how-to-create-news-and-events.md](../features/content/09-how-to-create-news-and-events.md) |
 | [x] | Словарь `city_content_tags` + CRUD в dashboard | 2 | P1 | — | [implementation/04-dashboard-pages-ai-and-city-ops.md](../implementation/04-dashboard-pages-ai-and-city-ops.md) |
-| [ ] | Публичный API + страницы guides / editorial | 3 | P1 | SEO | [03-recommended-mvp.md](../features/content/03-recommended-mvp.md) |
+| [~] | Публичный API + страницы guides / editorial | 3 | P1 | SEO | [33-editorial-articles-longreads-retention.md](../features/content/33-editorial-articles-longreads-retention.md), TASK-014 |
+| [~] | Статьи: привязка portal vs venue + блок «Упоминания» | 2 | P1 | — | [33-editorial-articles-longreads-retention.md](../features/content/33-editorial-articles-longreads-retention.md), TASK-014 |
+| [~] | «Читать потом» + сохранённое + offline cache | 3 | P1 | — | [33-editorial-articles-longreads-retention.md](../features/content/33-editorial-articles-longreads-retention.md), TASK-014 |
+| [ ] | Конструктор `body_json` (place embed, галерея, цитата) | 3 | P1 | — | [33-editorial-articles-longreads-retention.md](../features/content/33-editorial-articles-longreads-retention.md) |
+| [ ] | Журнал на главной + stories-анонс статьи | 2 | P1 | выс | [33-editorial-articles-longreads-retention.md](../features/content/33-editorial-articles-longreads-retention.md) |
+| [ ] | Маршрут из статьи-подборки (one click) | 3 | P2 | — | [33-editorial-articles-longreads-retention.md](../features/content/33-editorial-articles-longreads-retention.md) |
+| [ ] | UGC-опрос в конце обзора места | 2 | P2 | низ | [33-editorial-articles-longreads-retention.md](../features/content/33-editorial-articles-longreads-retention.md) |
+| [ ] | Scroll depth + weekly editorial report в бот | 2 | P2 | — | [33-editorial-articles-longreads-retention.md](../features/content/33-editorial-articles-longreads-retention.md) |
+| [ ] | Content multiplier: 6 форматов из одной статьи | 3 | P1 | — | [34-groq-editorial-content-multiplier.md](../features/content/34-groq-editorial-content-multiplier.md), TASK-015 |
 | [ ] | Полный CRUD редакции (events, lists, news) в dashboard | 4 | P1 | — | [03-recommended-mvp.md](../features/content/03-recommended-mvp.md) |
 | [ ] | Promo-блоки в подборках (не event) | 3 | P2 | сред | [14-digests-curated-admin-smm.md](../features/content/14-digests-curated-admin-smm.md) |
 | [ ] | Admin «тиндер» для сборки дайджеста | 4 | P2 | — | [14-digests-curated-admin-smm.md](../features/content/14-digests-curated-admin-smm.md) |
 | [x] | Cron авто-черновики дайджестов (праздники, ⭐4–5) | 3 | P2 | — | [14-digests-curated-admin-smm.md](../features/content/14-digests-curated-admin-smm.md) |
 | [x] | Stories города на главной (city stories API → UI) | 3 | P1 | выс | [04-features-priority.md](../04-features-priority.md) |
-| [ ] | HTML→image экспорт для Instagram | 4 | P2 | сред | [14-digests-curated-admin-smm.md](../features/content/14-digests-curated-admin-smm.md) |
+| [ ] | HTML carousel studio (шаблоны Cover/Body/CTA) | 4 | P2 | сред | [35-html-carousel-video-studio.md](../features/content/35-html-carousel-video-studio.md) |
+| [ ] | Client-side video render (WebCodecs + GSAP) | 5 | P3 | — | [35-html-carousel-video-studio.md](../features/content/35-html-carousel-video-studio.md) |
 | [x] | Обзоры/посты о местах через manager chat (AI, видео, org) | 4 | P1 | сред | [30-manager-chat-place-editorial.md](../features/content/30-manager-chat-place-editorial.md) |
 | [x] | Stories через manager chat (слайды, org) | 3 | P1 | выс | [30-manager-chat-place-editorial.md](../features/content/30-manager-chat-place-editorial.md) |
 | [ ] | `topic_tags` на подборках + наследование вайбов в дайджесте | 2 | P1 | — | [31-content-tags-vibes-taxonomy.md](../features/content/31-content-tags-vibes-taxonomy.md) |
@@ -145,6 +155,10 @@
 | [ ] | Push при publish события (match по тегам) | 3 | P1 | выс | [06-bot-digest-subscriptions.md](../features/content/06-bot-digest-subscriptions.md) |
 | [ ] | Подписка «сообщить, когда» (артист / тема / формат) | 3 | P1 | выс | [06-bot-digest-subscriptions.md](../features/content/06-bot-digest-subscriptions.md), [02.05.2026](../../fix/brainstorm/02.05.2026.md) |
 | [ ] | Push при publish подборки / новости | 3 | P1 | сред | [06-bot-digest-subscriptions.md](../features/content/06-bot-digest-subscriptions.md) |
+| [ ] | Карусели editorial по вайбам в TG (media group) | 3 | P1 | выс | [36-bot-vibes-editorial-delivery.md](../features/content/36-bot-vibes-editorial-delivery.md) |
+| [ ] | Read later: пятничный дайджест сохранённых статей | 2 | P1 | — | [33-editorial-articles-longreads-retention.md](../features/content/33-editorial-articles-longreads-retention.md), [06-bot-digest-subscriptions.md](../features/content/06-bot-digest-subscriptions.md) |
+| [ ] | «Меньше такого» в рассылке по вайбам | 2 | P2 | — | [36-bot-vibes-editorial-delivery.md](../features/content/36-bot-vibes-editorial-delivery.md) |
+| [ ] | Онбординг: квиз вайбов при cold start | 2 | P1 | — | [36-bot-vibes-editorial-delivery.md](../features/content/36-bot-vibes-editorial-delivery.md) |
 | [ ] | Напоминания −24ч / −2ч + QR в чате | 2 | P1 | — | [23-bot-roles-ops-support.md](../features/content/23-bot-roles-ops-support.md) |
 | [ ] | AI intent router + NL-консьерж в боте | 4 | P1 | сред | [22-ai-bot-concierge-and-intent.md](../features/content/22-ai-bot-concierge-and-intent.md), [13-ai-content-horizon.md](../features/content/13-ai-content-horizon.md) |
 | [ ] | Голосовые → Whisper (Groq) → intent поиск | 3 | P2 | — | [22-ai-bot-concierge-and-intent.md](../features/content/22-ai-bot-concierge-and-intent.md) |
@@ -186,6 +200,7 @@
 | [ ] | Автовозвраты + waitlist (калькулятор 193-ФЗ) | 4 | P2 | — | [18-ticketing-full-flow.md](../features/content/18-ticketing-full-flow.md) |
 | [ ] | «Поделиться билетом» другу (deep link) | 3 | P2 | низ | [18-ticketing-full-flow.md](../features/content/18-ticketing-full-flow.md) |
 | [ ] | Оплата публикации партнёрской новости (B2B) | 3 | P2 | выс | [07-paid-news-publication.md](../features/content/07-paid-news-publication.md) |
+| [ ] | Платная рассылка editorial по сегменту вайбов | 3 | P2 | выс | [36-bot-vibes-editorial-delivery.md](../features/content/36-bot-vibes-editorial-delivery.md), [07-paid-news-publication.md](../features/content/07-paid-news-publication.md) |
 
 ---
 
@@ -240,22 +255,23 @@
 | [ ] | AI-маршрут на вечер (событие + еда рядом) | 4 | P2 | — | [22-ai-bot-concierge-and-intent.md](../features/content/22-ai-bot-concierge-and-intent.md), [20-bot-engagement-backlog.md](../features/content/20-bot-engagement-backlog.md) |
 | [ ] | Рулетка «случайные выходные» | 2 | P2 | — | [22-ai-bot-concierge-and-intent.md](../features/content/22-ai-bot-concierge-and-intent.md), [20-bot-engagement-backlog.md](../features/content/20-bot-engagement-backlog.md) |
 | [ ] | Нишевые TG-каналы (стратегия «Дерево») | 3 | P3 | сред | [13-ai-content-horizon.md](../features/content/13-ai-content-horizon.md) |
-| [ ] | Stories-матрица автоконтента | 4 | P2 | — | [14-digests-curated-admin-smm.md](../features/content/14-digests-curated-admin-smm.md) |
-| [ ] | Видео-обзоры / рилсы (Max CDN, партнёрка, не парсинг IG) | 4 | P2 | сред | [31-content-tags-vibes-taxonomy.md](../features/content/31-content-tags-vibes-taxonomy.md), [verticals/news-and-editorial.md](../verticals/news-and-editorial.md) |
+| [ ] | Stories-матрица автоконтента | 4 | P2 | — | [14-digests-curated-admin-smm.md](../features/content/14-digests-curated-admin-smm.md), [34-groq-editorial-content-multiplier.md](../features/content/34-groq-editorial-content-multiplier.md) |
+| [ ] | Аудио-версия статьи (TTS) | 3 | P3 | — | [33-editorial-articles-longreads-retention.md](../features/content/33-editorial-articles-longreads-retention.md) |
+| [ ] | Видео-обзоры / рилсы (Max CDN, партнёрка, не парсинг IG) | 4 | P2 | сред | [31-content-tags-vibes-taxonomy.md](../features/content/31-content-tags-vibes-taxonomy.md), [35-html-carousel-video-studio.md](../features/content/35-html-carousel-video-studio.md) |
 | [ ] | Реферальная программа пользователей (амбассадоры) | 3 | P3 | низ | [20-bot-engagement-backlog.md](../features/content/20-bot-engagement-backlog.md), [02.05.2026](../../fix/brainstorm/02.05.2026.md) |
 | [ ] | Сезонные UI-темы Mini App (календарь праздников) | 2 | P3 | — | [21-mini-app-and-web-wireframes.md](../features/content/21-mini-app-and-web-wireframes.md), [02.05.2026](../../fix/brainstorm/02.05.2026.md) |
 | [ ] | Закрытые подборки (студенты / нишевые аудитории) | 2 | P3 | низ | [14-digests-curated-admin-smm.md](../features/content/14-digests-curated-admin-smm.md), [02.05.2026](../../fix/brainstorm/02.05.2026.md) |
 
 ---
 
-## Сводка (на 02.06.2026)
+## Сводка (на 03.06.2026)
 
 | | Кол-во |
 |---|--------|
-| Всего строк | 149 |
+| Всего строк | 167 |
 | `[x]` сделано | 60 |
-| `[~]` в работе | 0 |
-| `[ ]` в плане | 89 |
+| `[~]` в работе | 3 |
+| `[ ]` в плане | 104 |
 
 > **Примечание:** `[x]` = есть рабочий код или MVP закрыт по спеке; `[~]` = идёт реализация; `[ ]` = не начато или только спека. Строки «снято» (§11) не входят в «в плане». При расхождении с кодом — править здесь первым делом.
 
@@ -267,4 +283,5 @@
 - [fix/brainstorm/31.05.2026.md](../../fix/brainstorm/31.05.2026.md) — индекс брейншторма 31.05 (спеки 21–24)  
 - [fix/brainstorm/01.06.2026.md](../../fix/brainstorm/01.06.2026.md) — индекс 01.06 (спеки 25–29, web pipeline)  
 - [fix/brainstorm/02.05.2026.md](../../fix/brainstorm/02.05.2026.md) — индекс 02.06: вайбы, рилсы Max, лайфстайл-лента  
+- [fix/brainstorm/03.06.2026.md](../../fix/brainstorm/03.06.2026.md) — индекс 03.06: статьи, read later, Groq multiplier, HTML studio  
 - [tracker/TASK-008-web-parsing-pipeline.md](./TASK-008-web-parsing-pipeline.md) — runbook web crawl 008–010

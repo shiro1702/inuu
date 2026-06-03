@@ -50,15 +50,48 @@
 
 **Закрыто:** TASK-012 — AI-подборки и дайджест недели (cron + Groq).
 
-**Следующий фокус (контент/UX):** TASK-013 — мастер-список **тегов-вайбов** из [02.05.2026](../../fix/brainstorm/02.05.2026.md).
+**Следующий фокус (контент/UX):** TASK-014 — редакционные статьи, read later, публичный guides API (брейншторм [03.06.2026](../../fix/brainstorm/03.06.2026.md)). Параллельно TASK-013 (taxonomy) и TASK-015 (Groq multiplier).
 
-Индексы брейнштормов: [01.06.2026](../../fix/brainstorm/01.06.2026.md), [02.05.2026](../../fix/brainstorm/02.05.2026.md).
+Индексы брейнштормов: [01.06.2026](../../fix/brainstorm/01.06.2026.md), [02.05.2026](../../fix/brainstorm/02.05.2026.md), [03.06.2026](../../fix/brainstorm/03.06.2026.md).
 
 ---
 
 ## Активные задачи
 
-> **Очередь:** 1 задача · лимит 3.
+> **Очередь:** 3 задачи · лимит 3.
+
+### TASK-014 · Редакционные статьи: API, read later, venue-блок
+
+- **Статус:** `in_progress`
+- **Матрица:** §6 «Публичный API guides» · «Привязка portal vs venue» · «Читать потом»
+- **Цель:** пользователь читает новости/лонгриды на витрине, сохраняет «на потом», видит статьи на карточке venue
+- **Спеки:** [33-editorial-articles-longreads-retention.md](../features/content/33-editorial-articles-longreads-retention.md), [03-recommended-mvp.md](../features/content/03-recommended-mvp.md), [01-news-editorial-options.md](../features/content/01-news-editorial-options.md)
+- **In scope:**
+  - `GET /api/cities/[slug]/editorial` + detail + venue mentions
+  - Страницы `/guides/[slug]`, журнал на главной
+  - `body_json` минимум: paragraph, image, `place_embed`
+  - `user_saved_editorial` + UI «🔖 Читать потом»
+  - Scroll depth events (50% / 100%)
+- **Out of scope:** Groq multiplier (TASK-015), HTML/video studio ([35](../features/content/35-html-carousel-video-studio.md)), пятничный cron бота, offline cache, маршрут one-click, TTS
+- **Ключевые файлы:** `supabase/migrations/`, `server/api/cities/`, `pages/[city_slug]/guides/`, `components/editorial/`
+- **Критерии готовности:** чеклист в [33](../features/content/33-editorial-articles-longreads-retention.md#критерии-готовности-task-014)
+- **Заметки:** поглощает часть отложенного TASK-006 (guides API); dashboard CRUD — отдельно
+
+### TASK-015 · Groq content multiplier в manager chat
+
+- **Статус:** `todo`
+- **Матрица:** §5 «Groq editorial pipeline» · §6 «Content multiplier»
+- **Цель:** админ кидает forward/URL/voice в manager chat → Groq preview → publish editorial + story анонс + текстовый «пак 6 форматов»
+- **Спеки:** [34-groq-editorial-content-multiplier.md](../features/content/34-groq-editorial-content-multiplier.md), [30-manager-chat-place-editorial.md](../features/content/30-manager-chat-place-editorial.md)
+- **In scope:**
+  - Расширить parse-editorial: рерайт, entity match venue, теги из whitelist (TASK-013)
+  - Preview card + кнопки Опубликовать / Пак контента / Отмена
+  - 6 текстовых блоков multiplier в TG
+  - Publish → `editorial_posts` + story campaign link
+- **Out of scope:** PNG/HTML render ([35](../features/content/35-html-carousel-video-studio.md)), vibe TG delivery ([36](../features/content/36-bot-vibes-editorial-delivery.md)), gen-cover AI
+- **Ключевые файлы:** `server/api/ai/parse-editorial`, manager chat handlers, `server/utils/groqEditorial*.ts`
+- **Критерии готовности:** чеклист в [34](../features/content/34-groq-editorial-content-multiplier.md#критерии-готовности-task-015)
+- **Заметки:** зависит от TASK-013 (whitelist) и TASK-014 (куда публиковать на витрине)
 
 ### TASK-013 · Мастер-список тегов-вайбов (taxonomy)
 
@@ -105,7 +138,7 @@
 |----|----------|-----------------|---------------|
 | TASK-004 | Каталог источников Улан-Удэ + backfill | Приоритет: довести web crawl до classifier/rules | **Сейчас** — 008–010 done |
 | TASK-005 | Санитар + TL;DR / vibe на карточках | Не блокирует web pipeline | После первых approve из 004 или параллельно |
-| TASK-006 | Guides + публичный editorial API | Редакционный слой; AI-дайджест → TASK-012 | TASK-004 частично или параллельно 012 |
+| TASK-006 | Guides + публичный editorial API | Редакционный слой; **guides API → TASK-014** | TASK-014 частично или параллельно 015 |
 
 <details>
 <summary>TASK-004 — полный scope (свернуто)</summary>
@@ -141,6 +174,8 @@
 
 | ID / тема | Фокус | Матрица | Спека |
 |-----------|--------|---------|-------|
+| — | HTML carousel + client video studio | §6, §13 | [35](../features/content/35-html-carousel-video-studio.md) |
+| — | Editorial delivery по вайбам в TG | §7 | [36](../features/content/36-bot-vibes-editorial-delivery.md) |
 | — | Groq: `publication_date` + расширенные поля JSON | §4 | [25](../features/content/25-groq-event-extraction-prompt.md) |
 | — | VK wall + `t.me/s/` workers | §4 | [27](../features/content/27-ingest-workers-vk-telegram-web.md) |
 | — | `post_type`: отмена / перенос / sold-out | §4 | [16](../features/content/16-parsing-pipeline-extensions.md) |
@@ -151,7 +186,7 @@
 | — | Mini App tab bar, checkout | §2 | [21](../features/content/21-mini-app-and-web-wireframes.md) |
 | TASK-012 | AI cron: черновик `week-YYYY-wNN` + Groq intro | §6 | [14](../features/content/14-digests-curated-admin-smm.md), [11](../features/content/11-digest-parsing-and-curated-picks.md) |
 
-Индексы брейнштормов: [30.05.2026](../../fix/brainstorm/30.05.2026.md), [31.05.2026](../../fix/brainstorm/31.05.2026.md), [01.06.2026](../../fix/brainstorm/01.06.2026.md), [02.05.2026](../../fix/brainstorm/02.05.2026.md).
+Индексы брейнштормов: [30.05.2026](../../fix/brainstorm/30.05.2026.md), [31.05.2026](../../fix/brainstorm/31.05.2026.md), [01.06.2026](../../fix/brainstorm/01.06.2026.md), [02.05.2026](../../fix/brainstorm/02.05.2026.md), [03.06.2026](../../fix/brainstorm/03.06.2026.md).
 
 ---
 
@@ -172,4 +207,4 @@
 
 ---
 
-**Последнее обновление:** 02.06.2026 · активных: **013** (`todo`) · отложено: **004–006** · архив: **012** done
+**Последнее обновление:** 03.06.2026 · активных: **013** (`todo`), **014** (`in_progress`), **015** (`todo`) · отложено: **004–006** · архив: **012** done

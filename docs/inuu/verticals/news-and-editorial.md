@@ -37,7 +37,11 @@
 
 Варианты инструментов (SQL, dashboard, CMS, бот): **[features/content/01-news-editorial-options.md](../features/content/01-news-editorial-options.md)**.
 
-1. Создание в dashboard редакции или `platform/` (`editorial_posts`, `curated_lists` в Supabase).
+Расширенная модель статей / лонгридов / retention: **[33-editorial-articles-longreads-retention.md](../features/content/33-editorial-articles-longreads-retention.md)** (брейншторм 03.06).
+
+Groq-пайплайн и content multiplier: **[34-groq-editorial-content-multiplier.md](../features/content/34-groq-editorial-content-multiplier.md)**.
+
+1. Создание в dashboard редакции, **manager chat** ([30](../features/content/30-manager-chat-place-editorial.md)) или `platform/` (`editorial_posts`, `curated_lists` в Supabase).
 2. Модерация (при user-generated — позже).
 3. Публикация → главная + TG-канал + опционально IG.
 4. Архив по тегам и `city_id`.
