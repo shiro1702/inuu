@@ -11,6 +11,7 @@ import {
 } from '~/server/utils/contentSubmissionIntake'
 import { formatTopicTagsAsHashtags } from '~/server/utils/ingestSourceDisplayName'
 import { formatDescriptionsForModeration } from '~/server/utils/eventParseDescriptions'
+import { ingestPostTypeLabel, normalizeIngestPostType } from '~/server/utils/eventIngestPostType'
 import { publishContentSubmission } from '~/server/utils/contentSubmissionPublish'
 import {
   buildContentSubmissionEditLinks,
@@ -261,7 +262,14 @@ export function formatContentSubmissionCard(args: {
     })
   }
 
-  const p = args.payload as EventParseResult
+  const p = args.payload as EventParseResult & {
+    ingest_post_type?: string
+    ingest_publication_date?: string | null
+  }
+  const postType = normalizeIngestPostType(p.ingest_post_type)
+  const postTypeLine =
+    postType !== 'new_event' ? `⚠️ Тип поста: ${ingestPostTypeLabel(postType)}` : null
+  const pubLine = p.ingest_publication_date ? `📆 Дата поста: ${p.ingest_publication_date}` : null
   const dates = Array.isArray(p.recurrence?.dates) ? p.recurrence.dates : []
   const dateLine = dates.length
     ? dates.length > 4
@@ -289,6 +297,8 @@ export function formatContentSubmissionCard(args: {
       sourceExternalId: args.sourceExternalId ?? p.source?.external_id,
     }),
     '────────────────',
+    postTypeLine,
+    pubLine,
     String(p.title || 'Без названия'),
     `📅 ${dateLine}`,
     `📍 ${venueName}${venueAddress}`,

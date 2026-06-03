@@ -38,7 +38,7 @@ export default defineEventHandler(async (event) => {
 
   let request = client
     .from('events')
-    .select('id,slug,title,description,excerpt,starts_at,ends_at,price,currency,cover_media_url,is_promoted,venue_id,series_slug,category_id,source_metadata,shop_id,source_channel')
+    .select('id,slug,title,description,excerpt,tldr,vibe_emoji,starts_at,ends_at,price,currency,cover_media_url,is_promoted,venue_id,series_slug,category_id,source_metadata,shop_id,source_channel')
     .eq('city_id', city.id)
     .eq('is_published', true)
     .gte('starts_at', nowIso)

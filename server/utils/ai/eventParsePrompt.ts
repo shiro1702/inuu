@@ -54,6 +54,13 @@ export function buildEventParseSystemPrompt(input: EventParseInput): string {
     'missing_fields: список недостающих полей для модератора на каждое событие.',
     'description_short: 1–2 предложения для карточки (до 280 символов).',
     'description_full: полный текст для страницы события.',
+    'tldr: 1–2 коротких предложения для карточки (до 200 символов), живой тон, без выдуманных фактов; если нечего сказать — null.',
+    'vibe_emoji: 1–3 emoji вайба события (напр. 🎭🔥🍸) или null.',
+    'post_type (на уровне корня JSON): new_event | cancellation | update | trash.',
+    '  trash — реклама, поздравления, розыгрыш без афиши; events: [].',
+    '  cancellation — отмена/распродано; update — перенос/изменение даты; new_event — обычный анонс.',
+    'publication_date: YYYY-MM-DD дата поста в канале, если явно в тексте, иначе null (см. CONTEXT).',
+    'is_past_event: true если все даты события уже прошли относительно current_date в CONTEXT.',
     'Максимум 20 событий в events[].',
   ].filter(Boolean).join('\n')
 }

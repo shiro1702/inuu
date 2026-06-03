@@ -37,6 +37,13 @@ function isMissingEventsSourceColumnsError(error: { code?: string; message?: str
   return msg.includes('source_channel') || msg.includes('source_metadata')
 }
 
+function isMissingEventsTldrColumnError(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false
+  if (error.code === 'PGRST204') return true
+  const msg = String(error.message || '').toLowerCase()
+  return msg.includes('tldr') || msg.includes('vibe_emoji')
+}
+
 export type PublishSubmissionResult = {
   entityType: 'event' | 'editorial_post' | 'story_campaign'
   entityId: string
@@ -277,7 +284,9 @@ async function insertEventRow(args: {
   variants.push(stripEventRowFields(args.row, ['source_channel', 'source_metadata']))
   variants.push(stripEventRowFields(args.row, ['series_slug']))
   variants.push(stripEventRowFields(args.row, ['excerpt']))
+  variants.push(stripEventRowFields(args.row, ['tldr', 'vibe_emoji']))
   variants.push(stripEventRowFields(args.row, ['source_channel', 'source_metadata', 'series_slug', 'excerpt']))
+  variants.push(stripEventRowFields(args.row, ['source_channel', 'source_metadata', 'series_slug', 'excerpt', 'tldr', 'vibe_emoji']))
 
   let lastError: { message?: string } | null = null
   for (const row of variants) {
@@ -295,6 +304,7 @@ async function insertEventRow(args: {
     const retryable = isMissingEventsSourceColumnsError(attempt.error)
       || isMissingEventsSeriesSlugColumnError(attempt.error)
       || isMissingEventsExcerptColumnError(attempt.error)
+      || isMissingEventsTldrColumnError(attempt.error)
     if (!retryable) break
   }
 
@@ -509,9 +519,12 @@ export async function publishContentSubmission(
       : []),
   ].filter((url, i, arr) => arr.indexOf(url) === i)
 
+  const ingestPostType = String((payload as any).ingest_post_type || '').trim() || null
   const sourceMeta = {
     content_submission_id: submission.id,
     source_url: (submission as any).source_url || payload.source?.url || null,
+    ingest_post_type: ingestPostType,
+    ingest_publication_date: (payload as any).ingest_publication_date || null,
     topic_tags: payload.topic_tags || [],
     registration_url: payload.registration_url || null,
     organization_name: payload.organization?.name || null,
@@ -532,6 +545,11 @@ export async function publishContentSubmission(
       title,
       description: descriptionFull || title,
       excerpt: descriptionShort || null,
+      tldr: typeof (payload as any).tldr === 'string' ? String((payload as any).tldr).trim().slice(0, 320) || null : null,
+      vibe_emoji:
+        typeof (payload as any).vibe_emoji === 'string'
+          ? String((payload as any).vibe_emoji).trim().slice(0, 24) || null
+          : null,
       starts_at: startsAt,
       ends_at: null,
       capacity: typeof payload.capacity === 'number' ? payload.capacity : null,

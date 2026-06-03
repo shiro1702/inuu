@@ -7,6 +7,8 @@ export const EVENT_KINDS = ['event', 'masterclass', 'news'] as const
 export const RECURRENCE_RULES = ['none', 'daily', 'weekly', 'monthly', 'custom'] as const
 export const PARSE_KINDS = ['single', 'digest'] as const
 export const DIGEST_PERIODS = ['week', 'month'] as const
+export const INGEST_POST_TYPES = ['new_event', 'cancellation', 'update', 'trash'] as const
+export type IngestPostType = (typeof INGEST_POST_TYPES)[number]
 
 const nullableTrimmedString = z
   .string()
@@ -59,6 +61,9 @@ export const eventParseResultSchema = z.object({
   }),
   confidence: z.number().min(0).max(1),
   missing_fields: z.array(z.string().trim().min(1).max(60)).max(20),
+  tldr: z.string().trim().max(320).nullable().optional().default(null),
+  vibe_emoji: z.string().trim().max(24).nullable().optional().default(null),
+  is_past_event: z.boolean().optional().default(false),
 })
 
 export type EventParseResult = z.infer<typeof eventParseResultSchema>
@@ -74,8 +79,16 @@ export type EventDigestMeta = z.infer<typeof eventDigestMetaSchema>
 
 export const eventDigestParseResultSchema = z.object({
   parse_kind: z.enum(PARSE_KINDS),
+  post_type: z.enum(INGEST_POST_TYPES).default('new_event'),
+  publication_date: z
+    .string()
+    .trim()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .nullable()
+    .optional()
+    .default(null),
   digest: eventDigestMetaSchema.nullable().default(null),
-  events: z.array(eventParseResultSchema).min(1).max(20),
+  events: z.array(eventParseResultSchema).min(0).max(20),
 })
 
 export type EventDigestParseResult = z.infer<typeof eventDigestParseResultSchema>

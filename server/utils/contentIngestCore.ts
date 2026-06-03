@@ -2,7 +2,8 @@ import type { H3Event } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import { evaluateContentPrefilter } from '~/server/utils/ai/contentPrefilter'
 import { parseEventsWithGroq } from '~/server/utils/ai/groqEventParser'
-import type { EventDigestMeta, EventParseInput, EventParseResult } from '~/server/utils/ai/eventParseSchema'
+import type { EventDigestMeta, EventParseInput, EventParseResult, IngestPostType } from '~/server/utils/ai/eventParseSchema'
+import { normalizeIngestPostType, moderationStatusForPostType, shouldSkipPersistForPostType } from '~/server/utils/eventIngestPostType'
 import { writeAiParseLog } from '~/server/utils/ai/aiParseLogs'
 import { enrichRawTextWithUrls } from '~/server/utils/contentUrlEnricher'
 import {
@@ -133,6 +134,8 @@ export type ContentIngestResult = {
   enrichedUrls?: string[]
   skippedByPrefilter?: boolean
   skippedByPastEvent?: boolean
+  skippedByPostType?: boolean
+  ingestPostType?: IngestPostType
 }
 
 async function resolveEventResult(
@@ -176,6 +179,15 @@ async function persistBatchSubmissions(args: PersistBatchArgs): Promise<{
 
   if (args.parseKind === 'single' && args.items[0]) {
     const item = args.items[0]
+    const envelope = args.fullPayload as {
+      post_type?: string
+      publication_date?: string | null
+    }
+    const submissionPayload = {
+      ...item.parse,
+      ingest_post_type: envelope.post_type || 'new_event',
+      ingest_publication_date: envelope.publication_date || null,
+    }
     if (externalId) {
       const { data: existing } = await client
         .from('content_submissions')
@@ -190,7 +202,7 @@ async function persistBatchSubmissions(args: PersistBatchArgs): Promise<{
             .from('content_submissions')
             .update({
               status: item.moderationStatus,
-              payload: item.parse,
+              payload: submissionPayload,
               source_kind: args.sourceKind,
               source_url: args.sourceUrl,
               updated_at: new Date().toISOString(),
@@ -214,7 +226,7 @@ async function persistBatchSubmissions(args: PersistBatchArgs): Promise<{
         city_id: args.cityId,
         kind: 'event',
         status: item.moderationStatus,
-        payload: item.parse,
+        payload: submissionPayload,
         source_kind: args.sourceKind,
         source_url: args.sourceUrl,
         source_external_id: externalId,
@@ -560,6 +572,80 @@ export async function runContentIngest(
   }
 
   const digestResult = parseOutput.result
+  const ingestPostType = normalizeIngestPostType(digestResult.post_type)
+  const ingestPublicationDate = digestResult.publication_date || null
+
+  if (shouldSkipPersistForPostType(ingestPostType)) {
+    await writeAiParseLog(event, {
+      sourceKind: input.sourceKind,
+      sourceUrl: input.sourceUrl ?? null,
+      sourceExternalId: input.sourceExternalId ?? null,
+      citySlug: citySlugHint,
+      model: parseOutput.model,
+      status: 'skipped',
+      latencyMs: parseOutput.latencyMs,
+      errorMessage: 'post_type_trash',
+      payload: { post_type: ingestPostType },
+    })
+    const stampedEmpty = stampEventParse({
+      title: '',
+      description_short: '',
+      description_full: '',
+      description: '',
+      cover_media_url: null,
+      city_slug: citySlugHint,
+      event_kind: 'event',
+      category_slug: null,
+      venue: { name: null, address: null },
+      organization: { name: null },
+      source: {
+        kind: input.sourceKind,
+        url: input.sourceUrl || null,
+        external_id: input.sourceExternalId || null,
+        intake: resolvedIntake,
+      },
+      is_free: false,
+      price_from: null,
+      capacity: null,
+      registration_url: null,
+      topic_tags: [],
+      recurrence: { rule: 'none', dates: [] },
+      confidence: 0,
+      missing_fields: ['post_type_trash'],
+    } as EventParseResult)
+
+    return {
+      city: cityForTaxonomy
+        ? {
+            id: cityForTaxonomy.id,
+            slug: cityForTaxonomy.slug,
+            name: cityForTaxonomy.name,
+            timezone: cityForTaxonomy.timezone,
+          }
+        : {
+            id: '',
+            slug: citySlugHint || '',
+            name: citySlugHint || '',
+            timezone: input.timezone || 'Asia/Irkutsk',
+          },
+      parseKind: 'single',
+      digest: null,
+      events: [],
+      items: [],
+      batchId: null,
+      parentSubmissionId: null,
+      parse: stampedEmpty,
+      moderationStatus: 'needs_revision',
+      duplicates: { checked: false, items: [], seriesMatches: [] },
+      persisted: { ok: false, id: null, warning: 'skipped: post_type trash' },
+      model: parseOutput.model,
+      latencyMs: parseOutput.latencyMs,
+      enrichedUrls: enriched.enrichedUrls,
+      skippedByPostType: true,
+      ingestPostType,
+    }
+  }
+
   const ingestTimezone = input.timezone || cityForTaxonomy?.timezone || 'Asia/Irkutsk'
   const rejectPastEvents = citySlugHint
     ? await resolveCityRejectPastEventsEnabled(event, citySlugHint)
@@ -708,11 +794,14 @@ export async function runContentIngest(
       title: parsed.title,
       dates: parsed.recurrence.dates,
     })
-    const moderationStatus = confidenceStatus({
-      confidence: parsed.confidence,
-      missingFields: parsed.missing_fields,
-      hasDates: parsed.recurrence.dates.length > 0,
-    })
+    const moderationStatus = moderationStatusForPostType(
+      ingestPostType,
+      confidenceStatus({
+        confidence: parsed.confidence,
+        missingFields: parsed.missing_fields,
+        hasDates: parsed.recurrence.dates.length > 0,
+      }),
+    )
     items.push({
       parse: parsed,
       moderationStatus,
@@ -727,6 +816,8 @@ export async function runContentIngest(
 
   const fullPayload = {
     parse_kind: parseKind,
+    post_type: ingestPostType,
+    publication_date: ingestPublicationDate,
     digest,
     events,
     source: {

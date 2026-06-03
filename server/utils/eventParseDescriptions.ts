@@ -67,6 +67,12 @@ export function coerceEventParsePayload(raw: unknown): unknown {
     ? o.missing_fields.map((field) => String(field).trim()).filter(Boolean)
     : []
 
+  const tldrRaw = typeof o.tldr === 'string' ? o.tldr.trim() : ''
+  const tldr = tldrRaw.length >= 8 ? tldrRaw.slice(0, 320) : null
+  const vibeRaw = typeof o.vibe_emoji === 'string' ? o.vibe_emoji.trim() : ''
+  const vibeEmoji = vibeRaw.length >= 1 ? vibeRaw.slice(0, 24) : null
+  const isPastEvent = coerceBoolean(o.is_past_event, false)
+
   return {
     ...o,
     title,
@@ -91,6 +97,9 @@ export function coerceEventParsePayload(raw: unknown): unknown {
     },
     confidence,
     missing_fields: missingFields,
+    tldr,
+    vibe_emoji: vibeEmoji,
+    is_past_event: isPastEvent,
   }
 }
 
@@ -123,10 +132,14 @@ export function resolveSubmissionDescriptions(payload: Record<string, unknown>):
 
 export function formatDescriptionsForModeration(payload: Record<string, unknown>): string[] {
   const { descriptionShort, descriptionFull } = resolveSubmissionDescriptions(payload)
+  const tldr = typeof payload.tldr === 'string' ? payload.tldr.trim() : ''
+  const vibe = typeof payload.vibe_emoji === 'string' ? payload.vibe_emoji.trim() : ''
   const lines = [
+    tldr ? `✨ TL;DR:\n${tldr}` : null,
+    vibe ? `🎭 Вайб: ${vibe}` : null,
     `📝 Кратко (карточка):\n${descriptionShort || '—'}`,
     `📄 Полностью (страница):\n${descriptionFull || '—'}`,
-  ]
+  ].filter(Boolean) as string[]
   const cover = typeof payload.cover_media_url === 'string' ? payload.cover_media_url.trim() : ''
   if (cover) lines.push(`🖼 Обложка: ${cover}`)
   else lines.push('🖼 Обложка: не загружена')

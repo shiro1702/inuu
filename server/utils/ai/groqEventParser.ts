@@ -11,6 +11,7 @@ import {
 } from '~/server/utils/ai/eventParseSchema'
 import { slugifyTaxonomy } from '~/server/utils/cityContentTaxonomy'
 import { buildEventParseSystemPrompt } from '~/server/utils/ai/eventParsePrompt'
+import { formatEventPublicationContext } from '~/server/utils/ai/eventPublicationContext'
 import {
   coerceEventParsePayload,
   normalizeEventParseDescriptions,
@@ -68,6 +69,9 @@ const SINGLE_EVENT_SHAPE = {
   },
   confidence: 0.8,
   missing_fields: ['capacity'],
+  tldr: 'string|null',
+  vibe_emoji: '🎭🔥|null',
+  is_past_event: false,
 }
 
 function buildSystemPrompt(input: EventParseInput) {
@@ -86,11 +90,14 @@ function buildUserPrompt(input: EventParseInput) {
   const categoriesHint = Array.isArray(hints.availableCategories) && hints.availableCategories.length
     ? `KNOWN_CATEGORIES: ${JSON.stringify(hints.availableCategories)}`
     : ''
+  const pub = formatEventPublicationContext(timezone)
 
   return [
     'Верни JSON строго по этой форме:',
     JSON.stringify({
       parse_kind: 'single|digest',
+      post_type: 'new_event|cancellation|update|trash',
+      publication_date: 'YYYY-MM-DD|null',
       digest: {
         title: 'string|null',
         period: 'week|month|null',
@@ -101,6 +108,8 @@ function buildUserPrompt(input: EventParseInput) {
     }),
     '',
     `CONTEXT: timezone=${timezone}`,
+    `CONTEXT: publication_date=${pub.publicationDate} (${pub.publicationWeekday})`,
+    `CONTEXT: current_date=${pub.currentDate} (${pub.currentWeekday})`,
     `CONTEXT: source.kind=${input.sourceKind}`,
     `CONTEXT: source.url=${sourceUrl}`,
     `CONTEXT: source.external_id=${sourceExternalId}`,
@@ -155,17 +164,34 @@ function coerceDigestPayload(raw: unknown, input: EventParseInput): unknown {
   if (!raw || typeof raw !== 'object') return raw
   const o = raw as Record<string, unknown>
 
+  const postType = o.post_type ?? 'new_event'
+  const publicationDate = o.publication_date ?? null
+
   if (Array.isArray(o.events) && o.events.length > 0) {
     return {
       parse_kind: o.parse_kind === 'digest' ? 'digest' : (o.events.length > 1 ? 'digest' : 'single'),
+      post_type: postType,
+      publication_date: publicationDate,
       digest: o.digest ?? null,
       events: o.events.map((ev) => coerceEventParsePayload(ev)),
+    }
+  }
+
+  if (o.post_type === 'trash' || (Array.isArray(o.events) && o.events.length === 0 && o.post_type)) {
+    return {
+      parse_kind: 'single',
+      post_type: postType,
+      publication_date: publicationDate,
+      digest: null,
+      events: [],
     }
   }
 
   if (typeof o.title === 'string') {
     return {
       parse_kind: 'single',
+      post_type: postType,
+      publication_date: publicationDate,
       digest: null,
       events: [coerceEventParsePayload(o)],
     }

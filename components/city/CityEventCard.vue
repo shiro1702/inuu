@@ -18,6 +18,7 @@
       </div>
       <div class="p-4">
         <p class="text-xs font-medium uppercase tracking-wide text-indigo-600">
+          <span v-if="event.vibe_emoji" class="mr-1 normal-case">{{ event.vibe_emoji }}</span>
           {{ formattedDate }}
           <span v-if="seriesDateCount > 1" class="normal-case text-indigo-500">
             · ещё {{ seriesDateCount - 1 }} {{ datesLabel }}
@@ -62,6 +63,8 @@ const props = defineProps<{
     title: string
     description?: string | null
     excerpt?: string | null
+    tldr?: string | null
+    vibe_emoji?: string | null
     starts_at: string
     price?: number
     cover_media_url?: string | null
@@ -74,7 +77,7 @@ const props = defineProps<{
 const { cityBasePath } = useCity()
 
 const cardDescription = computed(() =>
-  String(props.event.excerpt || props.event.description || '').trim(),
+  String(props.event.tldr || props.event.excerpt || props.event.description || '').trim(),
 )
 
 const seriesDateCount = computed(() => Math.max(1, Number(props.event.series_date_count) || 1))
