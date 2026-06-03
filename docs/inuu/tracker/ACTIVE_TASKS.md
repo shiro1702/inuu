@@ -40,103 +40,144 @@
 
 ---
 
-## Текущий вектор (01.06.2026)
+## Текущий вектор (03.06.2026)
 
-**Волна 2b закрыта** (TASK-008–010): classifier → router → cheerio fast lane + `scraping_alerts`. Runbook: [TASK-008-web-parsing-pipeline.md](./TASK-008-web-parsing-pipeline.md).
+**Волна 3a в работе:** TASK-004 (источники + runbook) · TASK-005 · TASK-018 — код в репо; backfill/cron smoke — вручную по [TASK-004-ulan-ude-sources-backfill.md](./TASK-004-ulan-ude-sources-backfill.md).
 
-**Следующий фокус:** вернуть **TASK-004** (каталог источников Улан-Удэ) после smoke на 2 `cron_enabled` URL и `NUXT_WEB_CLASSIFIER_ENABLED=true` на dev.
-
-**Отложено:** TASK-005 (санитар/TL;DR).
-
-**Закрыто:** TASK-012 — AI-подборки и дайджест недели (cron + Groq).
-
-**Закрыто:** TASK-006 — guides, публичный editorial API, dashboard CRUD `editorial-news`.
-
-**Бэклог:** TASK-017 (venue announcements из ingest) · спека маршрутов — [37-ingest-editorial-routing.md](../features/content/37-ingest-editorial-routing.md) (TASK-016).
+**Следующая волна 3b:** TASK-019–021 (запланировано ниже) — после закрытия 3a / smoke TASK-004.
 
 Индексы брейнштормов: [01.06.2026](../../fix/brainstorm/01.06.2026.md), [02.05.2026](../../fix/brainstorm/02.05.2026.md), [03.06.2026](../../fix/brainstorm/03.06.2026.md).
 
 ---
 
-## Активные задачи
+## Активные задачи · Волна 3a
 
-> **Очередь:** 0 задач · лимит 3. Следующий фокус — **TASK-004** (см. [Отложено](#отложено-волна-2a--контент--наполнение)).
+> **Очередь:** 3 задачи · лимит 3 · **TASK-004** size **L**.
 
----
+### TASK-004 · Каталог источников Улан-Удэ + backfill
 
-## Отложено (волна 2a — контент / наполнение)
-
-> Статус `paused` · не считаются в лимите 3 активных · в матрице остаются `[ ]`.
-
-| ID | Название | Почему отложено | Вернуть когда |
-|----|----------|-----------------|---------------|
-| TASK-004 | Каталог источников Улан-Удэ + backfill | Приоритет: довести web crawl до classifier/rules | **Сейчас** — 008–010 done |
-| TASK-005 | Санитар + TL;DR / vibe на карточках | Не блокирует web pipeline | После первых approve из 004 или параллельно |
-
-<details>
-<summary>TASK-004 — полный scope (свернуто)</summary>
-
+- **Статус:** `in_progress`
+- **Размер:** L
 - **Матрица:** §4 Ingestion · §8 «Регистрация источников»
-- **Спеки:** [10](../features/content/10-telegram-sources-without-bot-access.md), [17](../features/content/17-ingest-sources-context.md)
-- **In scope:** seed 12–20 TG + 4–6 web, backfill userbot, ≥15 published events
-- **Критерии:** см. историю в git до 01.06.2026
+- **Цель:** whitelist TG/web для Улан-Удэ и первичное наполнение афиши из ingest
+- **Спеки:** [10](../features/content/10-telegram-sources-without-bot-access.md), [17](../features/content/17-ingest-sources-context.md), [TASK-004 runbook](./TASK-004-ulan-ude-sources-backfill.md)
+- **In scope:**
+  - Seed 12–20 TG + 4–6 web (`045_wave3a_ulan_ude_ingest_sources.sql`)
+  - 2 web `cron_enabled` для smoke classifier/rules
+  - Smoke seed ≥15 published events
+  - Runbook backfill userbot + cron
+- **Out of scope:** VK worker, `t.me/s/` отдельный воркер (027), venue editorial (017)
+- **Ключевые файлы:** `supabase/migrations/045_*.sql`, `workers/telegram-userbot/`, `server/api/cron/web-sources-crawl.post.ts`
+- **Критерии готовности:** чеклист в runbook TASK-004
+- **Заметки:** миграция и runbook готовы; осталось — подписка userbot, smoke cron, approve ≥15 из очереди
 
-</details>
+### TASK-005 · Санитар + TL;DR + vibe на карточках
 
-<details>
-<summary>TASK-005 — полный scope (свернуто)</summary>
+- **Статус:** `in_progress`
+- **Размер:** M
+- **Матрица:** §4 «AI-санитар» · «TL;DR + vibe emoji»
+- **Цель:** карточка афиши показывает короткий pitch и emoji-вайб из Groq
+- **Спеки:** [22](../features/content/22-ai-bot-concierge-and-intent.md), [16](../features/content/16-parsing-pipeline-extensions.md), [13](../features/content/13-ai-content-horizon.md)
+- **In scope:**
+  - `events.tldr`, `events.vibe_emoji` (`046_events_tldr_vibe.sql`)
+  - Поля в `eventParseSchema` + prompt + publish + `CityEventCard`
+- **Out of scope:** отдельный второй LLM-вызов «санитар», SEO-рерайт страниц
+- **Ключевые файлы:** `eventParseSchema.ts`, `eventParsePrompt.ts`, `contentSubmissionPublish.ts`, `CityEventCard.vue`
+- **Критерии готовности:**
+  - [ ] После approve в БД есть `tldr` или `vibe_emoji` на тестовом событии
+  - [ ] Карточка на `/events` показывает emoji + TL;DR
+- **Заметки:** санитар = те же поля Groq на этапе parse (без второго запроса)
 
-- **Матрица:** §4 санитар · TL;DR + vibe
-- **Спеки:** [22](../features/content/22-ai-bot-concierge-and-intent.md), [16](../features/content/16-parsing-pipeline-extensions.md)
-- **In scope:** `events.tldr`, `vibe_emoji`, enrich после Groq, `CityEventCard`
+### TASK-018 · Groq event: `publication_date` + `post_type`
 
-</details>
+- **Статус:** `in_progress`
+- **Размер:** S
+- **Матрица:** §4 `post_type` · Groq `publication_date`
+- **Цель:** парсер различает отмену/перенос/мусор; даты «завтра» от даты поста
+- **Спеки:** [25](../features/content/25-groq-event-extraction-prompt.md), [16](../features/content/16-parsing-pipeline-extensions.md)
+- **In scope:**
+  - `post_type` + `publication_date` в digest JSON
+  - `trash` → skip persist; `cancellation`/`update` → needs_revision + карточка модерации
+- **Out of scope:** авто-отмена события в БД по fuzzy match
+- **Ключевые файлы:** `eventParseSchema.ts`, `groqEventParser.ts`, `contentIngestCore.ts`, `eventIngestPostType.ts`
+- **Критерии готовности:**
+  - [ ] Тестовый JSON `post_type: trash` не создаёт submission
+  - [ ] `cancellation` попадает в очередь с меткой типа поста
+- **Заметки:** `tests/eventIngestPostType.spec.ts`
 
 ---
 
-## Бэклог волны 3 (не активно)
+## Запланировано · Волна 3b — «Качество ingest + карточка»
+
+> Статус `todo` · **не в лимите 3 активных** · старт после волны 3a (минимум: smoke web cron + первые approve из TASK-004).  
+> Очередь волны: **3 задачи** (по одной в активных или параллельно, если 3a закрыта).
+
+### TASK-019 · WebP афиш + Groq cascade 429
+
+- **Статус:** `todo`
+- **Размер:** M
+- **Матрица:** §4 «Сжатие афиш WebP» · «Groq: каскад 8b/70b + graceful 429»
+- **Цель:** лёгкие обложки при ingest и устойчивый парсинг при лимитах Groq
+- **Спеки:** [24-mvp-launch-checklist-ulan-ude.md](../features/content/24-mvp-launch-checklist-ulan-ude.md), [11-tech-stack.md](../11-tech-stack.md)
+- **In scope:**
+  - Сжатие cover → WebP при ingest (цель < 300 KB)
+  - Fallback модели / retry при 429 в `groqEventParser`
+  - Логирование в `ai_parse_logs` при деградации
+- **Out of scope:** CDN отдельно от Storage, платный резервный провайдер
+- **Ключевые файлы:** `server/utils/contentCoverMedia.ts`, `server/utils/ai/groqEventParser.ts`, ingest publish path
+- **Критерии готовности:**
+  - [ ] Новый ingest сохраняет WebP URL (или webp mime) в `cover_media_url`
+  - [ ] При 429 парсинг не падает 500 — очередь/лог с понятным warning
+- **Заметки:** зависит от стабильного ingest (TASK-004)
+
+### TASK-020 · Отмена / перенос / SOLD OUT на витрине
+
+- **Статус:** `todo`
+- **Размер:** M
+- **Матрица:** §2 «Плашки ОТМЕНЕНО / SOLD OUT» · §4 `post_type` (UI)
+- **Цель:** пользователь видит статус события, карточка не исчезает молча
+- **Спеки:** [16-parsing-pipeline-extensions.md](../features/content/16-parsing-pipeline-extensions.md), [15-event-detail-series-venues.md](../features/content/15-event-detail-series-venues.md)
+- **In scope:**
+  - Поле статуса на `events` (или `source_metadata`) из `post_type` update/cancellation
+  - Плашки на `CityEventCard` и детальной странице
+  - Модерация: кнопка «Отменить в базе» (MVP — ручной approve → `is_cancelled` / скрытие CTA)
+- **Out of scope:** fuzzy auto-match отмены по тексту без модератора (расширение TASK-018)
+- **Ключевые файлы:** `supabase/migrations/`, `CityEventCard.vue`, `pages/[city_slug]/events/[eventSlug].vue`, `contentSubmissionPublish.ts`
+- **Критерии готовности:**
+  - [ ] Событие с флагом отмены показывает плашку «Отменено»
+  - [ ] Sold out / перенос — отдельная плашка или бейдж на карточке
+- **Заметки:** опирается на `post_type` из TASK-018
+
+### TASK-021 · AI-чек источников перед выходными
+
+- **Статус:** `todo`
+- **Размер:** M
+- **Матрица:** §4 «AI-чек источников (404, отмена на сайте)»
+- **Цель:** менеджер видит расхождения афиши на сайте источника и в базе до выходных
+- **Спеки:** [16-parsing-pipeline-extensions.md](../features/content/16-parsing-pipeline-extensions.md), [02.05.2026](../../fix/brainstorm/02.05.2026.md)
+- **In scope:**
+  - Cron или ручной триггер: re-fetch whitelisted web sources
+  - Сравнение «событие ещё в афише» vs опубликовано у нас
+  - Запись в `scraping_alerts` / уведомление в manager chat
+- **Out of scope:** полный мониторинг всех внешних сайтов, VK
+- **Ключевые файлы:** `server/api/cron/`, `scrapingAlerts.ts`, `web-sources-crawl.post.ts`, dashboard alerts UI
+- **Критерии готовности:**
+  - [ ] Тестовый 404/«отмена» на странице источника → alert в dashboard
+  - [ ] Runbook: когда запускать (чт–пт перед выходными)
+- **Заметки:** после стабильного web cron (TASK-004 + 008–010)
+
+---
+
+## Бэклог волны 3c+ (не активно)
 
 | ID / тема | Фокус | Матрица | Спека |
 |-----------|--------|---------|-------|
+| 3c | `topic_tags` на подборках + смарт-лента | §6 | [31](../features/content/31-content-tags-vibes-taxonomy.md) |
+| 3c | Push при publish события | §7 | [06](../features/content/06-bot-digest-subscriptions.md) |
+| 3d | Read later: пятничный дайджест в боте | §7 | [33](../features/content/33-editorial-articles-longreads-retention.md) |
 | — | HTML carousel + client video studio | §6, §13 | [35](../features/content/35-html-carousel-video-studio.md) |
-| — | Editorial delivery по вайбам в TG | §7 | [36](../features/content/36-bot-vibes-editorial-delivery.md) |
-| — | Groq: `publication_date` + расширенные поля JSON | §4 | [25](../features/content/25-groq-event-extraction-prompt.md) |
-| — | VK wall + `t.me/s/` workers | §4 | [27](../features/content/27-ingest-workers-vk-telegram-web.md) |
-| — | `post_type`: отмена / перенос / sold-out | §4 | [16](../features/content/16-parsing-pipeline-extensions.md) |
-| TASK-017 | Venue announcements из привязанных TG-источников | §4 | [37](../features/content/37-ingest-editorial-routing.md), TASK-017 |
-| — | Cross-platform Share (TG/MAX/Web) | §2 | [28](../features/content/28-omnichannel-share-and-tma-funnel.md) |
-| — | NLP admin Tool Calling | §5 / §10 | [29](../features/content/29-nlp-admin-and-organizer-agent.md) |
-| — | Сжатие афиш WebP при ingest | §4 | [24](../features/content/24-mvp-launch-checklist-ulan-ude.md) |
-| — | Bot: QR + helpdesk + scanner | §5, §9 | [23](../features/content/23-bot-roles-ops-support.md) |
-| — | Mini App tab bar, checkout | §2 | [21](../features/content/21-mini-app-and-web-wireframes.md) |
-| TASK-012 | AI cron: черновик `week-YYYY-wNN` + Groq intro | §6 | [14](../features/content/14-digests-curated-admin-smm.md), [11](../features/content/11-digest-parsing-and-curated-picks.md) |
-
-Индексы брейнштормов: [30.05.2026](../../fix/brainstorm/30.05.2026.md), [31.05.2026](../../fix/brainstorm/31.05.2026.md), [01.06.2026](../../fix/brainstorm/01.06.2026.md), [02.05.2026](../../fix/brainstorm/02.05.2026.md), [03.06.2026](../../fix/brainstorm/03.06.2026.md).
-
-<details>
-<summary>TASK-017 — Venue announcements из привязанных ingest-источников</summary>
-
-### TASK-017 · Venue announcements из привязанных ingest-источников
-- **Статус:** `todo`
-- **Матрица:** §4 Ingestion · «Venue announcements из привязанных TG ingest-источников»
-- **Цель:** Точечно подтягивать анонсы заведения (не городской журнал) из каналов с `organization_id`, с модерацией и публикацией на карточку venue + guides.
-- **Спеки:** [37-ingest-editorial-routing.md](../features/content/37-ingest-editorial-routing.md), [17-ingest-sources-context.md](../features/content/17-ingest-sources-context.md), [30-manager-chat-place-editorial.md](../features/content/30-manager-chat-place-editorial.md)
-- **In scope:**
-  - Флаг на `city_telegram_sources` (только org-linked)
-  - Ветка ingest → editorial submission без дат события
-  - Publish: `editorial_posts`, `post_type: announcement`, `linked_entity_*` → venue
-  - Модерация без строки «📅 …»; дедуп с `events`
-  - Показ: venue editorial API + опц. `/guides` с бейджем «от организатора»
-- **Out of scope:** массовые городские news из ingest; longread / `body_json` из cron; web-cron MVP; замена manager chat
-- **Ключевые файлы:** `contentIngestCore.ts`, `groqEventParser.ts` или отдельный classifier, `contentSubmissionPublish.ts`, `inuuContentModeration.ts`, `pages/[city_slug]/venues/[slug].vue`
-- **Критерии готовности:**
-  - [ ] Источник без `organization_id` не создаёт venue editorial submission
-  - [ ] Тестовый пост «открытие» → pending → approve → виден на venue и в guides
-  - [ ] Афиша с датой остаётся в `events`
-  - [ ] FEATURE_MATRIX: `[x]` для строки venue announcements
-- **Заметки:** Желательно после или отдельным чатом от `post_type` cancellation ([16](../features/content/16-parsing-pipeline-extensions.md)).
-
-</details>
+| TASK-017 | Venue announcements из ingest | §4 | [37](../features/content/37-ingest-editorial-routing.md) |
+| — | Cross-platform Share | §2 | [28](../features/content/28-omnichannel-share-and-tma-funnel.md) |
 
 ---
 
@@ -148,18 +189,13 @@
 | TASK-003 | Публичные org/venue и афиша на витрине | 31.05.2026 | [TASK-003-public-org-venue-storefront.md](./TASK-003-public-org-venue-storefront.md) |
 | TASK-001 | Пре-фильтр + context_type + strict tags в Groq | 31.05.2026 | `contentPrefilter.ts`, `eventParsePrompt.ts`, `036_city_ingest_sources.sql` |
 | TASK-002 | Web CRON + shadow org (plain text MVP) | 31.05.2026 | `web-sources-crawl.post.ts`, `ingestShadowOrg.ts`, `vercel.json` |
-| TASK-007 | Dashboard: ingest-источники (web cron, TG, shadow org) | 31.05.2026 | `DashboardIngestSourcesPanel.vue`, ingest-sources API, `038_city_telegram_sources_org.sql` |
-| TASK-008 | Web ingest: схема + HTML sanitize | 01.06.2026 | `039_web_parsing_strategy.sql`, `webPageSanitizer.ts`, `webPageFetch.ts` |
-| TASK-009 | Groq classifier + router в web cron | 01.06.2026 | `groqWebPageClassifier.ts`, `webCrawlRouter.ts`, `NUXT_WEB_CLASSIFIER_ENABLED` |
-| TASK-010 | parsing_rules fast lane + alerts UI | 01.06.2026 | `webParsingRulesApply.ts`, `scraping_alerts` API, `parsedEvents` in ingest |
-| TASK-011 | Manager chat: обзоры мест, посты и stories | 01.06.2026 | [30-manager-chat-place-editorial.md](../features/content/30-manager-chat-place-editorial.md) |
-| TASK-012 | AI-подборки и дайджест недели | 02.06.2026 | `city-digest.post.ts`, `curatedListSelection.ts`, `groqCuratedListCopy.ts`, `/pick list <slug>` |
-| TASK-013 | Мастер-список тегов-вайбов (taxonomy) | 03.06.2026 | `042_city_content_tags_vibes_seed.sql`, `contentTagCatalog.ts`, grouped UI |
-| TASK-014 | Редакционные статьи: API, read later, venue-блок | 03.06.2026 | `043_editorial_retention.sql`, `044_editorial_guides_seed.sql`, `/guides`, `user_saved_editorial` |
-| TASK-015 | Groq content multiplier в manager chat | 03.06.2026 | `groqEditorialContentPack.ts`, `groqWhisperTranscribe.ts`, `inuu:mgr:publish|pack` |
-| TASK-006 | Guides + публичный editorial API + dashboard CRUD | 03.06.2026 | `editorialDashboard.ts`, `editorial-news` GET/PUT, `/guides`, `044` seed |
-| TASK-016 | Спека ingest → editorial (политика, маршруты публикации) | 03.06.2026 | [37-ingest-editorial-routing.md](../features/content/37-ingest-editorial-routing.md) |
+| TASK-007 | Dashboard: ingest-источники | 31.05.2026 | `DashboardIngestSourcesPanel.vue` |
+| TASK-008–010 | Web pipeline classifier/rules | 01.06.2026 | [TASK-008-web-parsing-pipeline.md](./TASK-008-web-parsing-pipeline.md) |
+| TASK-011–016 | Manager chat, digest, taxonomy, editorial routing spec | 03.06.2026 | см. архив в git |
+| TASK-006 | Guides + editorial API + dashboard CRUD | 03.06.2026 | `editorialDashboard.ts`, `/guides` |
+| TASK-014 | Read later, venue-блок, scroll beacon | 03.06.2026 | `043`, `044` |
+| TASK-015 | Groq content multiplier | 03.06.2026 | `groqEditorialContentPack.ts` |
 
 ---
 
-**Последнее обновление:** 03.06.2026 · активных: **0** · отложено: **004–005** · бэклог: **017** · архив: **006–016** done
+**Последнее обновление:** 03.06.2026 · активных: **004–005, 018** (3a) · запланировано: **019–021** (3b, `todo`) · бэклог: **3c+**
