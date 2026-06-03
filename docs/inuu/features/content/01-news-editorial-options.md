@@ -2,6 +2,8 @@
 
 **Новость** здесь — материал редакции: анонс, обзор, рекомендация («куда сходить»), не парсинг СМИ. Целевая таблица: `editorial_posts` (+ подборки `curated_lists`).
 
+Маршруты ingest vs editorial: [37-ingest-editorial-routing.md](./37-ingest-editorial-routing.md).
+
 ---
 
 ## Что уже заложено в модели

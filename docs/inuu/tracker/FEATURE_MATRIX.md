@@ -89,6 +89,8 @@
 | [ ] | VK wall ingest | 3 | P2 | — | [27-ingest-workers-vk-telegram-web.md](../features/content/27-ingest-workers-vk-telegram-web.md) |
 | [ ] | Telegram public: `t.me/s/` HTML worker | 2 | P2 | — | [27-ingest-workers-vk-telegram-web.md](../features/content/27-ingest-workers-vk-telegram-web.md) |
 | [ ] | AI-чек источников перед выходными (404, «отмена» на сайте) | 3 | P1 | — | [16-parsing-pipeline-extensions.md](../features/content/16-parsing-pipeline-extensions.md), [02.05.2026](../../fix/brainstorm/02.05.2026.md) |
+| [x] | Политика ingest → editorial (спека маршрутов публикации) | 1 | P2 | — | [37-ingest-editorial-routing.md](../features/content/37-ingest-editorial-routing.md), TASK-016 |
+| [ ] | Venue announcements из привязанных TG ingest-источников | 3 | P2 | — | [37-ingest-editorial-routing.md](../features/content/37-ingest-editorial-routing.md), TASK-017 |
 
 ---
 
@@ -268,10 +270,10 @@
 
 | | Кол-во |
 |---|--------|
-| Всего строк | 167 |
-| `[x]` сделано | 67 |
+| Всего строк | 169 |
+| `[x]` сделано | 68 |
 | `[~]` в работе | 3 |
-| `[ ]` в плане | 97 |
+| `[ ]` в плане | 98 |
 
 > **Примечание:** `[x]` = есть рабочий код или MVP закрыт по спеке; `[~]` = идёт реализация; `[ ]` = не начато или только спека. Строки «снято» (§11) не входят в «в плане». При расхождении с кодом — править здесь первым делом.
 

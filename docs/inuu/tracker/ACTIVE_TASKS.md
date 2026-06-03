@@ -52,6 +52,8 @@
 
 **Закрыто:** TASK-006 — guides, публичный editorial API, dashboard CRUD `editorial-news`.
 
+**Бэклог:** TASK-017 (venue announcements из ingest) · спека маршрутов — [37-ingest-editorial-routing.md](../features/content/37-ingest-editorial-routing.md) (TASK-016).
+
 Индексы брейнштормов: [01.06.2026](../../fix/brainstorm/01.06.2026.md), [02.05.2026](../../fix/brainstorm/02.05.2026.md), [03.06.2026](../../fix/brainstorm/03.06.2026.md).
 
 ---
@@ -101,6 +103,7 @@
 | — | Groq: `publication_date` + расширенные поля JSON | §4 | [25](../features/content/25-groq-event-extraction-prompt.md) |
 | — | VK wall + `t.me/s/` workers | §4 | [27](../features/content/27-ingest-workers-vk-telegram-web.md) |
 | — | `post_type`: отмена / перенос / sold-out | §4 | [16](../features/content/16-parsing-pipeline-extensions.md) |
+| TASK-017 | Venue announcements из привязанных TG-источников | §4 | [37](../features/content/37-ingest-editorial-routing.md), TASK-017 |
 | — | Cross-platform Share (TG/MAX/Web) | §2 | [28](../features/content/28-omnichannel-share-and-tma-funnel.md) |
 | — | NLP admin Tool Calling | §5 / §10 | [29](../features/content/29-nlp-admin-and-organizer-agent.md) |
 | — | Сжатие афиш WebP при ingest | §4 | [24](../features/content/24-mvp-launch-checklist-ulan-ude.md) |
@@ -109,6 +112,31 @@
 | TASK-012 | AI cron: черновик `week-YYYY-wNN` + Groq intro | §6 | [14](../features/content/14-digests-curated-admin-smm.md), [11](../features/content/11-digest-parsing-and-curated-picks.md) |
 
 Индексы брейнштормов: [30.05.2026](../../fix/brainstorm/30.05.2026.md), [31.05.2026](../../fix/brainstorm/31.05.2026.md), [01.06.2026](../../fix/brainstorm/01.06.2026.md), [02.05.2026](../../fix/brainstorm/02.05.2026.md), [03.06.2026](../../fix/brainstorm/03.06.2026.md).
+
+<details>
+<summary>TASK-017 — Venue announcements из привязанных ingest-источников</summary>
+
+### TASK-017 · Venue announcements из привязанных ingest-источников
+- **Статус:** `todo`
+- **Матрица:** §4 Ingestion · «Venue announcements из привязанных TG ingest-источников»
+- **Цель:** Точечно подтягивать анонсы заведения (не городской журнал) из каналов с `organization_id`, с модерацией и публикацией на карточку venue + guides.
+- **Спеки:** [37-ingest-editorial-routing.md](../features/content/37-ingest-editorial-routing.md), [17-ingest-sources-context.md](../features/content/17-ingest-sources-context.md), [30-manager-chat-place-editorial.md](../features/content/30-manager-chat-place-editorial.md)
+- **In scope:**
+  - Флаг на `city_telegram_sources` (только org-linked)
+  - Ветка ingest → editorial submission без дат события
+  - Publish: `editorial_posts`, `post_type: announcement`, `linked_entity_*` → venue
+  - Модерация без строки «📅 …»; дедуп с `events`
+  - Показ: venue editorial API + опц. `/guides` с бейджем «от организатора»
+- **Out of scope:** массовые городские news из ingest; longread / `body_json` из cron; web-cron MVP; замена manager chat
+- **Ключевые файлы:** `contentIngestCore.ts`, `groqEventParser.ts` или отдельный classifier, `contentSubmissionPublish.ts`, `inuuContentModeration.ts`, `pages/[city_slug]/venues/[slug].vue`
+- **Критерии готовности:**
+  - [ ] Источник без `organization_id` не создаёт venue editorial submission
+  - [ ] Тестовый пост «открытие» → pending → approve → виден на venue и в guides
+  - [ ] Афиша с датой остаётся в `events`
+  - [ ] FEATURE_MATRIX: `[x]` для строки venue announcements
+- **Заметки:** Желательно после или отдельным чатом от `post_type` cancellation ([16](../features/content/16-parsing-pipeline-extensions.md)).
+
+</details>
 
 ---
 
@@ -130,7 +158,8 @@
 | TASK-014 | Редакционные статьи: API, read later, venue-блок | 03.06.2026 | `043_editorial_retention.sql`, `044_editorial_guides_seed.sql`, `/guides`, `user_saved_editorial` |
 | TASK-015 | Groq content multiplier в manager chat | 03.06.2026 | `groqEditorialContentPack.ts`, `groqWhisperTranscribe.ts`, `inuu:mgr:publish|pack` |
 | TASK-006 | Guides + публичный editorial API + dashboard CRUD | 03.06.2026 | `editorialDashboard.ts`, `editorial-news` GET/PUT, `/guides`, `044` seed |
+| TASK-016 | Спека ingest → editorial (политика, маршруты публикации) | 03.06.2026 | [37-ingest-editorial-routing.md](../features/content/37-ingest-editorial-routing.md) |
 
 ---
 
-**Последнее обновление:** 03.06.2026 · активных: **0** · отложено: **004–005** · архив: **006–015** done
+**Последнее обновление:** 03.06.2026 · активных: **0** · отложено: **004–005** · бэклог: **017** · архив: **006–016** done

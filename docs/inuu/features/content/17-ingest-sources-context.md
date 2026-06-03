@@ -91,6 +91,7 @@ B2B: «У вас уже есть страница, 50 подписчиков —
 
 ## Связи
 
+- [37-ingest-editorial-routing.md](./37-ingest-editorial-routing.md) — что из источников идёт в `events` vs `editorial_posts`
 - [10-telegram-sources-without-bot-access.md](./10-telegram-sources-without-bot-access.md)
 - [09-data-model-overview.md](../../09-data-model-overview.md)
 - [16-parsing-pipeline-extensions.md](./16-parsing-pipeline-extensions.md)
