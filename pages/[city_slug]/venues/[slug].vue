@@ -16,29 +16,17 @@
     </a>
 
     <section v-if="editorialItems.length">
-      <h2 class="text-lg font-semibold text-gray-900">Обзоры и материалы</h2>
-      <div class="mt-4 space-y-6">
-        <article
+      <h2 class="text-lg font-semibold text-gray-900">Упоминания в статьях</h2>
+      <div class="mt-4 space-y-4">
+        <NuxtLink
           v-for="post in editorialItems"
           :key="post.id"
-          class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
+          :to="`${cityBasePath}/guides/${post.slug}`"
+          class="group block rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-primary/30"
         >
-          <h3 class="text-base font-semibold text-gray-900">{{ post.title }}</h3>
+          <h3 class="text-base font-semibold text-gray-900 group-hover:text-primary">{{ post.title }}</h3>
           <p v-if="post.excerpt" class="mt-2 text-sm text-gray-600">{{ post.excerpt }}</p>
-          <video
-            v-if="post.video_url"
-            :src="post.video_url"
-            class="mt-3 max-h-80 w-full rounded-lg bg-black"
-            controls
-            playsinline
-          />
-          <img
-            v-else-if="post.cover_media_url"
-            :src="post.cover_media_url"
-            :alt="post.title"
-            class="mt-3 max-h-64 w-full rounded-lg object-cover"
-          >
-        </article>
+        </NuxtLink>
       </div>
     </section>
 
@@ -83,10 +71,9 @@ const venueSlug = computed(() => String(route.params.slug || ''))
 
 type EditorialItem = {
   id: string
+  slug: string
   title: string
   excerpt?: string | null
-  video_url?: string | null
-  cover_media_url?: string | null
 }
 
 const pending = ref(true)

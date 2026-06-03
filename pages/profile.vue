@@ -103,6 +103,28 @@
       </div>
 
       <div class="card">
+        <h2>Сохранённое</h2>
+        <p class="hint">Статьи и обзоры, отложенные «на потом».</p>
+        <div v-if="savedEditorialLoading" class="mt-3 text-sm text-gray-500">Загрузка…</div>
+        <ul v-else-if="savedEditorialItems.length" class="mt-4 space-y-3">
+          <li v-for="item in savedEditorialItems" :key="item.post.id">
+            <NuxtLink
+              :to="`/${defaultCitySlug}/guides/${item.post.slug}`"
+              class="block rounded-lg border border-gray-200 px-4 py-3 transition hover:border-primary/30"
+            >
+              <span class="font-medium text-gray-900">{{ item.post.title }}</span>
+              <span v-if="item.post.excerpt" class="mt-1 block text-sm text-gray-600 line-clamp-2">
+                {{ item.post.excerpt }}
+              </span>
+            </NuxtLink>
+          </li>
+        </ul>
+        <p v-else class="mt-3 text-sm text-gray-500">
+          Пока ничего не сохранено. На странице статьи нажмите «Читать потом».
+        </p>
+      </div>
+
+      <div class="card">
         <h2>Мои записи</h2>
         <p class="hint">
           История записей и билетов появится в следующем обновлении INUU. Пока сохраняйте избранное и подписки через Telegram / MAX.
@@ -279,6 +301,35 @@ function onProfileAuthChannelSubmit(channel: AuthChannel) {
 const showProfileModal = ref(false)
 const isSaving = ref(false)
 const saveStatus = ref('')
+
+type SavedEditorialItem = {
+  saved_at: string
+  read_status: string
+  post: { id: string; slug: string; title: string; excerpt?: string | null; city_id?: string }
+}
+
+const savedEditorialLoading = ref(false)
+const savedEditorialItems = ref<SavedEditorialItem[]>([])
+
+async function loadSavedEditorial() {
+  if (!user.value) {
+    savedEditorialItems.value = []
+    return
+  }
+  savedEditorialLoading.value = true
+  try {
+    const res = await $fetch<{ ok: boolean; items?: SavedEditorialItem[] }>('/api/me/saved-editorial')
+    savedEditorialItems.value = res?.items ?? []
+  } catch {
+    savedEditorialItems.value = []
+  } finally {
+    savedEditorialLoading.value = false
+  }
+}
+
+watch(user, () => {
+  void loadSavedEditorial()
+}, { immediate: true })
 
 type ProfileDraft = {
   name: string

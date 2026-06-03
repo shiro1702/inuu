@@ -32,6 +32,22 @@
       @action="onStoryAction"
     />
 
+    <section v-if="home?.editorialJournal?.length">
+      <div class="mb-4 flex items-center justify-between gap-2">
+        <h2 class="text-lg font-semibold text-gray-900">Журнал</h2>
+        <NuxtLink :to="`${cityBasePath}/guides`" class="text-sm font-medium text-primary hover:underline">
+          Все материалы
+        </NuxtLink>
+      </div>
+      <div class="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:-mx-6 sm:px-6">
+        <EditorialCard
+          v-for="post in home.editorialJournal"
+          :key="post.id"
+          :post="post"
+        />
+      </div>
+    </section>
+
     <section v-if="home?.curatedLists?.length">
       <div class="mb-4 flex items-center justify-between gap-2">
         <h2 class="text-lg font-semibold text-gray-900">Подборки</h2>
@@ -130,10 +146,20 @@ function onStoryAction(payload: { slide: StorySlideDto; actionType: string }) {
   }
 }
 
+type EditorialJournalItem = {
+  id: string
+  slug: string
+  title: string
+  excerpt?: string | null
+  cover_media_url?: string | null
+  is_sponsored?: boolean
+}
+
 type HomePayload = {
   events: Array<Record<string, unknown>>
   venues: Array<Record<string, unknown>>
   curatedLists: Array<{ id: string; slug: string; title: string; description?: string | null }>
+  editorialJournal: EditorialJournalItem[]
 }
 
 const pending = ref(true)
@@ -149,6 +175,7 @@ async function loadHome() {
       events?: HomePayload['events']
       venues?: HomePayload['venues']
       curatedLists?: HomePayload['curatedLists']
+      editorialJournal?: HomePayload['editorialJournal']
     }>(`/api/cities/${slug.value}/home`)
     if (!res?.ok) {
       loadError.value = 'Не удалось загрузить главную'
@@ -159,6 +186,7 @@ async function loadHome() {
       events: (res.events ?? []) as HomePayload['events'],
       venues: (res.venues ?? []) as HomePayload['venues'],
       curatedLists: res.curatedLists ?? [],
+      editorialJournal: res.editorialJournal ?? [],
     }
   } catch (e: unknown) {
     loadError.value = e instanceof Error ? e.message : 'Ошибка загрузки'

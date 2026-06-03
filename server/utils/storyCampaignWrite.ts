@@ -15,7 +15,8 @@ export type CreateStoryCampaignArgs = {
   shopId: string
   title: string
   previewUrl?: string | null
-  placement?: 'top_bar' | 'catalog_grid'
+  linkUrl?: string | null
+  placement?: 'top_bar' | 'catalog_grid' | 'home_hero'
   isActive?: boolean
   validFrom?: string | null
   validUntil?: string | null
@@ -47,7 +48,13 @@ export async function createStoryCampaign(
       author_type: args.authorType || 'organization',
       title,
       preview_url: args.previewUrl?.trim() || null,
-      placement: args.placement === 'catalog_grid' ? 'catalog_grid' : 'top_bar',
+      placement:
+        args.placement === 'catalog_grid'
+          ? 'catalog_grid'
+          : args.placement === 'home_hero'
+            ? 'home_hero'
+            : 'top_bar',
+      link_url: args.linkUrl?.trim() || null,
       is_active: args.isActive !== false,
       valid_from: args.validFrom ?? new Date().toISOString(),
       valid_until: args.validUntil ?? null,

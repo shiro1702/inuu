@@ -5,7 +5,14 @@ import {
   submissionKindFromEditorial,
   type EditorialContentType,
 } from '~/server/utils/ai/editorialParseSchema'
+import {
+  formatEditorialContentPackMessage,
+  generateEditorialContentPack,
+} from '~/server/utils/ai/groqEditorialContentPack'
 import { parseEditorialWithGroq } from '~/server/utils/ai/groqEditorialParser'
+import { transcribeTelegramVoice } from '~/server/utils/ai/groqWhisperTranscribe'
+import { publishContentSubmission } from '~/server/utils/contentSubmissionPublish'
+import { suggestCuratedListSlugs } from '~/server/utils/editorialCuratedSuggest'
 import { loadCityParseTaxonomy, resolveParsedTaxonomy } from '~/server/utils/cityContentTaxonomy'
 import {
   attachShadowOrgToEditorialPayload,
@@ -94,7 +101,11 @@ function buildManagerPreviewKeyboard(submissionId: string, needsOrg: boolean) {
     ])
   }
   rows.push(
-    [{ text: '✅ В модерацию', callback_data: `inuu:mgr:moderate:${submissionId}` }],
+    [{ text: '✅ Опубликовать на портал', callback_data: `inuu:mgr:publish:${submissionId}` }],
+    [
+      { text: '📦 Пак контента', callback_data: `inuu:mgr:pack:${submissionId}` },
+      { text: '✅ В модерацию', callback_data: `inuu:mgr:moderate:${submissionId}` },
+    ],
     [{ text: '❌ Отмена', callback_data: `inuu:mgr:cancel:${submissionId}` }],
   )
   return { inline_keyboard: rows }
@@ -137,7 +148,19 @@ export async function createManagerEditorialDraft(
     sourceExternalId: string
   },
 ): Promise<{ submissionId: string; payload: EditorialParseResult }> {
-  const rawBase = extractTelegramMessageText(args.message)
+  let rawBase = extractTelegramMessageText(args.message)
+  if (args.message.voice?.file_id) {
+    try {
+      const voice = await transcribeTelegramVoice({
+        botToken: args.botToken,
+        fileId: args.message.voice.file_id,
+      })
+      rawBase = [rawBase, voice.text].filter(Boolean).join('\n\n')
+    } catch (err) {
+      console.warn('[inuuManagerChatBot] voice transcribe failed:', err)
+    }
+  }
+
   const rawText = stripCommandPrefix(rawBase) || rawBase
   if (!hasIngestibleContent(rawText) && !args.message.photo?.length && !args.message.video) {
     throw createError({ statusCode: 400, statusMessage: 'Need text, photo or video' })
@@ -195,6 +218,15 @@ export async function createManagerEditorialDraft(
     payload,
     sourceUrl: args.sourceUrl,
   })
+
+  const suggestedLists = await suggestCuratedListSlugs(event, {
+    cityId: args.city.id,
+    topicTags: payload.topic_tags,
+  })
+  payload = {
+    ...payload,
+    suggested_curated_list_slugs: suggestedLists,
+  }
 
   if (args.contentTypeHint === 'story') {
     const slideUrls = payload.media_urls.length
@@ -300,7 +332,24 @@ export async function tryHandleInuuManagerChatMessage(
   const city = await findCityByTelegramManagerChat(event, String(chatId))
   if (!city) return false
 
-  const rawText = extractTelegramMessageText(args.message)
+  let rawText = extractTelegramMessageText(args.message)
+  if (args.message.voice?.file_id) {
+    try {
+      const voice = await transcribeTelegramVoice({
+        botToken: args.botToken,
+        fileId: args.message.voice.file_id,
+      })
+      rawText = [rawText, voice.text].filter(Boolean).join('\n\n')
+    } catch {
+      await telegramSend(args.botToken, 'sendMessage', {
+        chat_id: chatId,
+        text: '❌ Не удалось распознать голосовое. Отправьте текстом или с подписью.',
+        reply_to_message_id: args.message.message_id,
+      }).catch(() => {})
+      return true
+    }
+  }
+
   if (!hasIngestibleContent(rawText) && !args.message.photo?.length && !args.message.video) {
     if (!isManagerChatCommand(rawText)) return false
   }
@@ -502,6 +551,51 @@ export async function handleInuuManagerTelegramCallback(
     })
 
     return { alertText: 'Отправлено в модерацию', showAlert: false }
+  }
+
+  if (action === 'publish') {
+    if (editorialMissingOrg(payload)) {
+      return { alertText: 'Сначала привяжите или создайте организацию', showAlert: true }
+    }
+
+    try {
+      const result = await publishContentSubmission(event, submissionId)
+      const guideUrl = `/${city.slug}/guides/${result.entitySlug}`
+      await telegramSend(args.botToken, 'sendMessage', {
+        chat_id: args.chatId,
+        text: `✅ Опубликовано на портал\n${guideUrl}`,
+        reply_to_message_id: args.messageId,
+      }).catch(() => {})
+      return { alertText: 'Опубликовано', showAlert: false }
+    } catch (err: any) {
+      const msg = err?.statusMessage || err?.message || 'Ошибка публикации'
+      return { alertText: String(msg).slice(0, 180), showAlert: true }
+    }
+  }
+
+  if (action === 'pack') {
+    try {
+      const guideUrl = payload.city_slug
+        ? `https://inuu.app/${payload.city_slug}/guides/preview`
+        : null
+      const { pack } = await generateEditorialContentPack({
+        payload,
+        cityName: city.name,
+        citySlug: city.slug,
+        suggestedListSlugs: payload.suggested_curated_list_slugs,
+        guideUrl,
+      })
+      const text = formatEditorialContentPackMessage(pack, guideUrl)
+      await telegramSend(args.botToken, 'sendMessage', {
+        chat_id: args.chatId,
+        text: text.length <= 4096 ? text : `${text.slice(0, 4090)}…`,
+        reply_to_message_id: args.messageId,
+      })
+      return { alertText: 'Пак контента отправлен', showAlert: false }
+    } catch (err: any) {
+      const msg = err?.statusMessage || err?.message || 'Ошибка генерации'
+      return { alertText: String(msg).slice(0, 180), showAlert: true }
+    }
   }
 
   return { alertText: 'Неизвестное действие', showAlert: true }

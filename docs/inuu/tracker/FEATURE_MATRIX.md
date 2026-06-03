@@ -106,7 +106,7 @@
 | [x] | `/pick week\|month` — сбор подборки inline | 3 | P1 | — | [11-digest-parsing-and-curated-picks.md](../features/content/11-digest-parsing-and-curated-picks.md) |
 | [ ] | `/submit` для партнёров (публичная предложка) | 3 | P1 | — | [04-telegram-bot-content-moderation.md](../features/content/04-telegram-bot-content-moderation.md) |
 | [ ] | `/news`, `/event` для редакции (без очереди) | 2 | P2 | — | [05-bot-news-dialog-script.md](../features/content/05-bot-news-dialog-script.md) |
-| [ ] | Groq editorial: forward / URL / voice → preview → publish | 4 | P1 | — | [34-groq-editorial-content-multiplier.md](../features/content/34-groq-editorial-content-multiplier.md), TASK-015 |
+| [x] | Groq editorial: forward / URL / voice → preview → publish | 4 | P1 | — | [34-groq-editorial-content-multiplier.md](../features/content/34-groq-editorial-content-multiplier.md), TASK-015 |
 | [ ] | Approve с рангом одной кнопкой «Одобрить 5⭐» | 1 | P2 | — | [16-parsing-pipeline-extensions.md](../features/content/16-parsing-pipeline-extensions.md) |
 | [ ] | Редактирование тегов в Mini App (словарь из БД) | 3 | P1 | — | [16-parsing-pipeline-extensions.md](../features/content/16-parsing-pipeline-extensions.md) |
 | [ ] | Bot helpdesk: forward + reply из admin chat | 3 | P1 | — | [23-bot-roles-ops-support.md](../features/content/23-bot-roles-ops-support.md) |
@@ -120,18 +120,18 @@
 |:------:|------|:------:|:-----:|:------:|-------|
 | [x] | Публичные подборки `curated_lists` + `/lists/[slug]` | 2 | P0 | сред | [01-news-editorial-options.md](../features/content/01-news-editorial-options.md) |
 | [x] | Авто-подборка периода при digest approve_all | 2 | P1 | — | [11-digest-parsing-and-curated-picks.md](../features/content/11-digest-parsing-and-curated-picks.md) |
-| [x] | Создание новости в dashboard (`editorial-news`) | 2 | P1 | — | [09-how-to-create-news-and-events.md](../features/content/09-how-to-create-news-and-events.md) |
+| [x] | CRUD материалов журнала в dashboard (`editorial-news`) | 2 | P1 | — | [09-how-to-create-news-and-events.md](../features/content/09-how-to-create-news-and-events.md), TASK-006 |
 | [x] | Словарь `city_content_tags` + CRUD в dashboard | 2 | P1 | — | [implementation/04-dashboard-pages-ai-and-city-ops.md](../implementation/04-dashboard-pages-ai-and-city-ops.md) |
-| [~] | Публичный API + страницы guides / editorial | 3 | P1 | SEO | [33-editorial-articles-longreads-retention.md](../features/content/33-editorial-articles-longreads-retention.md), TASK-014 |
-| [~] | Статьи: привязка portal vs venue + блок «Упоминания» | 2 | P1 | — | [33-editorial-articles-longreads-retention.md](../features/content/33-editorial-articles-longreads-retention.md), TASK-014 |
-| [~] | «Читать потом» + сохранённое + offline cache | 3 | P1 | — | [33-editorial-articles-longreads-retention.md](../features/content/33-editorial-articles-longreads-retention.md), TASK-014 |
-| [ ] | Конструктор `body_json` (place embed, галерея, цитата) | 3 | P1 | — | [33-editorial-articles-longreads-retention.md](../features/content/33-editorial-articles-longreads-retention.md) |
-| [ ] | Журнал на главной + stories-анонс статьи | 2 | P1 | выс | [33-editorial-articles-longreads-retention.md](../features/content/33-editorial-articles-longreads-retention.md) |
+| [x] | Публичный API + страницы guides / editorial | 3 | P1 | SEO | [33-editorial-articles-longreads-retention.md](../features/content/33-editorial-articles-longreads-retention.md), TASK-014 |
+| [x] | Статьи: привязка portal vs venue + блок «Упоминания» | 2 | P1 | — | [33-editorial-articles-longreads-retention.md](../features/content/33-editorial-articles-longreads-retention.md), TASK-014 |
+| [~] | «Читать потом» + сохранённое + offline cache | 3 | P1 | — | [33-editorial-articles-longreads-retention.md](../features/content/33-editorial-articles-longreads-retention.md) — save MVP [x], offline P2 |
+| [x] | Конструктор `body_json` (place embed, галерея, цитата) | 3 | P1 | — | [33-editorial-articles-longreads-retention.md](../features/content/33-editorial-articles-longreads-retention.md) — MVP: paragraph, image, place_embed |
+| [x] | Журнал на главной + stories-анонс статьи | 2 | P1 | выс | [33-editorial-articles-longreads-retention.md](../features/content/33-editorial-articles-longreads-retention.md), TASK-014 |
 | [ ] | Маршрут из статьи-подборки (one click) | 3 | P2 | — | [33-editorial-articles-longreads-retention.md](../features/content/33-editorial-articles-longreads-retention.md) |
 | [ ] | UGC-опрос в конце обзора места | 2 | P2 | низ | [33-editorial-articles-longreads-retention.md](../features/content/33-editorial-articles-longreads-retention.md) |
-| [ ] | Scroll depth + weekly editorial report в бот | 2 | P2 | — | [33-editorial-articles-longreads-retention.md](../features/content/33-editorial-articles-longreads-retention.md) |
-| [ ] | Content multiplier: 6 форматов из одной статьи | 3 | P1 | — | [34-groq-editorial-content-multiplier.md](../features/content/34-groq-editorial-content-multiplier.md), TASK-015 |
-| [ ] | Полный CRUD редакции (events, lists, news) в dashboard | 4 | P1 | — | [03-recommended-mvp.md](../features/content/03-recommended-mvp.md) |
+| [~] | Scroll depth + weekly editorial report в бот | 2 | P2 | — | [33-editorial-articles-longreads-retention.md](../features/content/33-editorial-articles-longreads-retention.md) — beacon 50/100 [x], weekly report [ ] |
+| [x] | Content multiplier: 6 форматов из одной статьи | 3 | P1 | — | [34-groq-editorial-content-multiplier.md](../features/content/34-groq-editorial-content-multiplier.md), TASK-015 |
+| [~] | Полный CRUD редакции (events, lists, news) в dashboard | 4 | P1 | — | [03-recommended-mvp.md](../features/content/03-recommended-mvp.md) — editorial [x] TASK-006; events/lists [ ] |
 | [ ] | Promo-блоки в подборках (не event) | 3 | P2 | сред | [14-digests-curated-admin-smm.md](../features/content/14-digests-curated-admin-smm.md) |
 | [ ] | Admin «тиндер» для сборки дайджеста | 4 | P2 | — | [14-digests-curated-admin-smm.md](../features/content/14-digests-curated-admin-smm.md) |
 | [x] | Cron авто-черновики дайджестов (праздники, ⭐4–5) | 3 | P2 | — | [14-digests-curated-admin-smm.md](../features/content/14-digests-curated-admin-smm.md) |
@@ -269,9 +269,9 @@
 | | Кол-во |
 |---|--------|
 | Всего строк | 167 |
-| `[x]` сделано | 61 |
-| `[~]` в работе | 2 |
-| `[ ]` в плане | 103 |
+| `[x]` сделано | 67 |
+| `[~]` в работе | 3 |
+| `[ ]` в плане | 97 |
 
 > **Примечание:** `[x]` = есть рабочий код или MVP закрыт по спеке; `[~]` = идёт реализация; `[ ]` = не начато или только спека. Строки «снято» (§11) не входят в «в плане». При расхождении с кодом — править здесь первым делом.
 

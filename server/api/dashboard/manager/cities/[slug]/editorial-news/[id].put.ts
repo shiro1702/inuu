@@ -1,17 +1,17 @@
-import { defineEventHandler, readBody } from 'h3'
+import { createError, defineEventHandler, readBody } from 'h3'
 import { resolveManagerCityScopeOrThrow } from '~/server/utils/managerCityAccess'
-import {
-  editorialPublicPath,
-  insertEditorialPost,
-  type EditorialDashboardInput,
-} from '~/server/utils/editorialDashboard'
+import { updateEditorialPost, type EditorialDashboardInput } from '~/server/utils/editorialDashboard'
 
 export default defineEventHandler(async (event) => {
   const slugParam = typeof event.context.params?.slug === 'string' ? event.context.params.slug : ''
+  const postId = typeof event.context.params?.id === 'string' ? event.context.params.id.trim() : ''
+  if (!postId) {
+    throw createError({ statusCode: 400, statusMessage: 'Post id is required' })
+  }
+
   const scope = await resolveManagerCityScopeOrThrow(event, slugParam)
   const body = await readBody<EditorialDashboardInput>(event).catch(() => ({}))
-
-  const item = await insertEditorialPost(event, scope, body)
+  const { item, publicPath } = await updateEditorialPost(event, scope, postId, body)
 
   return {
     ok: true as const,
@@ -21,6 +21,6 @@ export default defineEventHandler(async (event) => {
       name: scope.cityName,
     },
     item,
-    publicPath: item.is_published ? editorialPublicPath(scope.citySlug, item.slug) : null,
+    publicPath,
   }
 })

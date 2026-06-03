@@ -7,6 +7,7 @@ import { prepareEventsListForDisplay } from '~/server/utils/eventListDisplay'
 const HOME_EVENTS_LIMIT = 6
 const HOME_EVENTS_FETCH_POOL = 48
 const HOME_CURATED_LISTS_LIMIT = 4
+const HOME_EDITORIAL_JOURNAL_LIMIT = 6
 
 export default defineEventHandler(async (event) => {
   setResponseHeader(event, 'Cache-Control', 'public, max-age=60, s-maxage=120, stale-while-revalidate=300')
@@ -16,7 +17,7 @@ export default defineEventHandler(async (event) => {
   const client = await serverSupabaseServiceRole(event)
   const nowIso = new Date().toISOString()
 
-  const [storiesRes, eventsRes, venuesRes, listsRes, hotSlotsRes] = await Promise.all([
+  const [storiesRes, eventsRes, venuesRes, listsRes, hotSlotsRes, editorialRes] = await Promise.all([
     client
       .from('story_campaigns')
       .select('id,title,preview_url,placement,author_type,link_url')
@@ -56,6 +57,13 @@ export default defineEventHandler(async (event) => {
       .gte('expires_at', nowIso)
       .order('starts_at', { ascending: true })
       .limit(8),
+    client
+      .from('editorial_posts')
+      .select('id,slug,title,excerpt,cover_media_url,published_at,topic_tags,is_sponsored')
+      .eq('city_id', city.id)
+      .eq('is_published', true)
+      .order('published_at', { ascending: false })
+      .limit(HOME_EDITORIAL_JOURNAL_LIMIT),
   ])
 
   return {
@@ -75,5 +83,6 @@ export default defineEventHandler(async (event) => {
     venues: venuesRes.data ?? [],
     curatedLists: listsRes.data ?? [],
     hotSlots: hotSlotsRes.data ?? [],
+    editorialJournal: editorialRes.data ?? [],
   }
 })

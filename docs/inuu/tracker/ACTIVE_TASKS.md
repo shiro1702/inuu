@@ -46,11 +46,11 @@
 
 **Следующий фокус:** вернуть **TASK-004** (каталог источников Улан-Удэ) после smoke на 2 `cron_enabled` URL и `NUXT_WEB_CLASSIFIER_ENABLED=true` на dev.
 
-**Отложено:** TASK-005 (санитар/TL;DR), TASK-006 (guides без AI-дайджеста — см. TASK-012).
+**Отложено:** TASK-005 (санитар/TL;DR).
 
 **Закрыто:** TASK-012 — AI-подборки и дайджест недели (cron + Groq).
 
-**Следующий фокус (контент/UX):** TASK-014 — редакционные статьи, read later, публичный guides API (брейншторм [03.06.2026](../../fix/brainstorm/03.06.2026.md)). TASK-015 (Groq multiplier) — whitelist тегов готов (TASK-013).
+**Закрыто:** TASK-006 — guides, публичный editorial API, dashboard CRUD `editorial-news`.
 
 Индексы брейнштормов: [01.06.2026](../../fix/brainstorm/01.06.2026.md), [02.05.2026](../../fix/brainstorm/02.05.2026.md), [03.06.2026](../../fix/brainstorm/03.06.2026.md).
 
@@ -58,40 +58,7 @@
 
 ## Активные задачи
 
-> **Очередь:** 2 задачи · лимит 3.
-
-### TASK-014 · Редакционные статьи: API, read later, venue-блок
-
-- **Статус:** `in_progress`
-- **Матрица:** §6 «Публичный API guides» · «Привязка portal vs venue» · «Читать потом»
-- **Цель:** пользователь читает новости/лонгриды на витрине, сохраняет «на потом», видит статьи на карточке venue
-- **Спеки:** [33-editorial-articles-longreads-retention.md](../features/content/33-editorial-articles-longreads-retention.md), [03-recommended-mvp.md](../features/content/03-recommended-mvp.md), [01-news-editorial-options.md](../features/content/01-news-editorial-options.md)
-- **In scope:**
-  - `GET /api/cities/[slug]/editorial` + detail + venue mentions
-  - Страницы `/guides/[slug]`, журнал на главной
-  - `body_json` минимум: paragraph, image, `place_embed`
-  - `user_saved_editorial` + UI «🔖 Читать потом»
-  - Scroll depth events (50% / 100%)
-- **Out of scope:** Groq multiplier (TASK-015), HTML/video studio ([35](../features/content/35-html-carousel-video-studio.md)), пятничный cron бота, offline cache, маршрут one-click, TTS
-- **Ключевые файлы:** `supabase/migrations/`, `server/api/cities/`, `pages/[city_slug]/guides/`, `components/editorial/`
-- **Критерии готовности:** чеклист в [33](../features/content/33-editorial-articles-longreads-retention.md#критерии-готовности-task-014)
-- **Заметки:** поглощает часть отложенного TASK-006 (guides API); dashboard CRUD — отдельно
-
-### TASK-015 · Groq content multiplier в manager chat
-
-- **Статус:** `todo`
-- **Матрица:** §5 «Groq editorial pipeline» · §6 «Content multiplier»
-- **Цель:** админ кидает forward/URL/voice в manager chat → Groq preview → publish editorial + story анонс + текстовый «пак 6 форматов»
-- **Спеки:** [34-groq-editorial-content-multiplier.md](../features/content/34-groq-editorial-content-multiplier.md), [30-manager-chat-place-editorial.md](../features/content/30-manager-chat-place-editorial.md)
-- **In scope:**
-  - Расширить parse-editorial: рерайт, entity match venue, теги из whitelist (TASK-013)
-  - Preview card + кнопки Опубликовать / Пак контента / Отмена
-  - 6 текстовых блоков multiplier в TG
-  - Publish → `editorial_posts` + story campaign link
-- **Out of scope:** PNG/HTML render ([35](../features/content/35-html-carousel-video-studio.md)), vibe TG delivery ([36](../features/content/36-bot-vibes-editorial-delivery.md)), gen-cover AI
-- **Ключевые файлы:** `server/api/ai/parse-editorial`, manager chat handlers, `server/utils/groqEditorial*.ts`
-- **Критерии готовности:** чеклист в [34](../features/content/34-groq-editorial-content-multiplier.md#критерии-готовности-task-015)
-- **Заметки:** зависит от TASK-013 (whitelist) и TASK-014 (куда публиковать на витрине)
+> **Очередь:** 0 задач · лимит 3. Следующий фокус — **TASK-004** (см. [Отложено](#отложено-волна-2a--контент--наполнение)).
 
 ---
 
@@ -103,7 +70,6 @@
 |----|----------|-----------------|---------------|
 | TASK-004 | Каталог источников Улан-Удэ + backfill | Приоритет: довести web crawl до classifier/rules | **Сейчас** — 008–010 done |
 | TASK-005 | Санитар + TL;DR / vibe на карточках | Не блокирует web pipeline | После первых approve из 004 или параллельно |
-| TASK-006 | Guides + публичный editorial API | Редакционный слой; **guides API → TASK-014** | TASK-014 частично или параллельно 015 |
 
 <details>
 <summary>TASK-004 — полный scope (свернуто)</summary>
@@ -121,15 +87,6 @@
 - **Матрица:** §4 санитар · TL;DR + vibe
 - **Спеки:** [22](../features/content/22-ai-bot-concierge-and-intent.md), [16](../features/content/16-parsing-pipeline-extensions.md)
 - **In scope:** `events.tldr`, `vibe_emoji`, enrich после Groq, `CityEventCard`
-
-</details>
-
-<details>
-<summary>TASK-006 — полный scope (свернуто)</summary>
-
-- **Матрица:** §6 guides API · публичные страницы editorial
-- **Спеки:** [03](../features/content/03-recommended-mvp.md), [14](../features/content/14-digests-curated-admin-smm.md) (без cron)
-- **In scope:** `/guides`, editorial API; **без** AI/cron дайджеста (см. TASK-012)
 
 </details>
 
@@ -170,7 +127,10 @@
 | TASK-011 | Manager chat: обзоры мест, посты и stories | 01.06.2026 | [30-manager-chat-place-editorial.md](../features/content/30-manager-chat-place-editorial.md) |
 | TASK-012 | AI-подборки и дайджест недели | 02.06.2026 | `city-digest.post.ts`, `curatedListSelection.ts`, `groqCuratedListCopy.ts`, `/pick list <slug>` |
 | TASK-013 | Мастер-список тегов-вайбов (taxonomy) | 03.06.2026 | `042_city_content_tags_vibes_seed.sql`, `contentTagCatalog.ts`, grouped UI |
+| TASK-014 | Редакционные статьи: API, read later, venue-блок | 03.06.2026 | `043_editorial_retention.sql`, `044_editorial_guides_seed.sql`, `/guides`, `user_saved_editorial` |
+| TASK-015 | Groq content multiplier в manager chat | 03.06.2026 | `groqEditorialContentPack.ts`, `groqWhisperTranscribe.ts`, `inuu:mgr:publish|pack` |
+| TASK-006 | Guides + публичный editorial API + dashboard CRUD | 03.06.2026 | `editorialDashboard.ts`, `editorial-news` GET/PUT, `/guides`, `044` seed |
 
 ---
 
-**Последнее обновление:** 03.06.2026 · активных: **014** (`in_progress`), **015** (`todo`) · отложено: **004–006** · архив: **012–013** done
+**Последнее обновление:** 03.06.2026 · активных: **0** · отложено: **004–005** · архив: **006–015** done

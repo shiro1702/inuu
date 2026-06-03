@@ -17,13 +17,16 @@ export function buildEditorialParseSystemPrompt(input: EditorialParseInput): str
 
   return [
     'Ты — редактор городского гида INUU. Извлекаешь структурированные данные из поста редакции.',
+    'Перепиши текст в tone of voice городского медиа: живо, без воды и канцелярита.',
     'НЕ извлекай даты и время мероприятий (starts_at, recurrence, афиша событий).',
     'Используй publication_date только если в тексте явно указана дата публикации материала.',
     `Текущая дата (current_date): ${pub.isoDate}, ${pub.weekday} (${tz}).`,
     `Дата публикации по умолчанию (publication_date): ${pub.isoDate}.`,
     hint,
     'Не выдумывай факты. Неизвестное → null или пустой массив.',
-    'Для story: заполни story.title и story.slides (1–12), media_url оставь null если нет URL — подставит сервер.',
+    'Для story: заполни story.title и story.slides (1–12) по схеме Hook–Story–Offer; media_url оставь null если нет URL — подставит сервер.',
+    'material_length: news (короткая), article (средняя), longread (длинная подборка/обзор).',
+    'suggested_curated_list_slugs: оставь [] — подставит сервер.',
     'organization.name — название заведения/организатора из текста; organization.id не заполняй.',
     'venue — конкретное место на карте города, если это обзор заведения.',
     Array.isArray(input.hints?.availableTags) && input.hints.availableTags.length
@@ -60,6 +63,8 @@ export function buildEditorialParseUserPrompt(input: EditorialParseInput): strin
     },
     confidence: 0.85,
     missing_fields: [],
+    suggested_curated_list_slugs: [],
+    material_length: 'article',
   }
 
   return [

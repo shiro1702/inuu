@@ -35,7 +35,7 @@
    - пре-фильтр до Groq (toggle на город)
    - test crawl / create shadow org
    - подробный runbook: [WEB_URL_PARSER_RU.md](../runbooks/WEB_URL_PARSER_RU.md)
-5. Создать новость вручную в `editorial_posts`.
+5. Создать и редактировать материалы журнала в `editorial_posts` (список, черновики, publish/unpublish).
 6. Управлять очередью `content_submissions`:
    - фильтр по статусам
    - approve/reject/needs_revision
@@ -104,7 +104,10 @@
 - `POST /api/dashboard/manager/cities/:slug/ingest-sources/telegram`
 - `PUT /api/dashboard/manager/cities/:slug/ingest-sources/telegram/:id`
 - `DELETE /api/dashboard/manager/cities/:slug/ingest-sources/telegram/:id`
+- `GET /api/dashboard/manager/cities/:slug/editorial-news` (`status`, `page`, `limit`)
+- `GET /api/dashboard/manager/cities/:slug/editorial-news/:id`
 - `POST /api/dashboard/manager/cities/:slug/editorial-news`
+- `PUT /api/dashboard/manager/cities/:slug/editorial-news/:id` (update, publish/unpublish)
 - `GET /api/dashboard/manager/cities/:slug/content-queue`
 - `POST /api/dashboard/manager/cities/:slug/content-queue/action`
 - `PUT /api/dashboard/manager/cities/:slug/content-queue/:id`

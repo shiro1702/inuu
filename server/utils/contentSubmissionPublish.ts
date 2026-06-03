@@ -18,6 +18,8 @@ import {
 } from '~/server/utils/eventSeries'
 import { resolveIngestSourceOrganization } from '~/server/utils/ingestSourceContext'
 import { findShopIdByParsedSourceUrl } from '~/server/utils/resolvePublicOrganization'
+import { buildEditorialBodyJson } from '~/server/utils/editorialBodyJson'
+import { createEditorialStoryTeaser } from '~/server/utils/editorialStoryTeaser'
 import { createStoryCampaign, slidesFromEditorialStory } from '~/server/utils/storyCampaignWrite'
 
 function slugifyTitle(input: string): string {
@@ -124,6 +126,13 @@ async function publishEditorialFromPayload(
 
   const postSlug = `${slugifyTitle(title)}-${String(args.submissionId).slice(0, 8)}`
   const postType = editorialPostTypeFromPayload(args.payload)
+  const bodyJson = buildEditorialBodyJson({
+    descriptionFull,
+    venueId: venue?.id || null,
+    coverUrl: args.payload.cover_media_url || null,
+    mediaUrls,
+    existingBodyJson: (args.payload as { body_json?: unknown }).body_json,
+  })
 
   const { data: post, error: postError } = await args.client
     .from('editorial_posts')
@@ -133,6 +142,7 @@ async function publishEditorialFromPayload(
       slug: postSlug,
       title,
       body: descriptionFull,
+      body_json: bodyJson,
       excerpt: descriptionShort || null,
       cover_media_url: args.payload.cover_media_url || null,
       video_url: args.payload.video_url || null,
@@ -153,6 +163,23 @@ async function publishEditorialFromPayload(
       statusCode: 500,
       statusMessage: postError?.message || 'Failed to publish editorial post',
     })
+  }
+
+  let citySlug = String((args.payload as { city_slug?: string }).city_slug || '').trim()
+  if (!citySlug) {
+    const { data: cityRow } = await args.client.from('cities').select('slug').eq('id', args.cityId).maybeSingle()
+    citySlug = String((cityRow as any)?.slug || '').trim()
+  }
+  if (args.shopId && citySlug) {
+    await createEditorialStoryTeaser(event, {
+      cityId: args.cityId,
+      citySlug,
+      shopId: args.shopId,
+      postSlug: String((post as any).slug),
+      title,
+      previewUrl: args.payload.cover_media_url || null,
+      excerpt: descriptionShort,
+    }).catch((err) => console.warn('[publishEditorial] story teaser failed:', err))
   }
 
   await args.client

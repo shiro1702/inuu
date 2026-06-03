@@ -70,6 +70,8 @@ function applyInputDefaults(
       url: result.source?.url || input.sourceUrl || null,
       external_id: result.source?.external_id || input.sourceExternalId || null,
     },
+    suggested_curated_list_slugs: result.suggested_curated_list_slugs || [],
+    material_length: result.material_length || null,
   })
 }
 

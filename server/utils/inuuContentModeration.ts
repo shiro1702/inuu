@@ -229,6 +229,16 @@ export function formatEditorialSubmissionCard(args: {
     lines.splice(7, 0, `📱 Слайдов: ${p.story.slides.length}`)
   }
 
+  const suggested = (p as { suggested_curated_list_slugs?: string[] }).suggested_curated_list_slugs
+  if (Array.isArray(suggested) && suggested.length) {
+    lines.push(`📚 Подборки: ${suggested.join(', ')}`)
+  }
+
+  const materialLength = (p as { material_length?: string | null }).material_length
+  if (materialLength) {
+    lines.splice(4, 0, `Формат: ${materialLength}`)
+  }
+
   return lines.filter(Boolean).join('\n')
 }
 

@@ -78,6 +78,8 @@ export const editorialParseResultSchema = z.object({
     .default(null),
   confidence: z.number().min(0).max(1),
   missing_fields: z.array(z.string().trim().min(1).max(60)).max(20),
+  suggested_curated_list_slugs: z.array(z.string().trim().min(2).max(80)).max(8).default([]),
+  material_length: z.enum(['news', 'article', 'longread']).optional().nullable().default(null),
 })
 
 export type EditorialParseResult = z.infer<typeof editorialParseResultSchema>
