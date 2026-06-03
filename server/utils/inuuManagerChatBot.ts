@@ -178,6 +178,11 @@ export async function createManagerEditorialDraft(
     city_slug: args.city.slug,
     cover_media_url: coverMediaUrl || parseOutput.result.cover_media_url,
     video_url: videoUrl || parseOutput.result.video_url,
+    source: {
+      ...parseOutput.result.source,
+      kind: 'manual_editor',
+      intake: 'manual',
+    },
   }
 
   if (coverMediaUrl && !payload.media_urls.includes(coverMediaUrl)) {
@@ -261,6 +266,7 @@ export async function sendManagerEditorialPreview(
     cityName: args.city.name,
     citySlug: args.city.slug,
     status: 'draft',
+    sourceKind: 'manual_editor',
     payload: args.payload,
     needsOrg,
   })

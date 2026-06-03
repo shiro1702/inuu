@@ -64,6 +64,7 @@ def message_to_ingest_payload(message: Any, source: TelegramSource) -> dict[str,
     return {
         "rawText": raw_text,
         "sourceKind": "telegram_parse",
+        "sourceIntake": "telegram_channel",
         "sourceUrl": source_url,
         "sourceExternalId": source_external_id,
         "citySlug": source.city_slug,

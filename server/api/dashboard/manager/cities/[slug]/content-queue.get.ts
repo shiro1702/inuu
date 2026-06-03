@@ -1,6 +1,10 @@
 import { defineEventHandler, getQuery } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import { resolveManagerCityScopeOrThrow } from '~/server/utils/managerCityAccess'
+import {
+  intakeFromPayload,
+  resolveContentIntakeLabel,
+} from '~/server/utils/contentSubmissionIntake'
 
 export default defineEventHandler(async (event) => {
   const slug = typeof event.context.params?.slug === 'string' ? event.context.params.slug : ''
@@ -42,13 +46,23 @@ export default defineEventHandler(async (event) => {
   return {
     ok: true as const,
     city: { id: scope.cityId, slug: scope.citySlug, name: scope.cityName },
-    items: (data ?? []).map((row: any) => ({
+    items: (data ?? []).map((row: any) => {
+      const sourceKind = row.source_kind ? String(row.source_kind) : null
+      const sourceUrl = row.source_url ? String(row.source_url) : null
+      const sourceExternalId = row.source_external_id ? String(row.source_external_id) : null
+      return {
       id: String(row.id),
       kind: String(row.kind || 'event'),
       status: String(row.status || 'pending'),
-      sourceKind: row.source_kind ? String(row.source_kind) : null,
-      sourceUrl: row.source_url ? String(row.source_url) : null,
-      sourceExternalId: row.source_external_id ? String(row.source_external_id) : null,
+      sourceKind,
+      sourceIntakeLabel: resolveContentIntakeLabel({
+        sourceKind,
+        intake: intakeFromPayload(row.payload),
+        sourceUrl,
+        sourceExternalId,
+      }),
+      sourceUrl,
+      sourceExternalId,
       editorialScore: typeof row.editorial_score === 'number' ? row.editorial_score : null,
       rejectReasonCode: row.reject_reason_code ? String(row.reject_reason_code) : null,
       rejectComment: row.reject_comment ? String(row.reject_comment) : null,
@@ -61,6 +75,7 @@ export default defineEventHandler(async (event) => {
       payload: row.payload || {},
       createdAt: String(row.created_at || ''),
       updatedAt: String(row.updated_at || ''),
-    })),
+    }
+    }),
   }
 })

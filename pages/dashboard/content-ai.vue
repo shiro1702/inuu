@@ -296,7 +296,7 @@
                 </p>
                 <p class="font-mono text-xs text-gray-500">{{ item.id }}</p>
                 <p class="text-xs text-gray-600">
-                  status: {{ item.status }} · kind: {{ item.kind }} · score: {{ item.editorialScore ?? '—' }} · source: {{ item.sourceKind ?? '—' }}
+                  status: {{ item.status }} · kind: {{ item.kind }} · score: {{ item.editorialScore ?? '—' }} · откуда: {{ item.sourceIntakeLabel ?? item.sourceKind ?? '—' }}
                   <span v-if="item.batchRole"> · batch: {{ item.batchRole }}<span v-if="item.batchIndex != null"> #{{ item.batchIndex }}</span></span>
                 </p>
                 <ul v-if="item.batchRole === 'batch' && Array.isArray(item.payload?.events)" class="mt-2 space-y-0.5 text-xs text-gray-600">

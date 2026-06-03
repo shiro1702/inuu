@@ -15,6 +15,11 @@ import {
   extractPrimaryImageFromHtml,
   fetchHtmlForImageExtract,
 } from '~/server/utils/pageImageExtract'
+import {
+  type ContentIntakeChannel,
+  inferContentIntakeChannel,
+  withSourceIntake,
+} from '~/server/utils/contentSubmissionIntake'
 import { resolveIngestSourceContext, resolveIngestSourceOrganization } from '~/server/utils/ingestSourceContext'
 import { resolveCityBySlug } from '~/server/utils/inuuCity'
 import { loadCityParseTaxonomy, resolveParsedTaxonomy } from '~/server/utils/cityContentTaxonomy'
@@ -392,8 +397,20 @@ export async function runContentIngest(
     skipModerationNotify?: boolean
     /** Override bot token for moderation cards (e.g. webhook handler token) */
     moderationBotToken?: string
+    /** UI channel label (parser group, web cron, …); inferred from sourceKind if omitted */
+    sourceIntake?: ContentIntakeChannel
   },
 ): Promise<ContentIngestResult> {
+  const resolvedIntake =
+    input.sourceIntake
+    || inferContentIntakeChannel({
+      sourceKind: input.sourceKind,
+      sourceUrl: input.sourceUrl,
+      sourceExternalId: input.sourceExternalId,
+    })
+
+  const stampEventParse = (parse: EventParseResult): EventParseResult =>
+    withSourceIntake(parse, resolvedIntake)
   const citySlugHint = input.citySlug || null
   let taxonomyHints = input.hints || {}
   let cityForTaxonomy: Awaited<ReturnType<typeof resolveCityBySlug>> | null = null
@@ -471,6 +488,7 @@ export async function runContentIngest(
           kind: input.sourceKind,
           url: input.sourceUrl || null,
           external_id: input.sourceExternalId || null,
+          intake: resolvedIntake,
         },
         is_free: false,
         price_from: null,
@@ -481,6 +499,8 @@ export async function runContentIngest(
         confidence: 0,
         missing_fields: ['prefilter_skipped'],
       }
+
+      const stampedEmpty = stampEventParse(emptyParse as EventParseResult)
 
       return {
         city: cityForTaxonomy
@@ -502,7 +522,7 @@ export async function runContentIngest(
         items: [],
         batchId: null,
         parentSubmissionId: null,
-        parse: emptyParse,
+        parse: stampedEmpty,
         moderationStatus: 'needs_revision',
         duplicates: { checked: false, items: [], seriesMatches: [] },
         persisted: { ok: false, id: null, warning: 'skipped by prefilter' },
@@ -519,7 +539,7 @@ export async function runContentIngest(
   let events: EventParseResult[]
 
   if (input.parsedEvents?.length) {
-    events = [...input.parsedEvents]
+    events = input.parsedEvents.map((ev) => stampEventParse(ev))
     parseOutput = {
       result: {
         parse_kind: events.length > 1 ? 'digest' : 'single',
@@ -593,6 +613,7 @@ export async function runContentIngest(
             kind: input.sourceKind,
             url: input.sourceUrl || null,
             external_id: input.sourceExternalId || null,
+            intake: resolvedIntake,
           },
           is_free: false,
           price_from: null,
@@ -602,7 +623,7 @@ export async function runContentIngest(
           recurrence: { rule: 'none', dates: [] },
           confidence: 0,
           missing_fields: ['past_event_skipped'],
-        },
+        } as EventParseResult,
         moderationStatus: 'needs_revision',
         duplicates: { checked: false, items: [], seriesMatches: [] },
         persisted: { ok: false, id: null, warning: 'skipped: all_dates_in_past' },
@@ -677,7 +698,9 @@ export async function runContentIngest(
 
   const items: ContentIngestItemResult[] = []
   for (let i = 0; i < events.length; i++) {
-    let parsed = await resolveEventResult(event, city.id, events[i], taxonomyHints.contextType)
+    let parsed = stampEventParse(
+      await resolveEventResult(event, city.id, events[i], taxonomyHints.contextType),
+    )
     events[i] = parsed
     const duplicates = await findEventDuplicates({
       event,
@@ -710,6 +733,7 @@ export async function runContentIngest(
       kind: input.sourceKind,
       url: input.sourceUrl || null,
       external_id: input.sourceExternalId || null,
+      intake: resolvedIntake,
     },
   }
 

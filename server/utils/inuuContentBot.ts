@@ -555,6 +555,7 @@ export async function tryHandleInuuParserSourceTelegramMessage(
     const result = await runContentIngest(event, {
       rawText,
       sourceKind: 'telegram_parse',
+      sourceIntake: 'telegram_group',
       sourceUrl,
       sourceExternalId,
       citySlug: city.slug,

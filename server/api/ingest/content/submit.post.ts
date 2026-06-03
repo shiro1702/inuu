@@ -1,6 +1,7 @@
 import { createError, defineEventHandler, getHeader, readBody } from 'h3'
 import { eventParseInputSchema } from '~/server/utils/ai/eventParseSchema'
 import { runContentIngest } from '~/server/utils/contentIngestCore'
+import { isContentIntakeChannel, type ContentIntakeChannel } from '~/server/utils/contentSubmissionIntake'
 
 type IngestBody = {
   rawText?: string
@@ -14,6 +15,7 @@ type IngestBody = {
     topicTags?: string[]
   }
   persist?: boolean
+  sourceIntake?: ContentIntakeChannel
 }
 
 export default defineEventHandler(async (event) => {
@@ -46,9 +48,11 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
+    const sourceIntake = isContentIntakeChannel(body.sourceIntake) ? body.sourceIntake : undefined
     const result = await runContentIngest(event, {
       ...parsedInput.data,
       persist: body.persist === true,
+      sourceIntake,
     })
 
     return {

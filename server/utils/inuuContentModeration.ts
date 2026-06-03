@@ -5,6 +5,10 @@ import {
   isEditorialPayload,
   type EditorialParseResult,
 } from '~/server/utils/ai/editorialParseSchema'
+import {
+  intakeFromPayload,
+  resolveContentIntakeLabel,
+} from '~/server/utils/contentSubmissionIntake'
 import { formatTopicTagsAsHashtags } from '~/server/utils/ingestSourceDisplayName'
 import { formatDescriptionsForModeration } from '~/server/utils/eventParseDescriptions'
 import { publishContentSubmission } from '~/server/utils/contentSubmissionPublish'
@@ -53,7 +57,7 @@ const CONTENT_SUBMISSION_STATUS_EMOJI: Record<string, string> = {
 }
 
 const MODERATION_CARD_SELECT =
-  'id,city_id,kind,status,payload,source_kind,moderation_chat_id,moderation_message_id,reviewed_by_username,reviewed_at,reject_reason_code,editorial_score'
+  'id,city_id,kind,status,payload,source_kind,source_url,source_external_id,moderation_chat_id,moderation_message_id,reviewed_by_username,reviewed_at,reject_reason_code,editorial_score'
 
 const EDITORIAL_KIND_LABELS: Record<string, string> = {
   venue_review: 'Обзор места',
@@ -154,12 +158,30 @@ export function formatSubmissionEditMessageLines(submissionId: string): string[]
   ].filter(Boolean) as string[]
 }
 
+function formatSubmissionIntakeLine(args: {
+  sourceKind: string | null
+  payload: unknown
+  sourceUrl?: string | null
+  sourceExternalId?: string | null
+}): string {
+  const intake = intakeFromPayload(args.payload)
+  const label = resolveContentIntakeLabel({
+    sourceKind: args.sourceKind,
+    intake,
+    sourceUrl: args.sourceUrl,
+    sourceExternalId: args.sourceExternalId,
+  })
+  return `Откуда: ${label}`
+}
+
 export function formatEditorialSubmissionCard(args: {
   submissionId: string
   cityName: string
   citySlug: string
   status: string
   sourceKind: string | null
+  sourceUrl?: string | null
+  sourceExternalId?: string | null
   kind?: string | null
   payload: EditorialParseResult
   meta?: ContentSubmissionCardMeta
@@ -181,7 +203,12 @@ export function formatEditorialSubmissionCard(args: {
     `Тип: ${kindLabel}`,
     `Город: ${args.cityName} (${args.citySlug})`,
     `Статус: ${formatContentSubmissionStatusLabel(args.status)}`,
-    `Источник: ${args.sourceKind || p.source?.kind || '—'}`,
+    formatSubmissionIntakeLine({
+      sourceKind: args.sourceKind || p.source?.kind || null,
+      payload: args.payload,
+      sourceUrl: args.sourceUrl ?? p.source?.url,
+      sourceExternalId: args.sourceExternalId ?? p.source?.external_id,
+    }),
     '────────────────',
     String(p.title || 'Без названия'),
     pubDate,
@@ -211,6 +238,8 @@ export function formatContentSubmissionCard(args: {
   citySlug: string
   status: string
   sourceKind: string | null
+  sourceUrl?: string | null
+  sourceExternalId?: string | null
   kind?: string | null
   payload: EventParseResult | Record<string, unknown>
   meta?: ContentSubmissionCardMeta
@@ -243,7 +272,12 @@ export function formatContentSubmissionCard(args: {
     ...formatSubmissionIdHeader(args.submissionId),
     `Город: ${args.cityName} (${args.citySlug})`,
     `Статус: ${formatContentSubmissionStatusLabel(args.status)}`,
-    `Источник: ${args.sourceKind || p.source?.kind || '—'}`,
+    formatSubmissionIntakeLine({
+      sourceKind: args.sourceKind || p.source?.kind || null,
+      payload: args.payload,
+      sourceUrl: args.sourceUrl ?? p.source?.url,
+      sourceExternalId: args.sourceExternalId ?? p.source?.external_id,
+    }),
     '────────────────',
     String(p.title || 'Без названия'),
     `📅 ${dateLine}`,
@@ -312,6 +346,8 @@ async function buildContentSubmissionCardText(
     citySlug: String((city as any)?.slug || ''),
     status: String(submission.status || 'pending'),
     sourceKind: submission.source_kind ? String(submission.source_kind) : null,
+    sourceUrl: submission.source_url ? String(submission.source_url) : null,
+    sourceExternalId: submission.source_external_id ? String(submission.source_external_id) : null,
     kind: (submission as any).kind ? String((submission as any).kind) : null,
     payload: ((submission.payload || {}) as EventParseResult),
     meta: {
@@ -472,7 +508,7 @@ export async function sendContentSubmissionModerationCards(
   const client = await serverSupabaseServiceRole(event)
   const { data: submission, error } = await client
     .from('content_submissions')
-    .select('id,city_id,kind,status,payload,source_kind,moderation_message_id')
+    .select('id,city_id,kind,status,payload,source_kind,source_url,source_external_id,moderation_message_id')
     .eq('id', args.submissionId)
     .maybeSingle()
 
@@ -492,6 +528,10 @@ export async function sendContentSubmissionModerationCards(
     citySlug: String((city as any)?.slug || ''),
     status: String((submission as any).status || 'pending'),
     sourceKind: (submission as any).source_kind ? String((submission as any).source_kind) : null,
+    sourceUrl: (submission as any).source_url ? String((submission as any).source_url) : null,
+    sourceExternalId: (submission as any).source_external_id
+      ? String((submission as any).source_external_id)
+      : null,
     payload: ((submission as any).payload || {}) as EventParseResult,
   })
 
@@ -613,7 +653,7 @@ async function notifyContentSubmissionMaxChats(
   const client = await serverSupabaseServiceRole(event)
   const { data: submission } = await client
     .from('content_submissions')
-    .select('id,city_id,kind,status,payload,source_kind')
+    .select('id,city_id,kind,status,payload,source_kind,source_url,source_external_id')
     .eq('id', args.submissionId)
     .maybeSingle()
   if (!submission?.id) return
@@ -639,6 +679,10 @@ async function notifyContentSubmissionMaxChats(
     citySlug,
     status: String((submission as any).status || 'pending'),
     sourceKind: (submission as any).source_kind ? String((submission as any).source_kind) : null,
+    sourceUrl: (submission as any).source_url ? String((submission as any).source_url) : null,
+    sourceExternalId: (submission as any).source_external_id
+      ? String((submission as any).source_external_id)
+      : null,
     payload: ((submission as any).payload || {}) as EventParseResult,
   })
   const attachments = buildMaxContentSubmissionAttachments(editLinks)

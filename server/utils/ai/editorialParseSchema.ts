@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { CONTENT_INTAKE_CHANNELS } from '~/server/utils/contentSubmissionIntake'
 
 export const EDITORIAL_CONTENT_TYPES = [
   'venue_review',
@@ -65,6 +66,7 @@ export const editorialParseResultSchema = z.object({
     kind: z.enum(EDITORIAL_SOURCE_KINDS),
     url: nullableTrimmedString,
     external_id: nullableTrimmedString,
+    intake: z.enum(CONTENT_INTAKE_CHANNELS).optional(),
   }),
   topic_tags: z.array(z.string().trim().min(2).max(40)).max(5),
   story: z

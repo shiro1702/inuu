@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { CONTENT_INTAKE_CHANNELS } from '~/server/utils/contentSubmissionIntake'
 
 export const SOURCE_KINDS = ['bot_submit', 'telegram_parse', 'manual_editor', 'web_cron'] as const
 export const EVENT_KINDS = ['event', 'masterclass', 'news'] as const
@@ -44,6 +45,7 @@ export const eventParseResultSchema = z.object({
     kind: z.enum(SOURCE_KINDS),
     url: nullableTrimmedString,
     external_id: nullableTrimmedString,
+    intake: z.enum(CONTENT_INTAKE_CHANNELS).optional(),
   }),
   is_free: z.boolean(),
   price_from: z.number().nonnegative().nullable().default(null),
