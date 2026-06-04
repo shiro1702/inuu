@@ -16,15 +16,19 @@ export default defineEventHandler(async (event) => {
   const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, Number(query.limit) || DEFAULT_PAGE_SIZE))
   const from = (page - 1) * pageSize
   const to = from + pageSize - 1
+  const tag = typeof query.tag === 'string' ? query.tag.trim().toLowerCase() : ''
 
   const client = await serverSupabaseServiceRole(event)
-  const { data, count, error } = await client
+  let q = client
     .from('curated_lists')
-    .select('id,slug,title,description,sort_order,created_at', { count: 'exact' })
+    .select('id,slug,title,description,topic_tags,sort_order,created_at', { count: 'exact' })
     .eq('city_id', city.id)
     .eq('is_published', true)
     .order('created_at', { ascending: false })
-    .range(from, to)
+
+  if (tag) q = q.contains('topic_tags', [tag])
+
+  const { data, count, error } = await q.range(from, to)
 
   if (error) {
     console.error('[lists/index] load failed:', error)

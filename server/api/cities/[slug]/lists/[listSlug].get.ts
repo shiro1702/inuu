@@ -14,6 +14,7 @@ type ListWithItemsRow = {
   slug: string
   title: string
   description: string | null
+  topic_tags: string[] | null
   curated_list_items: CuratedListItemRow[] | null
   cities: { id: string; slug: string }
 }
@@ -36,6 +37,7 @@ export default defineEventHandler(async (event) => {
       slug,
       title,
       description,
+      topic_tags,
       curated_list_items (
         id,
         entity_type,
@@ -69,6 +71,7 @@ export default defineEventHandler(async (event) => {
     slug: row.slug,
     title: row.title,
     description: row.description,
+    topic_tags: Array.isArray(row.topic_tags) ? row.topic_tags : [],
   }
 
   const rows = [...(row.curated_list_items ?? [])].sort((a, b) => a.sort_order - b.sort_order)

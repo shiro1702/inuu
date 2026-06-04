@@ -54,6 +54,15 @@ export default defineEventHandler(async (event) => {
     .order('published_at', { ascending: false })
     .limit(24)
 
+  const { data: listRows } = await client
+    .from('curated_lists')
+    .select('id,slug,title,description,topic_tags,created_at')
+    .eq('city_id', city.id)
+    .eq('is_published', true)
+    .contains('topic_tags', [tagSlug])
+    .order('created_at', { ascending: false })
+    .limit(24)
+
   return {
     ok: true,
     tag: {
@@ -62,5 +71,6 @@ export default defineEventHandler(async (event) => {
     },
     events,
     news: newsRows ?? [],
+    lists: listRows ?? [],
   }
 })

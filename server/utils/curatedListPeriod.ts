@@ -1,6 +1,7 @@
 import type { H3Event } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import type { EventDigestMeta } from '~/server/utils/ai/eventParseSchema'
+import { parseSourceMetadata } from '~/server/utils/eventPublicDetail'
 
 export type CuratedPeriod = 'week' | 'month'
 
@@ -90,6 +91,34 @@ export function resolvePeriodListMeta(args: {
   return { period: 'week', slug, title, periodStart, periodEnd }
 }
 
+export async function unionTopicTagsFromEvents(
+  event: H3Event,
+  eventIds: string[],
+): Promise<string[]> {
+  if (!eventIds.length) return []
+
+  const client = await serverSupabaseServiceRole(event)
+  const { data, error } = await client
+    .from('events')
+    .select('source_metadata')
+    .in('id', eventIds)
+
+  if (error) {
+    console.error('[curatedListPeriod] unionTopicTagsFromEvents failed:', error)
+    return []
+  }
+
+  const slugs = new Set<string>()
+  for (const row of data ?? []) {
+    const meta = parseSourceMetadata((row as { source_metadata?: unknown }).source_metadata)
+    for (const tag of meta.topic_tags || []) {
+      const slug = String(tag || '').trim().toLowerCase()
+      if (slug.length >= 2) slugs.add(slug)
+    }
+  }
+  return [...slugs].sort()
+}
+
 export async function upsertCuratedListForPeriod(
   event: H3Event,
   args: {
@@ -100,6 +129,7 @@ export async function upsertCuratedListForPeriod(
     description?: string
     selectionMode?: 'weekly' | 'custom'
     sourceMetadata?: Record<string, unknown> | null
+    topicTags?: string[]
   },
 ): Promise<{ listId: string; slug: string }> {
   const client = await serverSupabaseServiceRole(event)
@@ -130,6 +160,7 @@ export async function upsertCuratedListForPeriod(
         description,
         is_published: args.publish !== false,
         source_metadata: sourceMetadata,
+        ...(args.topicTags !== undefined ? { topic_tags: args.topicTags } : {}),
         updated_at: new Date().toISOString(),
       } as any)
       .eq('id', existing.id)
@@ -146,6 +177,7 @@ export async function upsertCuratedListForPeriod(
       is_published: args.publish !== false,
       sort_order: args.meta.period === 'week' ? 10 : 20,
       source_metadata: sourceMetadata,
+      topic_tags: args.topicTags ?? [],
     } as any)
     .select('id,slug')
     .maybeSingle()
@@ -167,6 +199,7 @@ export async function upsertCuratedListBySlug(
     publish?: boolean
     sortOrder?: number
     sourceMetadata?: Record<string, unknown> | null
+    topicTags?: string[]
   },
 ): Promise<{ listId: string; slug: string }> {
   const client = await serverSupabaseServiceRole(event)
@@ -185,6 +218,7 @@ export async function upsertCuratedListBySlug(
         description: args.description,
         is_published: args.publish === true,
         source_metadata: args.sourceMetadata || {},
+        ...(args.topicTags !== undefined ? { topic_tags: args.topicTags } : {}),
         updated_at: new Date().toISOString(),
       } as any)
       .eq('id', existing.id)
@@ -201,6 +235,7 @@ export async function upsertCuratedListBySlug(
       is_published: args.publish === true,
       sort_order: typeof args.sortOrder === 'number' ? args.sortOrder : 15,
       source_metadata: args.sourceMetadata || {},
+      topic_tags: args.topicTags ?? [],
     } as any)
     .select('id,slug')
     .maybeSingle()
@@ -271,11 +306,15 @@ export async function syncDigestEventsToCuratedList(
     digest: args.digest,
   })
 
+  const eventIds = args.publishedItems.map((item) => item.eventId)
+  const topicTags = await unionTopicTagsFromEvents(event, eventIds)
+
   const { listId, slug } = await upsertCuratedListForPeriod(event, {
     cityId: args.cityId,
     meta,
     batchId: args.batchId,
     publish: true,
+    topicTags,
   })
 
   for (const item of args.publishedItems) {

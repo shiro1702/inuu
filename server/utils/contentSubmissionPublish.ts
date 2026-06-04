@@ -28,6 +28,7 @@ import {
   normalizeUpdateKind,
 } from '~/server/utils/eventLifecycleStatus'
 import type { IngestPostType } from '~/server/utils/ai/eventParseSchema'
+import { notifyEventPublished } from '~/server/utils/cityTopicBroadcast'
 
 function slugifyTitle(input: string): string {
   return slugifyTaxonomy(input).slice(0, 80) || `item-${Date.now()}`
@@ -703,6 +704,21 @@ export async function publishContentSubmission(
       updated_at: new Date().toISOString(),
     } as any)
     .eq('id', submissionId)
+
+  const topicTags = Array.isArray(payload.topic_tags)
+    ? payload.topic_tags.map((x) => String(x || '').trim()).filter(Boolean)
+    : []
+
+  void notifyEventPublished(event, {
+    cityId,
+    citySlug,
+    cityTimezone: String((city as any)?.timezone || 'Asia/Irkutsk'),
+    eventId: String(primary.id),
+    eventSlug: String(primary.slug),
+    eventTitle: title,
+    startsAt: primary.starts_at || startsAtList[0] || null,
+    topicTags,
+  }).catch((err) => console.error('[contentSubmissionPublish] event publish notify:', err))
 
   return {
     entityType: 'event',

@@ -4,8 +4,8 @@ type TagGroupWithItems = {
   items: Array<{ slug: string }>
 }
 
-/** Где искать теги: события, новости, места или объединение. */
-export const CONTENT_TAG_USAGE_SCOPES = ['events', 'editorial', 'venues', 'all'] as const
+/** Где искать теги: события, новости, места, подборки, лента (без venues) или объединение. */
+export const CONTENT_TAG_USAGE_SCOPES = ['events', 'editorial', 'venues', 'lists', 'feed', 'all'] as const
 export type ContentTagUsageScope = (typeof CONTENT_TAG_USAGE_SCOPES)[number]
 
 export function parseContentTagUsageScope(raw: unknown): ContentTagUsageScope | null {

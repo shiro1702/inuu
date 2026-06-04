@@ -92,6 +92,22 @@ async function collectVenueVibeTagSlugs(event: H3Event, cityId: string): Promise
   return slugs
 }
 
+async function collectCuratedListTopicTagSlugs(event: H3Event, cityId: string): Promise<Set<string>> {
+  const client = await serverSupabaseServiceRole(event)
+  const { data, error } = await client
+    .from('curated_lists')
+    .select('topic_tags')
+    .eq('city_id', cityId)
+    .eq('is_published', true)
+    .limit(500)
+
+  if (error) {
+    console.error('[cityContentTagsInUse] curated_lists scan failed:', error)
+    return new Set()
+  }
+  return collectFromTopicTagArrays(data ?? [])
+}
+
 export async function collectCityContentTagSlugsInUse(
   event: H3Event,
   cityId: string,
@@ -100,13 +116,23 @@ export async function collectCityContentTagSlugsInUse(
   if (scope === 'events') return collectEventTopicTagSlugs(event, cityId)
   if (scope === 'editorial') return collectEditorialTopicTagSlugs(event, cityId)
   if (scope === 'venues') return collectVenueVibeTagSlugs(event, cityId)
+  if (scope === 'lists') return collectCuratedListTopicTagSlugs(event, cityId)
+  if (scope === 'feed') {
+    const [events, editorial, lists] = await Promise.all([
+      collectEventTopicTagSlugs(event, cityId),
+      collectEditorialTopicTagSlugs(event, cityId),
+      collectCuratedListTopicTagSlugs(event, cityId),
+    ])
+    return new Set([...events, ...editorial, ...lists])
+  }
 
-  const [events, editorial, venues] = await Promise.all([
+  const [events, editorial, venues, lists] = await Promise.all([
     collectEventTopicTagSlugs(event, cityId),
     collectEditorialTopicTagSlugs(event, cityId),
     collectVenueVibeTagSlugs(event, cityId),
+    collectCuratedListTopicTagSlugs(event, cityId),
   ])
-  return new Set([...events, ...editorial, ...venues])
+  return new Set([...events, ...editorial, ...venues, ...lists])
 }
 
 export async function listCityContentTagsInScope(

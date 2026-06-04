@@ -33,7 +33,23 @@
         </ul>
       </section>
 
-      <p v-if="!events.length && !news.length" class="mt-8 text-sm text-gray-500">
+      <section v-if="lists.length" class="mt-10">
+        <h2 class="text-lg font-semibold text-gray-900">Подборки</h2>
+        <ul class="mt-4 space-y-3">
+          <li
+            v-for="list in lists"
+            :key="list.id"
+            class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
+          >
+            <NuxtLink :to="`${cityBasePath}/lists/${list.slug}`" class="font-medium text-gray-900 hover:text-primary">
+              {{ list.title }}
+            </NuxtLink>
+            <p v-if="list.description" class="mt-1 line-clamp-2 text-sm text-gray-600">{{ list.description }}</p>
+          </li>
+        </ul>
+      </section>
+
+      <p v-if="!events.length && !news.length && !lists.length" class="mt-8 text-sm text-gray-500">
         Пока нет материалов с этим тегом.
       </p>
     </template>
@@ -51,6 +67,7 @@ const pending = ref(true)
 const tagName = ref('')
 const events = ref<Array<Record<string, any>>>([])
 const news = ref<Array<Record<string, any>>>([])
+const lists = ref<Array<Record<string, any>>>([])
 
 watch([slug, tagSlug], async () => {
   pending.value = true
@@ -60,14 +77,17 @@ watch([slug, tagSlug], async () => {
       tag?: { name: string }
       events?: Array<Record<string, any>>
       news?: Array<Record<string, any>>
+      lists?: Array<Record<string, any>>
     }>(`/api/cities/${slug.value}/tag/${tagSlug.value}`)
     tagName.value = res?.tag?.name || tagSlug.value
     events.value = res?.events ?? []
     news.value = res?.news ?? []
+    lists.value = res?.lists ?? []
   } catch {
     tagName.value = tagSlug.value
     events.value = []
     news.value = []
+    lists.value = []
   } finally {
     pending.value = false
   }
