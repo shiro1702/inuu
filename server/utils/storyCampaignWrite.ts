@@ -21,6 +21,7 @@ export type CreateStoryCampaignArgs = {
   validFrom?: string | null
   validUntil?: string | null
   authorType?: 'editorial' | 'venue' | 'organization'
+  targeting?: Record<string, unknown>
   slides: StorySlideInput[]
 }
 
@@ -58,7 +59,8 @@ export async function createStoryCampaign(
       is_active: args.isActive !== false,
       valid_from: args.validFrom ?? new Date().toISOString(),
       valid_until: args.validUntil ?? null,
-      targeting: {},
+      targeting:
+        args.targeting && typeof args.targeting === 'object' ? args.targeting : {},
     } as any)
     .select('id')
     .single()

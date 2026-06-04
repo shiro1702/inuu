@@ -129,6 +129,8 @@ const emit = defineEmits<{
   'update:modelValue': [value: string[] | string | null]
 }>()
 
+const { dashboardFetch } = useDashboardFetch()
+
 const rootEl = ref<HTMLElement | null>(null)
 const search = ref('')
 const openDropdown = ref(false)
@@ -203,7 +205,7 @@ async function loadOptions() {
       params.set('kind', props.kind)
       params.set('submissionId', props.moderationSubmissionId.trim())
     }
-    const res = await fetch(`${apiBase.value}?${params.toString()}`, {
+    const res = await dashboardFetch(`${apiBase.value}?${params.toString()}`, {
       headers: props.fetchHeaders,
     })
     const payload = await res.json() as { ok?: boolean; items?: TaxonomyItem[] }
@@ -256,7 +258,7 @@ async function createFromSearch() {
   const url = buildCreateUrl()
   if (!name || !url) return
   try {
-    const res = await fetch(url, {
+    const res = await dashboardFetch(url, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',

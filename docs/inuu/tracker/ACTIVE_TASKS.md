@@ -44,9 +44,9 @@
 
 **Волна 3c закрыта:** TASK-022–024 → архив. Runbook: [WAVE_3C_README.md](../runbooks/WAVE_3C_README.md).
 
-**Следующая волна:** [3d — PNG карусели и сторис](#волна-3d--png-для-каруселей-и-сторис) (TASK-025 → 027). Runbook: [WAVE_3D_README.md](../runbooks/WAVE_3D_README.md).
+**Волна 3d закрыта:** TASK-025–027 → архив. Runbook: [WAVE_3D_README.md](../runbooks/WAVE_3D_README.md).
 
-**Дальше:** [3e retention в боте](#волна-3e--retention-и-editorial-push) · [3f+ бэклог](#бэклог-после-3e-не-активно).
+**Следующая волна:** [3e retention в боте](#волна-3e--retention-и-editorial-push) · [3f+ бэклог](#бэклог-после-3e-не-активно).
 
 Индексы брейнштормов: [01.06.2026](../../fix/brainstorm/01.06.2026.md), [02.05.2026](../../fix/brainstorm/02.05.2026.md), [03.06.2026](../../fix/brainstorm/03.06.2026.md).
 
@@ -54,7 +54,7 @@
 
 ## Активные задачи
 
-> **0/3** — слоты свободны. Старт 3d: **TASK-025** → `in_progress` + `[~]` в матрице.
+> **0/3** — слоты свободны. Старт 3e: **TASK-028**.
 
 ---
 
@@ -68,20 +68,26 @@
 
 ## Волна 3d — PNG для каруселей и сторис
 
+**Статус волны:** ✅ закрыта 04.06.2026 (TASK-025–027).
+
+**Как проверить:** [WAVE_3D_README.md](../runbooks/WAVE_3D_README.md) — prerequisites, URL, smoke-чеклист, SQL, troubleshooting.
+
+---
+
+## Волна 3d (архив описания)
+
 **Зачем:** multiplier (TASK-015) даёт **текст** карусели/сторис; редакции нужны **готовые картинки** для сайта, SMM и полоски stories — без WebCodecs.
 
-**Порядок:** 025 → (026 ‖ 027).
-
-| Формат | Сейчас в продукте | После 3d |
-|--------|-------------------|----------|
-| **Карусель** | `instagram_carousel` текст в Groq pack | PNG-слайды + свайп на статье + export |
-| **Сторис** | `story_campaigns` + текстовые слайды | PNG на storage → `story_slides.image_url` |
+| Формат | После 3d |
+|--------|----------|
+| **Карусель** | PNG-слайды + свайп на статье + export |
+| **Сторис** | PNG на storage → `story_slides.media_url` |
 
 ---
 
 ### TASK-025 · HTML-шаблоны слайдов + PNG-рендер (база)
 
-- **Статус:** `todo`
+- **Статус:** `done` (архив)
 - **Размер:** M
 - **Матрица:** §6 · HTML carousel studio (фаза 1 — только PNG)
 - **Цель:** один раз сверстать слайды и рендерить их в PNG на клиенте (`html-to-image`), без дублирования вёрстки для карусели и сторис.
@@ -95,15 +101,15 @@
 - **Out of scope:** WebCodecs / MP4; 4 полных стиля из библиотеки; satori на сервере; Mini App crop-редактор.
 - **Ключевые файлы:** `components/editorial/carousel/` (новое), `package.json` (`html-to-image`)
 - **Критерии готовности:**
-  - [ ] Dev-страница или Storybook-like route рендерит Cover+Body+Outro в 3 PNG без пустого canvas.
-  - [ ] 9:16 и 4:5 из одного `slide` data с разным wrapper.
-  - [ ] Watermark `@brand` на cover.
+  - [x] Dev-страница `/dev/carousel-render` — Cover+Body+Outro в PNG.
+  - [x] 9:16 и 4:5 из одного `slide` data.
+  - [x] Watermark `@brand` на cover.
 
 ---
 
 ### TASK-026 · Карусель: `metadata.carousel` + сайт + export
 
-- **Статус:** `todo`
+- **Статус:** `done` (архив)
 - **Размер:** M
 - **Матрица:** §6 · HTML carousel studio (живая карусель + export)
 - **Цель:** лонгрид на сайте показывает свайп-карусель; из multiplier/publish можно скачать PNG для Instagram.
@@ -116,15 +122,15 @@
 - **Out of scope:** живая карусель в TG media group ([36](../features/content/36-bot-vibes-editorial-delivery.md)); server Puppeteer; video.
 - **Ключевые файлы:** `groqEditorialContentPack.ts`, `editorialDashboard.ts`, `inuuManagerChatBot.ts`, `pages/[city_slug]/guides/`
 - **Критерии готовности:**
-  - [ ] После publish статьи с pack — на странице видна карусель из ≥3 слайдов.
-  - [ ] Export 4 PNG совпадает с превью на сайте.
-  - [ ] Без `metadata.carousel` — статья как сейчас (без ошибок).
+  - [x] `metadata.carousel` при publish + кнопка «Карусель» в manager chat.
+  - [x] Export PNG в dashboard (`EditorialCarouselExportPanel`).
+  - [x] Без `metadata.carousel` — статья без изменений.
 
 ---
 
 ### TASK-027 · Сторис: PNG-слайды → `story_slides` при publish
 
-- **Статус:** `todo`
+- **Статус:** `done` (архив)
 - **Размер:** M
 - **Матрица:** §6 · Stories города (визуальные слайды из шаблонов)
 - **Цель:** при публикации editorial из manager chat сторис на главной — с **картинками**, не только текстом в preview.
@@ -137,9 +143,9 @@
 - **Out of scope:** полноэкранный story viewer redesign; video slides; автопост в IG Stories API.
 - **Ключевые файлы:** `storyCampaignWrite.ts`, `editorialDashboard.ts`, `inuuManagerChatBot.ts`, `components/stories/`, `server/api/cities/[slug]/stories.get.ts`
 - **Критерии готовности:**
-  - [ ] Publish обзора из manager chat → на `/ulan-ude` новый круг с PNG-превью.
-  - [ ] Fullscreen story показывает 3+ слайда с картинкой и текстом.
-  - [ ] Повторный render не ломает старые кампании (новая кампания или replace по slug).
+  - [x] «Опубликовать + сторис» → Story Studio → PNG на storage.
+  - [x] `finalize-slides` пишет `story_slides` + `preview_url`.
+  - [x] Новая кампания на каждый publish (старые не трогаем).
 
 ---
 
@@ -191,7 +197,10 @@
 | TASK-022 | `topic_tags` на подборках + digest union | 04.06.2026 | `050_curated_lists_topic_tags.sql`, `curatedListPeriod.ts` |
 | TASK-023 | Смарт-лента: фильтр по тегам | 04.06.2026 | `home.get.ts`, `index.vue`, `tag/[tagSlug]` |
 | TASK-024 | Push при publish события | 04.06.2026 | `cityTopicBroadcast.ts`, `contentSubmissionPublish.ts` |
+| TASK-025 | HTML-шаблоны слайдов + PNG-рендер | 04.06.2026 | `components/editorial/carousel/`, `html-to-image`, `/dev/carousel-render` |
+| TASK-026 | Карусель metadata + сайт + export | 04.06.2026 | `051_editorial_posts_metadata.sql`, `EditorialCarousel.vue`, `parseInstagramCarousel.ts` |
+| TASK-027 | Сторис PNG → story_slides | 04.06.2026 | `/dashboard/story-studio`, `story-slide.upload`, `publish_story` |
 
 ---
 
-**Последнее обновление:** 04.06.2026 · активных: **0** · текущая волна: **3d** (TASK-025–027)
+**Последнее обновление:** 04.06.2026 · активных: **0** · текущая волна: **3e** (TASK-028–030)

@@ -19,7 +19,12 @@ export function useDashboardAccess() {
       return
     }
     try {
-      const res = await $fetch<DashboardAccessResponse>('/api/dashboard/access')
+      const { authHeaders } = useDashboardFetch()
+      const headers = await authHeaders()
+      const res = await $fetch<DashboardAccessResponse>('/api/dashboard/access', {
+        credentials: 'include',
+        headers,
+      })
       hasDashboardAccess.value = !!res?.ok
     } catch {
       hasDashboardAccess.value = false

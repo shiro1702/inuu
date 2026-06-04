@@ -39,6 +39,14 @@
       class="max-h-[480px] w-full rounded-xl object-cover"
     >
 
+    <EditorialCarousel
+      v-if="carouselMeta"
+      :carousel="carouselMeta"
+      :brand-name="displayName"
+      :topic-tags="post.topic_tags || []"
+      :link-hint="guideLinkHint"
+    />
+
     <EditorialBodyRenderer
       :blocks="bodyBlocks"
       :place-embeds="placeEmbedCards"
@@ -55,6 +63,7 @@
 
 <script setup lang="ts">
 import type { EditorialBodyBlock } from '~/server/utils/editorialBodyJson'
+import type { EditorialCarouselMetadata } from '~/types/editorialCarousel'
 import type { EditorialGalleryItem } from '~/utils/editorialTelegramGallery'
 
 definePageMeta({ layout: 'city' })
@@ -81,6 +90,8 @@ type EditorialDetail = {
   gallery?: EditorialGalleryItem[]
   linked_entity_type?: string | null
   linked_entity_id?: string | null
+  topic_tags?: string[] | null
+  metadata?: Record<string, unknown> | null
 }
 
 const route = useRoute()
@@ -115,6 +126,20 @@ const loadError = computed(() => {
     return 'Не удалось загрузить материал. Попробуйте обновить страницу.'
   }
   return null
+})
+
+const carouselMeta = computed((): EditorialCarouselMetadata | null => {
+  const raw = post.value?.metadata?.carousel
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
+  const slides = (raw as EditorialCarouselMetadata).slides
+  if (!Array.isArray(slides) || slides.length < 2) return null
+  return raw as EditorialCarouselMetadata
+})
+
+const guideLinkHint = computed(() => {
+  const city = citySlugParam.value
+  const slug = postSlug.value
+  return city && slug ? `/${city}/guides/${slug}` : null
 })
 
 const bodyBlocks = computed(() => post.value?.body_json ?? [])

@@ -13,6 +13,7 @@
               <NuxtLink to="/dashboard/stories" class="hover:text-gray-900">Сториз</NuxtLink>
               <NuxtLink to="/dashboard/branches" class="hover:text-gray-900">Точки</NuxtLink>
               <NuxtLink to="/dashboard/content-ai" class="hover:text-gray-900">Контент AI</NuxtLink>
+              <NuxtLink to="/dashboard/carousel-studio" class="hover:text-gray-900">Карусели</NuxtLink>
               <NuxtLink to="/dashboard/manager/cities" class="hover:text-gray-900">Города менеджера</NuxtLink>
               <NuxtLink to="/dashboard/admin/cities" class="hover:text-gray-900">Города admin</NuxtLink>
               <NuxtLink to="/dashboard/settings/organization" class="hover:text-gray-900">Настройки</NuxtLink>

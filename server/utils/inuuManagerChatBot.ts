@@ -8,10 +8,12 @@ import {
 import {
   formatEditorialContentPackMessage,
   generateEditorialContentPack,
+  type EditorialContentPack,
 } from '~/server/utils/ai/groqEditorialContentPack'
 import { parseEditorialWithGroq } from '~/server/utils/ai/groqEditorialParser'
 import { transcribeTelegramVoice } from '~/server/utils/ai/groqWhisperTranscribe'
 import { publishContentSubmission } from '~/server/utils/contentSubmissionPublish'
+import { buildEditorialCarouselMetadata } from '~/server/utils/parseInstagramCarousel'
 import { suggestCuratedListSlugs } from '~/server/utils/editorialCuratedSuggest'
 import { loadCityParseTaxonomy, resolveParsedTaxonomy } from '~/server/utils/cityContentTaxonomy'
 import {
@@ -103,7 +105,16 @@ function buildManagerPreviewKeyboard(submissionId: string, needsOrg: boolean) {
   rows.push(
     [{ text: '✅ Опубликовать на портал', callback_data: `inuu:mgr:publish:${submissionId}` }],
     [
+      {
+        text: '✅ Опубликовать + сторис',
+        callback_data: `inuu:mgr:publish_story:${submissionId}`,
+      },
+    ],
+    [
       { text: '📦 Пак контента', callback_data: `inuu:mgr:pack:${submissionId}` },
+      { text: '📷 Карусель', callback_data: `inuu:mgr:carousel:${submissionId}` },
+    ],
+    [
       { text: '✅ В модерацию', callback_data: `inuu:mgr:moderate:${submissionId}` },
     ],
     [{ text: '❌ Отмена', callback_data: `inuu:mgr:cancel:${submissionId}` }],
@@ -553,20 +564,29 @@ export async function handleInuuManagerTelegramCallback(
     return { alertText: 'Отправлено в модерацию', showAlert: false }
   }
 
-  if (action === 'publish') {
+  if (action === 'publish' || action === 'publish_story') {
     if (editorialMissingOrg(payload)) {
       return { alertText: 'Сначала привяжите или создайте организацию', showAlert: true }
     }
 
     try {
-      const result = await publishContentSubmission(event, submissionId)
+      const result = await publishContentSubmission(event, submissionId, {
+        storyVisuals: action === 'publish_story',
+      })
       const guideUrl = `/${city.slug}/guides/${result.entitySlug}`
+      let extra = ''
+      if (result.storyStudioPath) {
+        extra = `\n\n🎬 Соберите PNG-сторис:\n${result.storyStudioPath}`
+      }
       await telegramSend(args.botToken, 'sendMessage', {
         chat_id: args.chatId,
-        text: `✅ Опубликовано на портал\n${guideUrl}`,
+        text: `✅ Опубликовано на портал\n${guideUrl}${extra}`,
         reply_to_message_id: args.messageId,
       }).catch(() => {})
-      return { alertText: 'Опубликовано', showAlert: false }
+      return {
+        alertText: action === 'publish_story' ? 'Опубликовано + черновик сторис' : 'Опубликовано',
+        showAlert: false,
+      }
     } catch (err: any) {
       const msg = err?.statusMessage || err?.message || 'Ошибка публикации'
       return { alertText: String(msg).slice(0, 180), showAlert: true }
@@ -585,6 +605,15 @@ export async function handleInuuManagerTelegramCallback(
         suggestedListSlugs: payload.suggested_curated_list_slugs,
         guideUrl,
       })
+      payload = {
+        ...payload,
+        content_pack: pack,
+      } as EditorialParseResult
+      await client
+        .from('content_submissions')
+        .update({ payload, updated_at: new Date().toISOString() } as any)
+        .eq('id', submissionId)
+
       const text = formatEditorialContentPackMessage(pack, guideUrl)
       await telegramSend(args.botToken, 'sendMessage', {
         chat_id: args.chatId,
@@ -594,6 +623,63 @@ export async function handleInuuManagerTelegramCallback(
       return { alertText: 'Пак контента отправлен', showAlert: false }
     } catch (err: any) {
       const msg = err?.statusMessage || err?.message || 'Ошибка генерации'
+      return { alertText: String(msg).slice(0, 180), showAlert: true }
+    }
+  }
+
+  if (action === 'carousel') {
+    try {
+      const guideUrl = payload.city_slug
+        ? `https://inuu.app/${payload.city_slug}/guides/preview`
+        : null
+      const existingPack = (payload as { content_pack?: { instagram_carousel?: string } }).content_pack
+      const pack =
+        existingPack?.instagram_carousel
+          ? existingPack
+          : (
+              await generateEditorialContentPack({
+                payload,
+                cityName: city.name,
+                citySlug: city.slug,
+                suggestedListSlugs: payload.suggested_curated_list_slugs,
+                guideUrl,
+              })
+            ).pack
+
+      const carousel = buildEditorialCarouselMetadata({
+        instagramCarousel: pack.instagram_carousel,
+        coverMediaUrl: payload.cover_media_url || null,
+        topicTags: payload.topic_tags || [],
+        fallback: {
+          title: payload.title,
+          descriptionShort: payload.description_short,
+        },
+      })
+
+      if (!carousel) {
+        return { alertText: 'Не удалось разобрать карусель из пака', showAlert: true }
+      }
+
+      payload = {
+        ...payload,
+        content_pack: pack,
+        carousel_metadata: carousel,
+      } as EditorialParseResult & { carousel_metadata: typeof carousel; content_pack: typeof pack }
+
+      await client
+        .from('content_submissions')
+        .update({ payload, updated_at: new Date().toISOString() } as any)
+        .eq('id', submissionId)
+
+      const studioPath = `/dashboard/carousel-studio?city=${encodeURIComponent(city.slug)}&submission=${submissionId}`
+      await telegramSend(args.botToken, 'sendMessage', {
+        chat_id: args.chatId,
+        text: `📷 Карусель собрана: ${carousel.slides.length} слайдов (${carousel.aspect}).\n🛠 Редактор: ${studioPath}\nПри публикации появится на сайте.`,
+        reply_to_message_id: args.messageId,
+      })
+      return { alertText: 'Карусель сохранена в черновик', showAlert: false }
+    } catch (err: any) {
+      const msg = err?.statusMessage || err?.message || 'Ошибка карусели'
       return { alertText: String(msg).slice(0, 180), showAlert: true }
     }
   }

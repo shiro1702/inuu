@@ -30,10 +30,11 @@ export type EditorialDashboardItem = {
   published_at: string | null
   created_at: string
   updated_at: string
+  metadata?: Record<string, unknown> | null
 }
 
 export const editorialDashboardSelectFields =
-  'id,slug,title,excerpt,body,cover_media_url,topic_tags,category_slug,post_type,is_published,published_at,created_at,updated_at'
+  'id,slug,title,excerpt,body,cover_media_url,topic_tags,category_slug,post_type,is_published,published_at,created_at,updated_at,metadata'
 
 function slugify(input: string): string {
   return input

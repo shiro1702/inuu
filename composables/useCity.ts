@@ -13,6 +13,7 @@ const cityCache = new Map<string, CityDto>()
 
 /** Не городские slug (иначе /moderation → /api/cities/moderation/home). */
 const RESERVED_CITY_SLUGS = new Set([
+  'dev',
   'moderation',
   'dashboard',
   'platform',

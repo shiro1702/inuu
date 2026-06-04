@@ -138,7 +138,7 @@
 | [ ] | Admin «тиндер» для сборки дайджеста | 4 | P2 | — | [14-digests-curated-admin-smm.md](../features/content/14-digests-curated-admin-smm.md) |
 | [x] | Cron авто-черновики дайджестов (праздники, ⭐4–5) | 3 | P2 | — | [14-digests-curated-admin-smm.md](../features/content/14-digests-curated-admin-smm.md) |
 | [x] | Stories города на главной (city stories API → UI) | 3 | P1 | выс | [04-features-priority.md](../04-features-priority.md) |
-| [ ] | HTML carousel studio (шаблоны Cover/Body/CTA) | 4 | P2 | сред | [35-html-carousel-video-studio.md](../features/content/35-html-carousel-video-studio.md) |
+| [x] | HTML carousel studio (шаблоны Cover/Body/CTA) | 4 | P2 | сред | [35-html-carousel-video-studio.md](../features/content/35-html-carousel-video-studio.md) |
 | [ ] | Client-side video render (WebCodecs + GSAP) | 5 | P3 | — | [35-html-carousel-video-studio.md](../features/content/35-html-carousel-video-studio.md) |
 | [x] | Обзоры/посты о местах через manager chat (AI, видео, org) | 4 | P1 | сред | [30-manager-chat-place-editorial.md](../features/content/30-manager-chat-place-editorial.md) |
 | [x] | Stories через manager chat (слайды, org) | 3 | P1 | выс | [30-manager-chat-place-editorial.md](../features/content/30-manager-chat-place-editorial.md) |
@@ -271,9 +271,9 @@
 | | Кол-во |
 |---|--------|
 | Всего строк | 169 |
-| `[x]` сделано | 79 |
+| `[x]` сделано | 80 |
 | `[~]` в работе | 0 |
-| `[ ]` в плане | 90 |
+| `[ ]` в плане | 89 |
 
 > **Примечание:** `[x]` = есть рабочий код или MVP закрыт по спеке; `[~]` = идёт реализация; `[ ]` = не начато или только спека. Строки «снято» (§11) не входят в «в плане». При расхождении с кодом — править здесь первым делом.
 

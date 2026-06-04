@@ -23,7 +23,7 @@ export default defineEventHandler(async (event) => {
   const { data: post, error } = await client
     .from('editorial_posts')
     .select(
-      'id,slug,title,excerpt,body,body_json,cover_media_url,video_url,media_urls,post_type,published_at,topic_tags,is_sponsored,read_later_count,linked_entity_type,linked_entity_id',
+      'id,slug,title,excerpt,body,body_json,cover_media_url,video_url,media_urls,post_type,published_at,topic_tags,is_sponsored,read_later_count,linked_entity_type,linked_entity_id,metadata',
     )
     .eq('city_id', city.id)
     .eq('slug', postSlug)

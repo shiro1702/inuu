@@ -1,4 +1,4 @@
-import { createError } from 'h3'
+import { createError, getHeader, type H3Event } from 'h3'
 import { serverSupabaseServiceRole, serverSupabaseUser } from '#supabase/server'
 
 export type DashboardAccess = {
@@ -31,25 +31,67 @@ export function invalidateDashboardAccessCache(userId: string) {
   dashboardAccessCache.delete(userId)
 }
 
-async function resolveUserId(event: any): Promise<string> {
-  const supabaseUser = await serverSupabaseUser(event)
-  if (!supabaseUser) {
-    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+function userIdFromJwtPayload(raw: { id?: string; sub?: string } | null): string | null {
+  if (!raw) return null
+  if (typeof raw.id === 'string' && raw.id) return raw.id
+  if (typeof raw.sub === 'string' && raw.sub) return raw.sub
+  return null
+}
+
+async function resolveUserIdFromBearer(event: H3Event): Promise<string | null> {
+  const authHeader = getHeader(event, 'authorization')
+  const token = typeof authHeader === 'string' && authHeader.startsWith('Bearer ')
+    ? authHeader.slice(7).trim()
+    : ''
+  if (!token) return null
+
+  const client = await serverSupabaseServiceRole(event)
+  const { data, error } = await client.auth.getUser(token)
+  if (error || !data.user?.id) return null
+  return data.user.id
+}
+
+async function resolveUserMetadata(event: H3Event, userId: string): Promise<Record<string, unknown>> {
+  const client = await serverSupabaseServiceRole(event)
+  const { data, error } = await client.auth.admin.getUserById(userId)
+  if (error || !data.user) return {}
+  return (data.user.user_metadata && typeof data.user.user_metadata === 'object')
+    ? data.user.user_metadata as Record<string, unknown>
+    : {}
+}
+
+/** Resolves Supabase user id from SSR cookies or Authorization: Bearer. */
+export async function resolveDashboardUserId(event: H3Event): Promise<string | null> {
+  const cached = (event.context as { _dashboardUserId?: string })._dashboardUserId
+  if (cached) return cached
+
+  let userId: string | null = null
+  try {
+    const supabaseUser = await serverSupabaseUser(event)
+    userId = userIdFromJwtPayload(supabaseUser as { id?: string; sub?: string } | null)
+  } catch {
+    // Stale cookie / getClaims failure — try Bearer below
   }
 
-  const raw = supabaseUser as any
-  const userId = typeof raw.id === 'string'
-    ? raw.id
-    : typeof raw.sub === 'string'
-      ? raw.sub
-      : null
+  if (!userId) {
+    userId = await resolveUserIdFromBearer(event)
+  }
+
+  if (userId) {
+    (event.context as { _dashboardUserId?: string })._dashboardUserId = userId
+  }
+  return userId
+}
+
+async function resolveUserId(event: H3Event): Promise<string> {
+  const userId = await resolveDashboardUserId(event)
   if (!userId) {
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
   }
   return userId
 }
 
-export async function resolveDashboardAccess(event: any): Promise<DashboardAccess | null> {
+export async function resolveDashboardAccess(event: H3Event): Promise<DashboardAccess | null> {
   const userId = await resolveUserId(event)
 
   const now = Date.now()
@@ -59,7 +101,7 @@ export async function resolveDashboardAccess(event: any): Promise<DashboardAcces
   }
 
   const client = await serverSupabaseServiceRole(event)
-  const raw = await serverSupabaseUser(event) as any
+  const userMetadata = await resolveUserMetadata(event, userId)
   let shopId: string | null = null
   let role: 'owner' | 'manager' = 'owner'
 
@@ -81,12 +123,12 @@ export async function resolveDashboardAccess(event: any): Promise<DashboardAcces
   }
 
   if (!shopId) {
-    const metadataShopId = typeof raw.user_metadata?.active_shop_id === 'string'
-      ? raw.user_metadata.active_shop_id.trim()
+    const metadataShopId = typeof userMetadata.active_shop_id === 'string'
+      ? userMetadata.active_shop_id.trim()
       : ''
     if (metadataShopId) {
       shopId = metadataShopId
-      role = normalizeRole(raw.user_metadata?.admin_role)
+      role = normalizeRole(userMetadata.admin_role)
     }
   }
 
@@ -119,7 +161,7 @@ export async function resolveDashboardAccess(event: any): Promise<DashboardAcces
   return value
 }
 
-export async function requireDashboardAccess(event: any): Promise<DashboardAccess> {
+export async function requireDashboardAccess(event: H3Event): Promise<DashboardAccess> {
   const access = await resolveDashboardAccess(event)
   if (!access) {
     throw createError({ statusCode: 403, statusMessage: 'No organization access' })

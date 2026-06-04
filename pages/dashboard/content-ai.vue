@@ -160,6 +160,13 @@
             <p class="text-xs text-gray-500">Материалы на витрине /guides — новости, гиды и лонгриды.</p>
           </div>
           <div class="flex flex-wrap items-end gap-2">
+            <NuxtLink
+              v-if="selectedCitySlug"
+              :to="`/dashboard/carousel-studio?city=${encodeURIComponent(selectedCitySlug)}`"
+              class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-800 hover:bg-gray-50"
+            >
+              Карусель PNG
+            </NuxtLink>
             <button
               type="button"
               class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90"
@@ -329,6 +336,22 @@
               >
                 На витрине →
               </a>
+              <div v-if="selectedCitySlug" class="mt-2 flex flex-wrap gap-2">
+                <NuxtLink
+                  :to="`/dashboard/carousel-studio?city=${encodeURIComponent(selectedCitySlug)}&post=${post.id}`"
+                  class="text-xs font-medium text-primary hover:underline"
+                >
+                  Редактировать карусель
+                </NuxtLink>
+              </div>
+              <EditorialCarouselExportPanel
+                v-if="editorialCarouselForPost(post)"
+                class="mt-2"
+                :carousel="editorialCarouselForPost(post)!"
+                :brand-name="selectedCityName"
+                :topic-tags="post.topic_tags || []"
+                :link-hint="`/${selectedCitySlug}/guides/${post.slug}`"
+              />
             </div>
             <div class="flex flex-wrap gap-2">
               <button
@@ -552,8 +575,13 @@ type ManagerCityItem = {
   cityName: string
 }
 
+const { dashboardFetch } = useDashboardFetch()
+
 const managerCities = ref<ManagerCityItem[]>([])
 const selectedCitySlug = ref('')
+const selectedCityName = computed(
+  () => managerCities.value.find((c) => c.citySlug === selectedCitySlug.value)?.cityName || 'INUU',
+)
 const loadingCities = ref(true)
 
 const settingsLoading = ref(false)
@@ -595,6 +623,7 @@ const editorialPosts = ref<Array<{
   category_slug: string | null
   is_published: boolean
   published_at: string | null
+  metadata?: Record<string, unknown> | null
 }>>([])
 const editorialStatusFilter = ref<'all' | 'published' | 'draft'>('all')
 const editorialListLoading = ref(false)
@@ -644,7 +673,7 @@ function pretty(value: unknown): string {
 async function loadManagerCities() {
   loadingCities.value = true
   try {
-    const res = await fetch('/api/dashboard/manager/cities')
+    const res = await dashboardFetch('/api/dashboard/manager/cities')
     const payload = await res.json() as { ok: boolean; items: Array<{ citySlug: string; cityName: string }> }
     managerCities.value = payload.ok ? payload.items : []
     if (!selectedCitySlug.value && managerCities.value.length) {
@@ -660,7 +689,7 @@ async function loadSettings() {
   settingsLoading.value = true
   settingsMessage.value = ''
   try {
-    const res = await fetch(`/api/dashboard/manager/cities/${selectedCitySlug.value}/content-settings`)
+    const res = await dashboardFetch(`/api/dashboard/manager/cities/${selectedCitySlug.value}/content-settings`)
     const payload = await res.json() as any
     const settings = payload?.settings || {}
     settingsForm.telegramManagerChatId = settings?.telegram?.manager_chat_id || ''
@@ -687,7 +716,7 @@ async function saveSettings() {
   settingsLoading.value = true
   settingsMessage.value = ''
   try {
-    const res = await fetch(`/api/dashboard/manager/cities/${selectedCitySlug.value}/content-settings`, {
+    const res = await dashboardFetch(`/api/dashboard/manager/cities/${selectedCitySlug.value}/content-settings`, {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
@@ -739,7 +768,7 @@ async function generateChatLink(channel: 'telegram' | 'max', target: 'manager' |
   settingsMessage.value = ''
   chatLinkResult.value = null
   try {
-    const res = await fetch(`/api/dashboard/manager/cities/${selectedCitySlug.value}/chat-link-token`, {
+    const res = await dashboardFetch(`/api/dashboard/manager/cities/${selectedCitySlug.value}/chat-link-token`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ channel, target }),
@@ -763,7 +792,7 @@ async function runParseOnly() {
   if (!selectedCitySlug.value) return
   aiLoading.value = true
   try {
-    const res = await fetch('/api/ai/parse-event', {
+    const res = await dashboardFetch('/api/ai/parse-event', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
@@ -786,7 +815,7 @@ async function runIngest(persist: boolean) {
   if (!selectedCitySlug.value) return
   aiLoading.value = true
   try {
-    const res = await fetch('/api/ingest/content/submit', {
+    const res = await dashboardFetch('/api/ingest/content/submit', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
@@ -803,6 +832,18 @@ async function runIngest(persist: boolean) {
     aiResultText.value = pretty(error?.data || error?.message || error)
   } finally {
     aiLoading.value = false
+  }
+}
+
+function editorialCarouselForPost(post: (typeof editorialPosts.value)[number]) {
+  const raw = post.metadata?.carousel
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
+  const meta = raw as { slides?: unknown[] }
+  if (!Array.isArray(meta.slides) || meta.slides.length < 2) return null
+  return raw as {
+    template_id: 'minimal-ios'
+    aspect: '4:5' | '9:16'
+    slides: Array<Record<string, unknown>>
   }
 }
 
@@ -852,7 +893,7 @@ async function onEditorialCoverFile(event: Event) {
   coverUploadLoading.value = true
   newsMessage.value = ''
   try {
-    const res = await fetch(
+    const res = await dashboardFetch(
       `/api/dashboard/manager/cities/${selectedCitySlug.value}/editorial-cover/upload`,
       {
         method: 'POST',
@@ -910,7 +951,7 @@ async function loadEditorialPosts() {
   if (!selectedCitySlug.value) return
   editorialListLoading.value = true
   try {
-    const res = await fetch(
+    const res = await dashboardFetch(
       `/api/dashboard/manager/cities/${selectedCitySlug.value}/editorial-news?status=${encodeURIComponent(editorialStatusFilter.value)}&limit=50`,
     )
     const payload = await res.json() as any
@@ -946,7 +987,7 @@ async function saveEditorialNews() {
     const url = isEdit
       ? `/api/dashboard/manager/cities/${selectedCitySlug.value}/editorial-news/${editingPostId.value}`
       : `/api/dashboard/manager/cities/${selectedCitySlug.value}/editorial-news`
-    const res = await fetch(url, {
+    const res = await dashboardFetch(url, {
       method: isEdit ? 'PUT' : 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(editorialPayload()),
@@ -975,7 +1016,7 @@ async function setEditorialPublishState(postId: string, isPublished: boolean) {
   newsMessage.value = ''
   try {
     const post = editorialPosts.value.find((row) => row.id === postId)
-    const res = await fetch(
+    const res = await dashboardFetch(
       `/api/dashboard/manager/cities/${selectedCitySlug.value}/editorial-news/${postId}`,
       {
         method: 'PUT',
@@ -1028,8 +1069,15 @@ async function loadQueue() {
   queueMessage.value = ''
   try {
     const kindQuery = queueKind.value ? `&kind=${encodeURIComponent(queueKind.value)}` : ''
-    const res = await fetch(`/api/dashboard/manager/cities/${selectedCitySlug.value}/content-queue?status=${encodeURIComponent(queueStatus.value)}&limit=50${kindQuery}`)
+    const res = await dashboardFetch(`/api/dashboard/manager/cities/${selectedCitySlug.value}/content-queue?status=${encodeURIComponent(queueStatus.value)}&limit=50${kindQuery}`)
     const payload = await res.json() as any
+    if (!res.ok) {
+      queueItems.value = []
+      queueMessage.value = res.status === 401
+        ? 'Сессия истекла — войдите в кабинет снова (/dashboard/login).'
+        : (payload?.statusMessage || payload?.message || `Ошибка ${res.status}`)
+      return
+    }
     queueItems.value = payload?.ok ? payload.items || [] : []
     for (const item of queueItems.value) hydrateQueueEdit(item)
     if (!payload?.ok && payload?.message) {
@@ -1045,7 +1093,7 @@ async function queueAction(submissionId: string, action: 'approve' | 'reject' | 
   if (!selectedCitySlug.value) return
   queueMessage.value = ''
   try {
-    const res = await fetch(`/api/dashboard/manager/cities/${selectedCitySlug.value}/content-queue/action`, {
+    const res = await dashboardFetch(`/api/dashboard/manager/cities/${selectedCitySlug.value}/content-queue/action`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ submissionId, action, score }),
@@ -1072,7 +1120,7 @@ async function publishQueueToSite(submissionId: string) {
   if (!selectedCitySlug.value) return
   queueMessage.value = ''
   try {
-    const res = await fetch(
+    const res = await dashboardFetch(
       `/api/dashboard/manager/cities/${selectedCitySlug.value}/content-queue/${submissionId}/publish`,
       { method: 'POST' },
     )
@@ -1094,7 +1142,7 @@ async function notifyQueueTelegram(submissionId: string) {
   if (!selectedCitySlug.value) return
   queueMessage.value = ''
   try {
-    const res = await fetch(
+    const res = await dashboardFetch(
       `/api/dashboard/manager/cities/${selectedCitySlug.value}/content-queue/${submissionId}/notify-telegram`,
       { method: 'POST' },
     )
@@ -1114,7 +1162,7 @@ async function saveQueueEdit(submissionId: string) {
   const edit = queueEdits[submissionId]
   if (!edit) return
   try {
-    const res = await fetch(`/api/dashboard/manager/cities/${selectedCitySlug.value}/content-queue/${submissionId}`, {
+    const res = await dashboardFetch(`/api/dashboard/manager/cities/${selectedCitySlug.value}/content-queue/${submissionId}`, {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
@@ -1143,7 +1191,7 @@ async function runDigestGeneration() {
     const topicTags = Array.isArray(digestForm.topicTags)
       ? digestForm.topicTags.map((tag: string) => String(tag || '').trim()).filter(Boolean)
       : []
-    const res = await fetch(`/api/dashboard/manager/cities/${selectedCitySlug.value}/generate-digest`, {
+    const res = await dashboardFetch(`/api/dashboard/manager/cities/${selectedCitySlug.value}/generate-digest`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({

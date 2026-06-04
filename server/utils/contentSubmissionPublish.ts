@@ -19,7 +19,11 @@ import {
 import { resolveIngestSourceOrganization } from '~/server/utils/ingestSourceContext'
 import { findShopIdByParsedSourceUrl } from '~/server/utils/resolvePublicOrganization'
 import { buildEditorialBodyJson } from '~/server/utils/editorialBodyJson'
-import { createEditorialStoryTeaser } from '~/server/utils/editorialStoryTeaser'
+import {
+  createEditorialStoryPendingCampaign,
+  createEditorialStoryTeaser,
+} from '~/server/utils/editorialStoryTeaser'
+import { buildStorySlidesFromEditorial } from '~/server/utils/buildStorySlidesFromEditorial'
 import { createStoryCampaign, slidesFromEditorialStory } from '~/server/utils/storyCampaignWrite'
 import { resolveIngestCoverMediaUrl } from '~/server/utils/contentCoverMedia'
 import {
@@ -29,6 +33,10 @@ import {
 } from '~/server/utils/eventLifecycleStatus'
 import type { IngestPostType } from '~/server/utils/ai/eventParseSchema'
 import { notifyEventPublished } from '~/server/utils/cityTopicBroadcast'
+import {
+  mergeEditorialPostMetadata,
+  resolveCarouselFromPayload,
+} from '~/server/utils/parseInstagramCarousel'
 
 function slugifyTitle(input: string): string {
   return slugifyTaxonomy(input).slice(0, 80) || `item-${Date.now()}`
@@ -59,6 +67,13 @@ export type PublishSubmissionResult = {
   alreadyPublished: boolean
   publishedEventCount?: number
   seriesSlug?: string | null
+  storyCampaignId?: string | null
+  storyStudioPath?: string | null
+}
+
+export type PublishContentSubmissionOptions = {
+  /** Create story campaign with slide_draft for dashboard PNG render (wave 3d). */
+  storyVisuals?: boolean
 }
 
 async function resolveSubmissionShopId(
@@ -111,6 +126,7 @@ async function publishEditorialFromPayload(
     shopId: string | null
     payload: EditorialParseResult
     submission: Record<string, unknown>
+    storyVisuals?: boolean
   },
 ): Promise<PublishSubmissionResult> {
   if (editorialMissingOrg(args.payload)) {
@@ -149,6 +165,11 @@ async function publishEditorialFromPayload(
     existingBodyJson: (args.payload as { body_json?: unknown }).body_json,
   })
 
+  const carouselMeta = resolveCarouselFromPayload(
+    args.payload as unknown as Record<string, unknown>,
+  )
+  const metadata = mergeEditorialPostMetadata(null, carouselMeta)
+
   const { data: post, error: postError } = await args.client
     .from('editorial_posts')
     .insert({
@@ -167,6 +188,7 @@ async function publishEditorialFromPayload(
       publication_date: args.payload.publication_date || null,
       linked_entity_type: venue?.id ? 'venue' : null,
       linked_entity_id: venue?.id || null,
+      metadata,
       is_published: true,
       published_at: new Date().toISOString(),
     } as any)
@@ -185,16 +207,39 @@ async function publishEditorialFromPayload(
     const { data: cityRow } = await args.client.from('cities').select('slug').eq('id', args.cityId).maybeSingle()
     citySlug = String((cityRow as any)?.slug || '').trim()
   }
+  let storyCampaignId: string | null = null
+  let storyStudioPath: string | null = null
+
   if (args.shopId && citySlug) {
-    await createEditorialStoryTeaser(event, {
-      cityId: args.cityId,
-      citySlug,
-      shopId: args.shopId,
-      postSlug: String((post as any).slug),
-      title,
-      previewUrl: args.payload.cover_media_url || null,
-      excerpt: descriptionShort,
-    }).catch((err) => console.warn('[publishEditorial] story teaser failed:', err))
+    try {
+      if (args.storyVisuals) {
+        const slideDraft = buildStorySlidesFromEditorial(args.payload)
+        const pending = await createEditorialStoryPendingCampaign(event, {
+          cityId: args.cityId,
+          citySlug,
+          shopId: args.shopId,
+          postSlug: String((post as any).slug),
+          title,
+          previewUrl: args.payload.cover_media_url || null,
+          excerpt: descriptionShort,
+          slideDraft,
+        })
+        storyCampaignId = pending.campaignId
+        storyStudioPath = `/dashboard/story-studio?city=${encodeURIComponent(citySlug)}&campaign=${pending.campaignId}`
+      } else {
+        await createEditorialStoryTeaser(event, {
+          cityId: args.cityId,
+          citySlug,
+          shopId: args.shopId,
+          postSlug: String((post as any).slug),
+          title,
+          previewUrl: args.payload.cover_media_url || null,
+          excerpt: descriptionShort,
+        })
+      }
+    } catch (err) {
+      console.warn('[publishEditorial] story teaser failed:', err)
+    }
   }
 
   await args.client
@@ -212,6 +257,8 @@ async function publishEditorialFromPayload(
     entityId: String(post.id),
     entitySlug: String((post as any).slug),
     alreadyPublished: false,
+    storyCampaignId,
+    storyStudioPath,
   }
 }
 
@@ -402,6 +449,7 @@ async function insertEventRow(args: {
 export async function publishContentSubmission(
   event: H3Event,
   submissionId: string,
+  options?: PublishContentSubmissionOptions,
 ): Promise<PublishSubmissionResult> {
   const client = await serverSupabaseServiceRole(event)
   const { data: submission, error } = await client
@@ -504,6 +552,7 @@ export async function publishContentSubmission(
         shopId,
         payload: editorialPayload,
         submission: submission as Record<string, unknown>,
+        storyVisuals: options?.storyVisuals === true,
       })
     }
   }
