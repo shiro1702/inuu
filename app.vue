@@ -46,6 +46,9 @@
               <NuxtLink :to="`${cityBasePath}/legal/cookies`" class="underline decoration-dotted hover:text-gray-900">
                 Файлы cookie
               </NuxtLink>
+              <NuxtLink to="/partners" class="underline decoration-dotted hover:text-gray-900">
+                Реклама на INUU
+              </NuxtLink>
             </div>
             <p class="mt-2 text-gray-500">
               INUU — городской агрегатор событий, мест и сервисов. По записям и билетам — напрямую к организаторам.

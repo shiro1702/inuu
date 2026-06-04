@@ -105,14 +105,6 @@
         class="flex items-center gap-2 sm:gap-3" 
       >
         <NuxtLink
-          to="/partners"
-          class="rounded-lg px-3 py-2 text-sm font-medium transition"
-          :style="ghostButtonStyle"
-        >
-          Партнёрам
-        </NuxtLink>
-
-        <NuxtLink
           v-if="user && hasDashboardAccess"
           to="/dashboard/content-ai"
           class="rounded-lg px-4 py-2 text-sm font-medium"
@@ -366,7 +358,7 @@ const isDashboardRoute = computed(() => {
   }
   return false
 })
-/** Партнёрам / Профиль / Войти — на витрине и на /profile, /partners (не в mini app на витрине). */
+/** Профиль / Войти — на витрине и на /profile, /partners (не в mini app на витрине). Реклама — в футере. */
 const showWebHeaderActions = computed(() => {
   if (isNonTenantRoute.value) return true
   return !isMessengerMiniAppChrome.value

@@ -28,13 +28,6 @@
             Карта
           </NuxtLink>
           <NuxtLink
-            to="/partners"
-            class="rounded-lg px-2 py-1.5 text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-            active-class="bg-gray-100 font-medium text-gray-900"
-          >
-            Партнёрам
-          </NuxtLink>
-          <NuxtLink
             v-if="showCabinetLink"
             to="/dashboard/content-ai"
             class="rounded-lg border border-primary bg-primary/5 px-2 py-1.5 text-sm font-medium text-primary hover:bg-primary/10"

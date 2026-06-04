@@ -40,8 +40,11 @@
     <section class="rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700">
       <p class="font-medium text-gray-900">Вы владелец?</p>
       <p class="mt-1">Подключите организацию к INUU и управляйте афишей в личном кабинете.</p>
-      <NuxtLink to="/partners" class="mt-3 inline-flex text-sm font-medium text-primary hover:underline">
-        Узнать о партнёрстве →
+      <NuxtLink
+        :to="`${cityBasePath}/legal/contacts`"
+        class="mt-3 inline-flex text-sm font-medium text-primary hover:underline"
+      >
+        Связаться с редакцией →
       </NuxtLink>
     </section>
   </article>
