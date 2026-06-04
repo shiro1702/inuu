@@ -45,7 +45,7 @@
             class="rounded-lg border border-primary px-2 py-1.5 text-sm font-medium text-primary hover:bg-primary/5"
             @click="openGuestAuthModal"
           >
-            Войти в бот
+            Войти
           </button>
         </nav>
       </div>
