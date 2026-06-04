@@ -70,6 +70,39 @@ export function resolveCarouselVibeTheme(slide: CarouselSlide, topicTags?: strin
   return VIBE_THEMES[key] || DEFAULT_THEME
 }
 
+const TAG_TO_GRADIENT: Record<string, (typeof CAROUSEL_VIBE_KEYS)[number]> = {
+  nightlife: 'nightlife',
+  night: 'nightlife',
+  'late-night': 'nightlife',
+  loud: 'nightlife',
+  drive: 'nightlife',
+  romance: 'romance',
+  date: 'romance',
+  underground: 'underground',
+  speakeasy: 'underground',
+  techno: 'underground',
+  vegan: 'vegan',
+  eco: 'vegan',
+  tourism: 'tourism',
+  chill: 'tourism',
+  zen: 'tourism',
+  party: 'party',
+  active: 'party',
+}
+
+export function resolveCarouselGradientFromTags(tags: string[]): (typeof CAROUSEL_VIBE_KEYS)[number] {
+  for (const raw of tags) {
+    const slug = raw.trim().toLowerCase()
+    if (!slug) continue
+    if ((CAROUSEL_VIBE_KEYS as readonly string[]).includes(slug)) {
+      return slug as (typeof CAROUSEL_VIBE_KEYS)[number]
+    }
+    const mapped = TAG_TO_GRADIENT[slug]
+    if (mapped) return mapped
+  }
+  return 'party'
+}
+
 export function carouselBrandHandle(displayName: string): string {
   const trimmed = displayName.trim()
   if (!trimmed) return '@INUU'

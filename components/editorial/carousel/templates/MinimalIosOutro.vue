@@ -1,6 +1,6 @@
 <template>
   <div
-    class="relative flex h-full w-full flex-col items-center justify-center gap-8 p-12 text-center"
+    class="relative flex h-full w-full flex-col items-center justify-center gap-8 px-12 pb-32 pt-36 text-center"
     :class="[theme.gradientClass, theme.textClass]"
   >
     <div
@@ -17,23 +17,18 @@
         {{ linkHint }}
       </p>
     </div>
-    <p class="text-sm font-medium text-white/60">
-      {{ brandHandle }}
-    </p>
   </div>
 </template>
 
 <script setup lang="ts">
 import type { CarouselSlide } from '~/types/editorialCarousel'
-import { carouselBrandHandle, resolveCarouselVibeTheme } from '~/utils/carouselVibeTheme'
+import { resolveCarouselVibeTheme } from '~/utils/carouselVibeTheme'
 
 const props = defineProps<{
   slide: CarouselSlide
-  brandName?: string
   linkHint?: string | null
   topicTags?: string[]
 }>()
 
 const theme = computed(() => resolveCarouselVibeTheme(props.slide, props.topicTags))
-const brandHandle = computed(() => carouselBrandHandle(props.brandName || 'INUU'))
 </script>

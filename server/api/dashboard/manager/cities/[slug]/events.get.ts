@@ -1,8 +1,13 @@
 import { defineEventHandler, getQuery } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import { enrichEventsForStorefront } from '~/server/utils/enrichEventsForStorefront'
-import { prepareEventsListForDisplay } from '~/utils/eventListDisplay'
+import { mapEventRowToCarouselMaterial } from '~/server/utils/mapCarouselMaterial'
 import { resolveManagerCityScopeOrThrow } from '~/server/utils/managerCityAccess'
+import {
+  filterEventsByTags,
+  parseTagSlugsFromQuery,
+  prepareEventsListForDisplay,
+} from '~/utils/eventListDisplay'
 
 type EventRow = {
   id: string
@@ -17,13 +22,15 @@ type EventRow = {
   vibe_emoji: string | null
   venue_id: string | null
   shop_id: string | null
+  source_metadata: unknown
 }
 
 export default defineEventHandler(async (event) => {
   const slugParam = typeof event.context.params?.slug === 'string' ? event.context.params.slug : ''
   const scope = await resolveManagerCityScopeOrThrow(event, slugParam)
   const query = getQuery(event)
-  const limit = Math.min(20, Math.max(1, Number(query.limit) || 10))
+  const limit = Math.min(50, Math.max(1, Number(query.limit) || 24))
+  const tagSlugs = parseTagSlugsFromQuery(query.tag)
   const nowIso = new Date().toISOString()
 
   const client = await serverSupabaseServiceRole(event)
@@ -39,16 +46,18 @@ export default defineEventHandler(async (event) => {
       ? cityRow.timezone.trim()
       : 'Asia/Irkutsk'
 
+  const fetchPool = tagSlugs.length ? Math.max(limit * 4, 80) : Math.max(limit * 2, 40)
+
   const { data, error } = await client
     .from('events')
     .select(
-      'id,slug,title,excerpt,tldr,starts_at,price,currency,cover_media_url,vibe_emoji,venue_id,shop_id',
+      'id,slug,title,excerpt,tldr,starts_at,price,currency,cover_media_url,vibe_emoji,venue_id,shop_id,source_metadata',
     )
     .eq('city_id', scope.cityId)
     .eq('is_published', true)
     .gte('starts_at', nowIso)
     .order('starts_at', { ascending: true })
-    .limit(Math.max(limit * 2, 40))
+    .limit(fetchPool)
 
   if (error) {
     return {
@@ -60,22 +69,17 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  const rows = prepareEventsListForDisplay((data ?? []) as EventRow[], limit)
+  let rows = (data ?? []) as EventRow[]
+  rows = filterEventsByTags(rows, tagSlugs)
+  rows = prepareEventsListForDisplay(rows, limit)
   const enriched = await enrichEventsForStorefront(client, rows)
 
-  const items = enriched.map((row) => ({
-    id: row.id,
-    slug: row.slug,
-    title: row.title,
-    excerpt: row.excerpt,
-    tldr: row.tldr,
-    startsAt: row.starts_at,
-    price: row.price,
-    currency: row.currency,
-    coverMediaUrl: row.cover_media_url,
-    vibeEmoji: row.vibe_emoji,
-    venueTitle: row.venue?.title ?? null,
-  }))
+  const items = enriched.map((row) =>
+    mapEventRowToCarouselMaterial({
+      ...row,
+      venue: row.venue,
+    }),
+  )
 
   return {
     ok: true as const,

@@ -1,4 +1,5 @@
 import type { CarouselSlide, EditorialCarouselMetadata } from '~/types/editorialCarousel'
+import { listMaterialCoverUrls } from '~/utils/resolveMaterialCoverUrl'
 
 function splitCarouselBlocks(raw: string): string[] {
   const normalized = raw.replace(/\r\n/g, '\n').trim()
@@ -86,6 +87,7 @@ export function parseInstagramCarouselToSlides(
 export function buildEditorialCarouselMetadata(args: {
   instagramCarousel: string
   coverMediaUrl?: string | null
+  mediaUrls?: string[] | null
   topicTags?: string[]
   aspect?: EditorialCarouselMetadata['aspect']
   fallback?: { title?: string; descriptionShort?: string }
@@ -94,11 +96,15 @@ export function buildEditorialCarouselMetadata(args: {
   if (slides.length < 2) return null
 
   const gradient = args.topicTags?.[0] || 'party'
+  const gallery = listMaterialCoverUrls({
+    coverMediaUrl: args.coverMediaUrl,
+    sourceMetadata: { media_urls: args.mediaUrls || [] },
+  })
+
   const withMedia = slides.map((slide, index) => {
-    if (index === 0 && args.coverMediaUrl && !slide.media_url) {
-      return { ...slide, media_url: args.coverMediaUrl, gradient }
-    }
-    return slide.gradient ? slide : { ...slide, gradient }
+    const fromGallery = gallery[index] || null
+    const media_url = slide.media_url || fromGallery || null
+    return { ...slide, media_url, gradient }
   })
 
   return {
@@ -134,10 +140,15 @@ export function resolveCarouselFromPayload(
   const instagramCarousel = pack?.instagram_carousel
   if (!instagramCarousel?.trim()) return null
 
+  const mediaUrls = [
+    typeof payload.cover_media_url === 'string' ? payload.cover_media_url : '',
+    ...(Array.isArray(payload.media_urls) ? payload.media_urls.map((x) => String(x || '')) : []),
+  ].map((x) => x.trim()).filter(Boolean)
+
   return buildEditorialCarouselMetadata({
     instagramCarousel,
-    coverMediaUrl:
-      typeof payload.cover_media_url === 'string' ? payload.cover_media_url : null,
+    coverMediaUrl: mediaUrls[0] || null,
+    mediaUrls,
     topicTags: Array.isArray(payload.topic_tags)
       ? payload.topic_tags.map((t) => String(t))
       : [],

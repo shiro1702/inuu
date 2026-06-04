@@ -59,6 +59,8 @@ export default defineNuxtConfig({
     firecrawlApiKey: process.env.FIRECRAWL_API_KEY ?? '',
     public: {
       brandName: 'INUU',
+      /** Логотип на слайдах карусели (public/). Переопределить: NUXT_PUBLIC_BRAND_LOGO_URL */
+      brandLogoUrl: process.env.NUXT_PUBLIC_BRAND_LOGO_URL ?? '/logo.webp',
       platformBaseDomain: process.env.NUXT_PLATFORM_BASE_DOMAIN ?? '',
       defaultCitySlug: process.env.NUXT_DEFAULT_CITY_SLUG ?? 'ulan-ude',
       yandexMapsApiKey: process.env.YANDEX_MAPS_API_KEY ?? '',

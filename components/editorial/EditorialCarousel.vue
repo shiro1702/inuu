@@ -3,19 +3,20 @@
     <h2 class="text-sm font-medium uppercase tracking-wide text-gray-500">
       Карусель для соцсетей
     </h2>
-    <div class="relative overflow-hidden rounded-2xl border border-gray-200 bg-gray-950">
-      <div class="mx-auto max-w-md">
-        <div class="origin-top scale-[0.32] sm:scale-[0.42]">
-          <CarouselSlideRenderer
-            :slide="activeSlide"
-            :aspect="aspect"
-            :template-id="carousel.template_id"
-            :brand-name="brandName"
-            :topic-tags="topicTags"
-            :link-hint="linkHint"
-          />
-        </div>
-      </div>
+    <div class="relative overflow-hidden rounded-2xl border border-gray-200 bg-gray-100/80 p-3">
+      <CarouselSlidePreview
+        :slide="activeSlide"
+        :aspect="aspect"
+        :template-id="carousel.template_id"
+        :brand-name="serviceBrandName"
+        :city-name="cityDisplayName"
+        :logo-url="logoUrl"
+        :topic-tags="topicTags"
+        :link-hint="linkHint"
+        :slide-index="activeIndex + 1"
+        :total-slides="slides.length"
+        :max-width="400"
+      />
       <button
         v-if="slides.length > 1"
         type="button"
@@ -57,14 +58,24 @@
 
 <script setup lang="ts">
 import type { EditorialCarouselMetadata } from '~/types/editorialCarousel'
-import CarouselSlideRenderer from '~/components/editorial/carousel/CarouselSlideRenderer.vue'
+import CarouselSlidePreview from '~/components/editorial/carousel/CarouselSlidePreview.vue'
+import { resolveCarouselBrandLogo } from '~/utils/carouselBrandLogo'
 
 const props = defineProps<{
   carousel: EditorialCarouselMetadata
+  /** Название города под логотипом */
   brandName?: string
   topicTags?: string[]
   linkHint?: string | null
 }>()
+
+const config = useRuntimeConfig()
+const serviceBrandName = computed(() => {
+  const raw = config.public.brandName
+  return typeof raw === 'string' && raw.trim() ? raw.trim() : 'INUU'
+})
+const cityDisplayName = computed(() => props.brandName?.trim() || '')
+const logoUrl = computed(() => resolveCarouselBrandLogo(config))
 
 const activeIndex = ref(0)
 const slides = computed(() => props.carousel.slides || [])

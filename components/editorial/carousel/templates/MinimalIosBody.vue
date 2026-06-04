@@ -12,7 +12,7 @@
       >
     </div>
     <div
-      class="flex flex-1 flex-col justify-center gap-6 p-12"
+      class="flex flex-1 flex-col justify-center gap-6 px-12 pb-32 pt-36"
       :class="[theme.gradientClass, theme.textClass]"
     >
       <h2

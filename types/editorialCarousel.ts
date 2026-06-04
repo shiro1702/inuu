@@ -2,7 +2,7 @@ export type CarouselSlideRole = 'cover' | 'body' | 'outro'
 
 export type CarouselAspect = '4:5' | '9:16'
 
-export type CarouselTemplateId = 'minimal-ios'
+export type CarouselTemplateId = 'minimal-ios' | 'photo-card' | 'editorial-bold' | 'city-poster'
 
 export type CarouselSlide = {
   role: CarouselSlideRole

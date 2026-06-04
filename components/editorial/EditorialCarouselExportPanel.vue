@@ -10,9 +10,13 @@
         :slide="slide"
         :aspect="carousel.aspect"
         :template-id="carousel.template_id"
-        :brand-name="brandName"
+        :brand-name="serviceBrandName"
+        :city-name="cityDisplayName"
+        :logo-url="logoUrl"
         :topic-tags="topicTags"
         :link-hint="linkHint"
+        :slide-index="index + 1"
+        :total-slides="carousel.slides.length"
       />
     </div>
     <button
@@ -30,6 +34,7 @@
 <script setup lang="ts">
 import type { EditorialCarouselMetadata } from '~/types/editorialCarousel'
 import CarouselSlideRenderer from '~/components/editorial/carousel/CarouselSlideRenderer.vue'
+import { resolveCarouselBrandLogo } from '~/utils/carouselBrandLogo'
 import { downloadBlob, preloadCarouselMedia, renderSlideToPng } from '~/utils/renderSlideToPng'
 
 const props = defineProps<{
@@ -38,6 +43,14 @@ const props = defineProps<{
   topicTags?: string[]
   linkHint?: string | null
 }>()
+
+const config = useRuntimeConfig()
+const serviceBrandName = computed(() => {
+  const raw = config.public.brandName
+  return typeof raw === 'string' && raw.trim() ? raw.trim() : 'INUU'
+})
+const cityDisplayName = computed(() => props.brandName?.trim() || '')
+const logoUrl = computed(() => resolveCarouselBrandLogo(config))
 
 const exporting = ref(false)
 const errorText = ref('')

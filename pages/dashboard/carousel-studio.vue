@@ -26,42 +26,25 @@
           @change="onSourceChange"
         >
           <option value="manual">Вручную</option>
-          <option value="events">События (слайд на событие)</option>
+          <option value="events">События (выбор вручную)</option>
+          <option value="curated_list">Подборка</option>
           <option v-if="postId" value="article">Из статьи</option>
           <option v-if="submissionId" value="submission">Из черновика заявки</option>
         </select>
       </label>
-      <template v-if="sourceKind === 'events'">
-        <label class="space-y-1 text-sm">
-          <span class="font-medium text-gray-700">Событий</span>
-          <select v-model.number="eventsLimit" class="rounded-lg border border-gray-300 px-3 py-2">
-            <option :value="5">5</option>
-            <option :value="8">8</option>
-            <option :value="10">10</option>
-            <option :value="15">15</option>
-          </select>
-        </label>
-        <label class="space-y-1 text-sm min-w-[200px]">
-          <span class="font-medium text-gray-700">Заголовок обложки</span>
-          <input
-            v-model="eventsCoverTitle"
-            type="text"
-            class="w-full rounded-lg border border-gray-300 px-3 py-2"
-            placeholder="Афиша на выходные"
-          >
-        </label>
-        <button
-          type="button"
-          class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-          :disabled="loadingEvents || !selectedCitySlug"
-          @click="buildFromEvents"
-        >
-          {{ loadingEvents ? 'Загрузка…' : 'Собрать карусель' }}
-        </button>
-      </template>
       <p v-if="contextHint" class="text-sm text-gray-600">{{ contextHint }}</p>
       <p v-else-if="sourceHint" class="text-sm text-gray-600">{{ sourceHint }}</p>
     </div>
+
+    <CarouselEventPicker
+      v-if="selectedCitySlug && (sourceKind === 'events' || sourceKind === 'curated_list')"
+      :city-slug="selectedCitySlug"
+      :mode="sourceKind === 'curated_list' ? 'curated_list' : 'events'"
+      :cover-title="eventsCoverTitle"
+      :timezone="cityTimezone"
+      @update:cover-title="eventsCoverTitle = $event"
+      @build="onPickerBuild"
+    />
 
     <div v-if="loadError" class="text-sm text-red-600">{{ loadError }}</div>
     <CarouselStudio
@@ -80,17 +63,19 @@
 <script setup lang="ts">
 import type { EditorialCarouselMetadata } from '~/types/editorialCarousel'
 import CarouselStudio from '~/components/editorial/CarouselStudio.vue'
+import CarouselEventPicker, { type PickerMaterialItem } from '~/components/editorial/CarouselEventPicker.vue'
 import { buildEditorialCarouselMetadata } from '~/utils/parseInstagramCarousel'
 import {
   buildCarouselFromEvents,
   carouselLinkHintForCity,
   type CarouselEventInput,
 } from '~/utils/buildCarouselFromEvents'
+import { resolveCarouselGradientFromTags } from '~/utils/carouselVibeTheme'
 
 definePageMeta({ layout: 'dashboard' })
 
 type ManagerCityItem = { citySlug: string; cityName: string }
-type SourceKind = 'manual' | 'events' | 'article' | 'submission'
+type SourceKind = 'manual' | 'events' | 'curated_list' | 'article' | 'submission'
 
 const route = useRoute()
 const managerCities = ref<ManagerCityItem[]>([])
@@ -100,9 +85,9 @@ const loadError = ref('')
 const initialCarousel = ref<EditorialCarouselMetadata | null>(null)
 const contextHint = ref('')
 const sourceKind = ref<SourceKind>('manual')
-const eventsLimit = ref(8)
 const eventsCoverTitle = ref('')
-const loadingEvents = ref(false)
+const cityTimezone = ref('Asia/Irkutsk')
+const activeListSlug = ref('')
 const studioKey = ref('manual-0')
 
 const postId = computed(() => String(route.query.post || '').trim())
@@ -119,14 +104,22 @@ const defaultEventsCoverTitle = computed(
 const defaultLinkHint = computed(() => {
   const city = selectedCitySlug.value
   if (!city) return null
-  if (sourceKind.value === 'events') return carouselLinkHintForCity(city, 'events')
+  if (sourceKind.value === 'curated_list' && activeListSlug.value) {
+    return carouselLinkHintForCity(city, 'list', activeListSlug.value)
+  }
+  if (sourceKind.value === 'events' || sourceKind.value === 'curated_list') {
+    return carouselLinkHintForCity(city, 'events')
+  }
   if (postSlug.value) return `/${city}/guides/${postSlug.value}`
   return carouselLinkHintForCity(city, 'home')
 })
 
 const sourceHint = computed(() => {
   if (sourceKind.value === 'events') {
-    return 'Каждое опубликованное событие — отдельный body-слайд между обложкой и финалом.'
+    return 'Отметьте события и соберите карусель. Вайбы — теги группы «Вайб и атмосфера». Лишние слайды можно удалить в редакторе.'
+  }
+  if (sourceKind.value === 'curated_list') {
+    return 'Выберите опубликованную подборку — события из неё попадут в карусель (можно снять галочки).'
   }
   if (sourceKind.value === 'manual') {
     return 'Пустой шаблон: обложка, один body и outro — дополняйте вручную.'
@@ -138,6 +131,61 @@ const postSlug = ref('')
 
 function bumpStudioKey() {
   studioKey.value = `${sourceKind.value}-${Date.now()}`
+}
+
+function pickerEventsToInput(events: PickerMaterialItem[]): CarouselEventInput[] {
+  return events.map((item) => ({
+    id: item.id,
+    entityType: item.entityType,
+    title: item.title,
+    slug: item.slug,
+    startsAt: item.startsAt,
+    excerpt: item.excerpt,
+    tldr: item.tldr,
+    coverMediaUrl: item.coverMediaUrl,
+    price: item.price,
+    currency: item.currency,
+    venueTitle: item.venueTitle,
+    address: item.address,
+    vibeEmoji: item.vibeEmoji,
+    topicTags: item.topicTags,
+    listNote: item.listNote,
+  }))
+}
+
+function onPickerBuild(payload: {
+  events: PickerMaterialItem[]
+  coverTitle: string
+  listSlug?: string
+  listTitle?: string
+}) {
+  loadError.value = ''
+  const city = selectedCitySlug.value
+  if (!city) return
+
+  const events = pickerEventsToInput(payload.events)
+  const allTags = [
+    ...events.flatMap((e) => e.topicTags || []),
+  ]
+  const gradient = resolveCarouselGradientFromTags(allTags)
+
+  eventsCoverTitle.value = payload.coverTitle || defaultEventsCoverTitle.value
+  activeListSlug.value = payload.listSlug?.trim() || ''
+
+    initialCarousel.value = buildCarouselFromEvents({
+      events,
+      citySlug: city,
+      cityName: selectedCityName.value,
+      timezone: cityTimezone.value,
+      coverTitle: eventsCoverTitle.value,
+      vibe: gradient,
+    })
+
+  contextHint.value = payload.listTitle
+    ? `Подборка «${payload.listTitle}»: ${events.length} слайдов`
+    : `Собрано из ${events.length} событий`
+
+  bumpStudioKey()
 }
 
 async function loadManagerCities() {
@@ -161,12 +209,27 @@ async function loadManagerCities() {
   }
 }
 
+async function loadCityTimezone() {
+  const city = selectedCitySlug.value
+  if (!city) return
+  try {
+    const res = await $fetch<{ ok: boolean; timezone?: string }>(
+      `/api/dashboard/manager/cities/${city}/events`,
+      { query: { limit: 1 } },
+    )
+    if (res?.timezone) cityTimezone.value = res.timezone
+  } catch {
+    cityTimezone.value = 'Asia/Irkutsk'
+  }
+}
+
 async function loadContext() {
   loadError.value = ''
-  if (sourceKind.value === 'manual' || sourceKind.value === 'events') {
+  if (sourceKind.value === 'manual' || sourceKind.value === 'events' || sourceKind.value === 'curated_list') {
     if (sourceKind.value === 'manual') {
       initialCarousel.value = null
       contextHint.value = ''
+      activeListSlug.value = ''
       bumpStudioKey()
     }
     return
@@ -174,6 +237,7 @@ async function loadContext() {
 
   initialCarousel.value = null
   contextHint.value = ''
+  activeListSlug.value = ''
   const city = selectedCitySlug.value
   if (!city) return
 
@@ -209,10 +273,16 @@ async function loadContext() {
         } else {
           const pack = payload.content_pack as { instagram_carousel?: string } | undefined
           if (pack?.instagram_carousel) {
+            const mediaUrls = [
+              typeof payload.cover_media_url === 'string' ? payload.cover_media_url : '',
+              ...(Array.isArray(payload.media_urls)
+                ? payload.media_urls.map((x: unknown) => String(x || ''))
+                : []),
+            ].map((x) => x.trim()).filter(Boolean)
             initialCarousel.value = buildEditorialCarouselMetadata({
               instagramCarousel: pack.instagram_carousel,
-              coverMediaUrl:
-                typeof payload.cover_media_url === 'string' ? payload.cover_media_url : null,
+              coverMediaUrl: mediaUrls[0] || null,
+              mediaUrls,
               topicTags: Array.isArray(payload.topic_tags)
                 ? payload.topic_tags.map(String)
                 : [],
@@ -235,67 +305,27 @@ async function loadContext() {
   }
 }
 
-async function buildFromEvents() {
-  const city = selectedCitySlug.value
-  if (!city) return
-  loadingEvents.value = true
-  loadError.value = ''
-  try {
-    const res = await $fetch<{
-      ok: boolean
-      items?: CarouselEventInput[]
-      timezone?: string
-      message?: string
-    }>(`/api/dashboard/manager/cities/${city}/events`, {
-      query: { limit: eventsLimit.value },
-    })
-    if (!res?.ok) {
-      throw new Error(res?.message || 'Не удалось загрузить события')
-    }
-    const events = (res.items || []).map((item) => ({
-      title: item.title,
-      slug: item.slug,
-      startsAt: item.startsAt,
-      excerpt: item.excerpt,
-      tldr: item.tldr,
-      coverMediaUrl: item.coverMediaUrl,
-      price: item.price,
-      currency: item.currency,
-      venueTitle: item.venueTitle,
-      vibeEmoji: item.vibeEmoji,
-    }))
-    initialCarousel.value = buildCarouselFromEvents({
-      events,
-      citySlug: city,
-      cityName: selectedCityName.value,
-      timezone: res.timezone || 'Asia/Irkutsk',
-      coverTitle: eventsCoverTitle.value || defaultEventsCoverTitle.value,
-    })
-    contextHint.value = events.length
-      ? `Собрано из ${events.length} событий`
-      : 'Нет предстоящих опубликованных событий — добавьте обложку и слайды вручную'
-    bumpStudioKey()
-  } catch (err: unknown) {
-    loadError.value = err instanceof Error ? err.message : 'Не удалось собрать карусель'
-  } finally {
-    loadingEvents.value = false
-  }
-}
-
 function onCityChange() {
   eventsCoverTitle.value = defaultEventsCoverTitle.value
-  if (sourceKind.value === 'events') {
-    void buildFromEvents()
-  } else {
-    void loadContext()
+  activeListSlug.value = ''
+  void loadCityTimezone()
+  if (sourceKind.value === 'events' || sourceKind.value === 'curated_list') {
+    initialCarousel.value = null
+    contextHint.value = ''
+    bumpStudioKey()
+    return
   }
+  void loadContext()
 }
 
 function onSourceChange() {
   loadError.value = ''
-  if (sourceKind.value === 'events') {
+  activeListSlug.value = ''
+  if (sourceKind.value === 'events' || sourceKind.value === 'curated_list') {
     if (!eventsCoverTitle.value) eventsCoverTitle.value = defaultEventsCoverTitle.value
-    void buildFromEvents()
+    initialCarousel.value = null
+    contextHint.value = ''
+    bumpStudioKey()
     return
   }
   void loadContext()
@@ -303,15 +333,13 @@ function onSourceChange() {
 
 watch([selectedCitySlug, postId, submissionId], () => {
   if (!selectedCitySlug.value) return
-  if (sourceKind.value === 'events') {
-    void buildFromEvents()
-  } else if (sourceKind.value !== 'manual') {
-    void loadContext()
-  }
+  void loadCityTimezone()
+  if (sourceKind.value === 'events' || sourceKind.value === 'curated_list') return
+  if (sourceKind.value !== 'manual') void loadContext()
 })
 
 watch(defaultEventsCoverTitle, (title) => {
-  if (sourceKind.value === 'events' && !eventsCoverTitle.value.trim()) {
+  if ((sourceKind.value === 'events' || sourceKind.value === 'curated_list') && !eventsCoverTitle.value.trim()) {
     eventsCoverTitle.value = title
   }
 })
@@ -321,9 +349,8 @@ onMounted(async () => {
   else if (submissionId.value) sourceKind.value = 'submission'
 
   await loadManagerCities()
-  if (sourceKind.value === 'events') {
-    await buildFromEvents()
-  } else {
+  await loadCityTimezone()
+  if (sourceKind.value !== 'events' && sourceKind.value !== 'curated_list') {
     await loadContext()
   }
 })

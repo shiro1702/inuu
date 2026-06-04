@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildCarouselFromEvents } from '~/utils/buildCarouselFromEvents'
+import { buildCarouselFromEvents, carouselLinkHintForCity } from '~/utils/buildCarouselFromEvents'
 
 describe('buildCarouselFromEvents', () => {
   it('builds cover, one body per event, and outro', () => {
@@ -13,6 +13,7 @@ describe('buildCarouselFromEvents', () => {
           title: 'Концерт',
           slug: 'kontsert',
           startsAt: '2026-06-10T12:00:00.000Z',
+          coverMediaUrl: 'https://cdn.example.com/k.jpg',
           venueTitle: 'Клуб',
           price: 500,
           currency: 'RUB',
@@ -30,6 +31,12 @@ describe('buildCarouselFromEvents', () => {
     expect(carousel.slides[0]?.title).toBe('На выходные')
     expect(carousel.slides.filter((s) => s.role === 'body')).toHaveLength(2)
     expect(carousel.slides.at(-1)?.role).toBe('outro')
+    expect(carousel.slides[0]?.media_url).toBe('https://cdn.example.com/k.jpg')
+    expect(carousel.slides[1]?.media_url).toBe('https://cdn.example.com/k.jpg')
     expect(carousel.slides[1]?.bullets?.length).toBeGreaterThan(0)
+  })
+
+  it('builds list link hint', () => {
+    expect(carouselLinkHintForCity('ulan-ude', 'list', 'weekend')).toBe('/ulan-ude/lists/weekend')
   })
 })
