@@ -132,6 +132,16 @@
           >
             <p class="font-mono break-all text-gray-800">{{ alert.url }}</p>
             <p class="text-amber-800">{{ alert.reason }}</p>
+            <p v-if="alert.eventTitle" class="mt-1 text-gray-700">
+              Событие:
+              <NuxtLink
+                v-if="alert.eventSlug"
+                :to="`/${citySlug}/events/${alert.eventSlug}`"
+                class="font-medium text-primary hover:underline"
+                target="_blank"
+              >{{ alert.eventTitle }}</NuxtLink>
+              <span v-else>{{ alert.eventTitle }}</span>
+            </p>
             <p v-if="alert.snapshot" class="mt-1 line-clamp-2 text-gray-500">{{ alert.snapshot }}</p>
             <div class="mt-2 flex flex-wrap gap-1">
               <button
@@ -329,8 +339,11 @@ const testResultText = ref('')
 const crawlRunningId = ref('')
 type ScrapingAlert = {
   id: string
-  webSourceId: string
+  webSourceId: string | null
   webSourceUrl: string | null
+  eventId: string | null
+  eventSlug: string | null
+  eventTitle: string | null
   url: string
   reason: string
   snapshot: string | null

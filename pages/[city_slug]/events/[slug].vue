@@ -25,6 +25,14 @@
         </NuxtLink>
       </div>
 
+      <p
+        v-if="statusBadge"
+        class="inline-flex rounded-full px-3 py-1 text-sm font-semibold"
+        :class="statusBadgeClass"
+      >
+        {{ statusBadge }}
+      </p>
+
       <h1 class="text-2xl font-bold text-gray-900 sm:text-3xl">{{ event.title }}</h1>
 
       <p class="text-base text-gray-600">{{ formattedMainDate }}</p>
@@ -79,7 +87,7 @@
 
     <EventSeriesDatePicker v-if="seriesSessions.length > 1" :sessions="seriesSessions" />
 
-    <div v-if="cta?.url" class="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+    <div v-if="cta?.url && !hideTicketCta" class="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
       <a
         :href="cta.url"
         target="_blank"
@@ -113,6 +121,7 @@
 
 <script setup lang="ts">
 import type { EventCta, EventSaleMode, SourceDisplay, StorefrontOrganization, StorefrontVenue } from '~/types/storefront'
+import { eventStatusLabel, shouldHideEventCta } from '~/utils/eventLifecycleDisplay'
 
 definePageMeta({ layout: 'city' })
 
@@ -163,6 +172,18 @@ const priceLabel = computed(() => {
   if (!event.value) return ''
   return event.value.price > 0 ? `от ${event.value.price} ₽` : 'Вход бесплатный'
 })
+
+const statusBadge = computed(() => eventStatusLabel(event.value?.event_status))
+
+const statusBadgeClass = computed(() => {
+  const status = String(event.value?.event_status || 'active')
+  if (status === 'cancelled') return 'bg-red-100 text-red-800'
+  if (status === 'sold_out') return 'bg-gray-900 text-white'
+  if (status === 'postponed') return 'bg-amber-100 text-amber-900'
+  return ''
+})
+
+const hideTicketCta = computed(() => shouldHideEventCta(event.value?.event_status))
 
 const ctaButtonClass = computed(() => {
   if (saleMode.value === 'parsed') {

@@ -21,6 +21,13 @@ import { findShopIdByParsedSourceUrl } from '~/server/utils/resolvePublicOrganiz
 import { buildEditorialBodyJson } from '~/server/utils/editorialBodyJson'
 import { createEditorialStoryTeaser } from '~/server/utils/editorialStoryTeaser'
 import { createStoryCampaign, slidesFromEditorialStory } from '~/server/utils/storyCampaignWrite'
+import { resolveIngestCoverMediaUrl } from '~/server/utils/contentCoverMedia'
+import {
+  eventStatusFromIngest,
+  isMissingEventsStatusColumnError,
+  normalizeUpdateKind,
+} from '~/server/utils/eventLifecycleStatus'
+import type { IngestPostType } from '~/server/utils/ai/eventParseSchema'
 
 function slugifyTitle(input: string): string {
   return slugifyTaxonomy(input).slice(0, 80) || `item-${Date.now()}`
@@ -276,6 +283,83 @@ function stripEventRowFields(
   return next
 }
 
+async function publishLifecycleStatusUpdate(args: {
+  client: Awaited<ReturnType<typeof serverSupabaseServiceRole>>
+  submissionId: string
+  cityId: string
+  cityTimezone: string
+  payload: EventParseResult & Record<string, unknown>
+  ingestPostType: IngestPostType
+}): Promise<PublishSubmissionResult> {
+  const linkedEventId = String((args.payload as any).linked_event_id || '').trim()
+  if (!linkedEventId) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Привяжите событие в карточке модерации перед публикацией отмены/переноса',
+    })
+  }
+
+  const updateKind = normalizeUpdateKind((args.payload as any).ingest_update_kind)
+  const nextStatus = eventStatusFromIngest(args.ingestPostType, updateKind)
+  const nowIso = new Date().toISOString()
+
+  const patch: Record<string, unknown> = {
+    event_status: nextStatus,
+    status_updated_at: nowIso,
+    status_note: String(args.payload.title || '').trim().slice(0, 280) || null,
+    updated_at: nowIso,
+  }
+
+  const startsAtList = listEventStartsAtFromPayload(args.payload, args.cityTimezone)
+  if (args.ingestPostType === 'update' && updateKind === 'reschedule' && startsAtList[0]) {
+    patch.starts_at = startsAtList[0]
+  }
+
+  let updateResult = await args.client
+    .from('events')
+    .update(patch as any)
+    .eq('id', linkedEventId)
+    .eq('city_id', args.cityId)
+    .select('id,slug,series_slug')
+    .maybeSingle()
+
+  if (updateResult.error && isMissingEventsStatusColumnError(updateResult.error)) {
+    const { starts_at, event_status, status_updated_at, status_note, ...legacy } = patch
+    updateResult = await args.client
+      .from('events')
+      .update(legacy as any)
+      .eq('id', linkedEventId)
+      .eq('city_id', args.cityId)
+      .select('id,slug,series_slug')
+      .maybeSingle()
+  }
+
+  if (updateResult.error || !updateResult.data?.id) {
+    throw createError({
+      statusCode: 500,
+      statusMessage: updateResult.error?.message || 'Failed to update event status',
+    })
+  }
+
+  await args.client
+    .from('content_submissions')
+    .update({
+      status: 'approved',
+      published_entity_type: 'event',
+      published_entity_id: linkedEventId,
+      updated_at: nowIso,
+    } as any)
+    .eq('id', args.submissionId)
+
+  return {
+    entityType: 'event',
+    entityId: String(updateResult.data.id),
+    entitySlug: String((updateResult.data as any).slug || ''),
+    alreadyPublished: false,
+    seriesSlug: (updateResult.data as any).series_slug || null,
+  }
+}
+
 async function insertEventRow(args: {
   client: Awaited<ReturnType<typeof serverSupabaseServiceRole>>
   row: Record<string, unknown>
@@ -444,9 +528,20 @@ export async function publishContentSubmission(
     throw createError({ statusCode: 400, statusMessage: 'Submission description is too short to publish' })
   }
 
-  const coverMediaUrl = typeof payload.cover_media_url === 'string'
+  let coverMediaUrl = typeof payload.cover_media_url === 'string'
     ? payload.cover_media_url.trim() || null
     : null
+
+  if (coverMediaUrl && !coverMediaUrl.includes('/storage/v1/object/public/organization-media/')) {
+    const mirrored = await resolveIngestCoverMediaUrl(event, {
+      sourceUrl: coverMediaUrl,
+      cityId,
+      key: `publish-${String(submission.id).slice(0, 8)}`,
+    }).catch(() => null)
+    if (mirrored?.stored && mirrored.url) {
+      coverMediaUrl = mirrored.url
+    }
+  }
 
   if (eventKind === 'news') {
     const postSlug = `${slugifyTitle(title)}-${String(submission.id).slice(0, 8)}`
@@ -519,7 +614,18 @@ export async function publishContentSubmission(
       : []),
   ].filter((url, i, arr) => arr.indexOf(url) === i)
 
-  const ingestPostType = String((payload as any).ingest_post_type || '').trim() || null
+  const ingestPostType = String((payload as any).ingest_post_type || '').trim() || 'new_event'
+  if (ingestPostType === 'cancellation' || ingestPostType === 'update') {
+    return publishLifecycleStatusUpdate({
+      client,
+      submissionId,
+      cityId,
+      cityTimezone: String((city as any)?.timezone || 'Asia/Irkutsk'),
+      payload,
+      ingestPostType: ingestPostType as IngestPostType,
+    })
+  }
+
   const sourceMeta = {
     content_submission_id: submission.id,
     source_url: (submission as any).source_url || payload.source?.url || null,

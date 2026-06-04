@@ -39,7 +39,7 @@
 | [ ] | Chips дат «как в кино» + мини-календарь на длинных сериях | 3 | P1 | — | [15-event-detail-series-venues.md](../features/content/15-event-detail-series-venues.md) |
 | [ ] | Блок «Похожие события» по тегам/категории | 2 | P1 | — | [15-event-detail-series-venues.md](../features/content/15-event-detail-series-venues.md) |
 | [ ] | Избранное + «Мои планы» + push за сутки | 3 | P1 | низ | [verticals/events-and-venues.md](../verticals/events-and-venues.md) |
-| [ ] | Плашки ОТМЕНЕНО / SOLD OUT (не скрывать карточку) | 2 | P1 | — | [16-parsing-pipeline-extensions.md](../features/content/16-parsing-pipeline-extensions.md) |
+| [x] | Плашки ОТМЕНЕНО / SOLD OUT (не скрывать карточку) | 2 | P1 | — | [16-parsing-pipeline-extensions.md](../features/content/16-parsing-pipeline-extensions.md) |
 | [ ] | «Позвать друга» (share deep link) | 2 | P2 | низ | [15-event-detail-series-venues.md](../features/content/15-event-detail-series-venues.md) |
 | [ ] | UGC: «Сообщить об отмене/ошибке» (3 флага → скрыть) | 2 | P1 | — | [16-parsing-pipeline-extensions.md](../features/content/16-parsing-pipeline-extensions.md) |
 | [ ] | Карта событий / venues на карте | 4 | P2 | — | [04-features-priority.md](../04-features-priority.md) |
@@ -84,11 +84,11 @@
 | [x] | Контекст источника в промпте (театр / клуб / …) | 2 | P1 | — | [17-ingest-sources-context.md](../features/content/17-ingest-sources-context.md) |
 | [x] | AI-санитар парсинга (title, price, category, vibe) | 2 | P1 | — | [22-ai-bot-concierge-and-intent.md](../features/content/22-ai-bot-concierge-and-intent.md), TASK-005 (tldr/vibe в одном Groq-вызове) |
 | [x] | TL;DR + vibe emoji на карточке события | 2 | P1 | — | [22-ai-bot-concierge-and-intent.md](../features/content/22-ai-bot-concierge-and-intent.md), TASK-005 |
-| [ ] | Сжатие афиш WebP при ingest | 2 | P1 | — | [24-mvp-launch-checklist-ulan-ude.md](../features/content/24-mvp-launch-checklist-ulan-ude.md) |
-| [ ] | Groq: каскад 8b/70b + graceful 429 | 2 | P1 | — | [24-mvp-launch-checklist-ulan-ude.md](../features/content/24-mvp-launch-checklist-ulan-ude.md), [11-tech-stack.md](../11-tech-stack.md) |
+| [x] | Сжатие афиш WebP при ingest | 2 | P1 | — | [24-mvp-launch-checklist-ulan-ude.md](../features/content/24-mvp-launch-checklist-ulan-ude.md) |
+| [x] | Groq: каскад 8b/70b + graceful 429 | 2 | P1 | — | [24-mvp-launch-checklist-ulan-ude.md](../features/content/24-mvp-launch-checklist-ulan-ude.md), [11-tech-stack.md](../11-tech-stack.md) |
 | [ ] | VK wall ingest | 3 | P2 | — | [27-ingest-workers-vk-telegram-web.md](../features/content/27-ingest-workers-vk-telegram-web.md) |
 | [ ] | Telegram public: `t.me/s/` HTML worker | 2 | P2 | — | [27-ingest-workers-vk-telegram-web.md](../features/content/27-ingest-workers-vk-telegram-web.md) |
-| [ ] | AI-чек источников перед выходными (404, «отмена» на сайте) | 3 | P1 | — | [16-parsing-pipeline-extensions.md](../features/content/16-parsing-pipeline-extensions.md), [02.05.2026](../../fix/brainstorm/02.05.2026.md) |
+| [x] | AI-чек источников перед выходными (404, «отмена» на сайте) | 3 | P1 | — | [16-parsing-pipeline-extensions.md](../features/content/16-parsing-pipeline-extensions.md), [02.05.2026](../../fix/brainstorm/02.05.2026.md) |
 | [x] | Политика ingest → editorial (спека маршрутов публикации) | 1 | P2 | — | [37-ingest-editorial-routing.md](../features/content/37-ingest-editorial-routing.md), TASK-016 |
 | [ ] | Venue announcements из привязанных TG ingest-источников | 3 | P2 | — | [37-ingest-editorial-routing.md](../features/content/37-ingest-editorial-routing.md), TASK-017 |
 
@@ -271,9 +271,9 @@
 | | Кол-во |
 |---|--------|
 | Всего строк | 169 |
-| `[x]` сделано | 72 |
-| `[~]` в работе | 3 |
-| `[ ]` в плане | 94 |
+| `[x]` сделано | 76 |
+| `[~]` в работе | 0 |
+| `[ ]` в плане | 93 |
 
 > **Примечание:** `[x]` = есть рабочий код или MVP закрыт по спеке; `[~]` = идёт реализация; `[ ]` = не начато или только спека. Строки «снято» (§11) не входят в «в плане». При расхождении с кодом — править здесь первым делом.
 

@@ -1,6 +1,12 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: '2025-03-05',
+  // sharp uses native .node binaries — must stay external (not nitro inline/rollup bundle).
+  nitro: {
+    externals: {
+      traceInclude: ['sharp', /^@img\/sharp-/],
+    },
+  },
   devtools: { enabled: true },
   // Workaround for intermittent source-map wasm crashes in Nuxt dev error parser.
   sourcemap: {

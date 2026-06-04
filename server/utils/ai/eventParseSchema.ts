@@ -9,6 +9,8 @@ export const PARSE_KINDS = ['single', 'digest'] as const
 export const DIGEST_PERIODS = ['week', 'month'] as const
 export const INGEST_POST_TYPES = ['new_event', 'cancellation', 'update', 'trash'] as const
 export type IngestPostType = (typeof INGEST_POST_TYPES)[number]
+export const UPDATE_KINDS = ['sold_out', 'reschedule', 'other'] as const
+export type UpdateKind = (typeof UPDATE_KINDS)[number]
 
 const nullableTrimmedString = z
   .string()
@@ -80,6 +82,7 @@ export type EventDigestMeta = z.infer<typeof eventDigestMetaSchema>
 export const eventDigestParseResultSchema = z.object({
   parse_kind: z.enum(PARSE_KINDS),
   post_type: z.enum(INGEST_POST_TYPES).default('new_event'),
+  update_kind: z.enum(UPDATE_KINDS).nullable().optional().default(null),
   publication_date: z
     .string()
     .trim()

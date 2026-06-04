@@ -1,5 +1,8 @@
 import Groq from 'groq-sdk'
-import { createError } from 'h3'
+import { GroqParseExhaustedError, isGroqRateLimitError } from '~/server/utils/ai/groqParseErrors'
+import type { ParseAttempt } from '~/server/utils/ai/groqEventParserTypes'
+
+export type { ParseAttempt } from '~/server/utils/ai/groqEventParserTypes'
 import {
   detectPreferDigest,
   eventDigestParseResultSchema,
@@ -16,18 +19,6 @@ import {
   coerceEventParsePayload,
   normalizeEventParseDescriptions,
 } from '~/server/utils/eventParseDescriptions'
-
-type ParseAttempt = {
-  ok: boolean
-  attempt: number
-  raw?: string
-  error?: string
-  usage?: {
-    promptTokens: number | null
-    completionTokens: number | null
-    totalTokens: number | null
-  }
-}
 
 type ParseOutput = {
   result: EventParseResult
@@ -97,6 +88,7 @@ function buildUserPrompt(input: EventParseInput) {
     JSON.stringify({
       parse_kind: 'single|digest',
       post_type: 'new_event|cancellation|update|trash',
+      update_kind: 'sold_out|reschedule|other|null',
       publication_date: 'YYYY-MM-DD|null',
       digest: {
         title: 'string|null',
@@ -166,11 +158,13 @@ function coerceDigestPayload(raw: unknown, input: EventParseInput): unknown {
 
   const postType = o.post_type ?? 'new_event'
   const publicationDate = o.publication_date ?? null
+  const updateKind = o.update_kind ?? null
 
   if (Array.isArray(o.events) && o.events.length > 0) {
     return {
       parse_kind: o.parse_kind === 'digest' ? 'digest' : (o.events.length > 1 ? 'digest' : 'single'),
       post_type: postType,
+      update_kind: updateKind,
       publication_date: publicationDate,
       digest: o.digest ?? null,
       events: o.events.map((ev) => coerceEventParsePayload(ev)),
@@ -181,6 +175,7 @@ function coerceDigestPayload(raw: unknown, input: EventParseInput): unknown {
     return {
       parse_kind: 'single',
       post_type: postType,
+      update_kind: updateKind,
       publication_date: publicationDate,
       digest: null,
       events: [],
@@ -191,6 +186,7 @@ function coerceDigestPayload(raw: unknown, input: EventParseInput): unknown {
     return {
       parse_kind: 'single',
       post_type: postType,
+      update_kind: updateKind,
       publication_date: publicationDate,
       digest: null,
       events: [coerceEventParsePayload(o)],
@@ -264,6 +260,12 @@ async function runSingleAttempt(args: {
   }
 }
 
+function resolveGroqModelChain(config: ReturnType<typeof useRuntimeConfig>): string[] {
+  const primary = String(config.groqModel || '').trim() || 'llama-3.3-70b-versatile'
+  const fallback = String(config.groqClassifierModel || '').trim() || 'llama-3.1-8b-instant'
+  return [...new Set([primary, fallback].filter(Boolean))]
+}
+
 export async function parseEventsWithGroq(inputRaw: EventParseInput): Promise<EventsParseOutput> {
   const startedAt = Date.now()
   const preferDigest = detectPreferDigest(inputRaw.rawText || '')
@@ -276,7 +278,7 @@ export async function parseEventsWithGroq(inputRaw: EventParseInput): Promise<Ev
   })
   const config = useRuntimeConfig()
   const apiKey = String(config.groqApiKey || '').trim()
-  const model = String(config.groqModel || '').trim() || 'llama-3.3-70b-versatile'
+  const models = resolveGroqModelChain(config)
 
   if (!apiKey) {
     throw createError({ statusCode: 500, statusMessage: 'NUXT_GROQ_API_KEY is not configured' })
@@ -284,26 +286,36 @@ export async function parseEventsWithGroq(inputRaw: EventParseInput): Promise<Ev
 
   const client = new Groq({ apiKey })
   const attempts: ParseAttempt[] = []
-  const maxAttempts = 2
+  const maxAttemptsPerModel = 2
+  let sawRateLimit = false
 
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      const { parsed, raw, usage } = await runSingleAttempt({ client, model, input, attempt })
-      attempts.push({ ok: true, attempt, raw, usage })
-      return { result: parsed, attempts, model, latencyMs: Date.now() - startedAt }
-    } catch (error: any) {
-      attempts.push({
-        ok: false,
-        attempt,
-        error: error?.message ? String(error.message) : 'Unknown parse error',
-      })
+  for (const model of models) {
+    for (let attempt = 1; attempt <= maxAttemptsPerModel; attempt++) {
+      try {
+        const { parsed, raw, usage } = await runSingleAttempt({ client, model, input, attempt })
+        attempts.push({ ok: true, attempt, model, raw, usage })
+        return { result: parsed, attempts, model, latencyMs: Date.now() - startedAt }
+      } catch (error: unknown) {
+        const rateLimited = isGroqRateLimitError(error)
+        if (rateLimited) sawRateLimit = true
+        attempts.push({
+          ok: false,
+          attempt,
+          model,
+          error: error instanceof Error ? error.message : 'Unknown parse error',
+        })
+        if (rateLimited) break
+      }
     }
   }
 
-  throw createError({
-    statusCode: 422,
-    statusMessage: `Failed to parse event payload after ${maxAttempts} attempts`,
-    data: { attempts },
+  throw new GroqParseExhaustedError({
+    message: sawRateLimit
+      ? 'Groq rate limit exceeded; parse deferred'
+      : `Failed to parse event payload after ${attempts.length} attempts`,
+    rateLimited: sawRateLimit,
+    attempts,
+    modelsTried: models,
   })
 }
 

@@ -79,6 +79,11 @@ export default defineEventHandler(async (event) => {
       model: result.model,
       latencyMs: result.latencyMs,
       enrichedUrls: result.enrichedUrls,
+      parseDegraded: result.parseDegraded === true,
+      warning:
+        result.parseDegraded === true
+          ? 'Groq rate limit — parse deferred, needs manual review'
+          : undefined,
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Ingest failed'

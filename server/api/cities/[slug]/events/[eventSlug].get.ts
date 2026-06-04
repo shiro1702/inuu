@@ -11,6 +11,7 @@ import {
   resolveEventDisplayLinks,
   type PublicEventSession,
 } from '~/server/utils/eventPublicDetail'
+import { shouldHideEventCta } from '~/utils/eventLifecycleDisplay'
 
 const OPTIONAL_ORGANIZATION_TIMEOUT_MS = 350
 
@@ -149,7 +150,7 @@ export default defineEventHandler(async (event) => {
     organization,
     venue,
     saleMode: displayLinks.saleMode,
-    cta: displayLinks.cta,
+    cta: shouldHideEventCta((data as any).event_status) ? null : displayLinks.cta,
     sourceDisplay,
     seriesSessions,
     similarEvents: similarEnriched,

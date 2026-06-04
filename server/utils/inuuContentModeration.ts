@@ -12,6 +12,13 @@ import {
 import { formatTopicTagsAsHashtags } from '~/server/utils/ingestSourceDisplayName'
 import { formatDescriptionsForModeration } from '~/server/utils/eventParseDescriptions'
 import { ingestPostTypeLabel, normalizeIngestPostType } from '~/server/utils/eventIngestPostType'
+import {
+  cancelLinkedEventInDatabase,
+  ingestPostTypeFromPayload,
+  linkedEventIdFromPayload,
+  listEventLinkCandidates,
+  setSubmissionLinkedEvent,
+} from '~/server/utils/eventModerationLink'
 import { publishContentSubmission } from '~/server/utils/contentSubmissionPublish'
 import {
   buildContentSubmissionEditLinks,
@@ -265,10 +272,12 @@ export function formatContentSubmissionCard(args: {
   const p = args.payload as EventParseResult & {
     ingest_post_type?: string
     ingest_publication_date?: string | null
+    linked_event_id?: string | null
   }
   const postType = normalizeIngestPostType(p.ingest_post_type)
   const postTypeLine =
     postType !== 'new_event' ? `⚠️ Тип поста: ${ingestPostTypeLabel(postType)}` : null
+  const linkedLine = p.linked_event_id ? `🔗 Привязано к событию: ${p.linked_event_id}` : null
   const pubLine = p.ingest_publication_date ? `📆 Дата поста: ${p.ingest_publication_date}` : null
   const dates = Array.isArray(p.recurrence?.dates) ? p.recurrence.dates : []
   const dateLine = dates.length
@@ -298,6 +307,7 @@ export function formatContentSubmissionCard(args: {
     }),
     '────────────────',
     postTypeLine,
+    linkedLine,
     pubLine,
     String(p.title || 'Без названия'),
     `📅 ${dateLine}`,
@@ -425,7 +435,7 @@ async function sendModerationCardMessage(args: {
   botToken: string
   chatId: string
   text: string
-  keyboard: ReturnType<typeof buildContentSubmissionMainKeyboard>
+  keyboard: Awaited<ReturnType<typeof buildContentSubmissionMainKeyboard>>
   coverUrl: string | null
 }): Promise<number | null> {
   const caption = args.text.length <= 1024 ? args.text : `${args.text.slice(0, 1020)}…`
@@ -449,22 +459,67 @@ async function sendModerationCardMessage(args: {
 }
 
 /** Кнопки модерации до публикации (без оценки). */
-export function buildContentSubmissionMainKeyboard(submissionId: string) {
-  return {
-    inline_keyboard: [
-      [
+export async function buildContentSubmissionMainKeyboard(
+  event: H3Event,
+  submission: Record<string, unknown>,
+) {
+  const submissionId = String(submission.id)
+  const payload = (submission.payload && typeof submission.payload === 'object'
+    ? submission.payload
+    : {}) as Record<string, unknown>
+  const postType = ingestPostTypeFromPayload(payload)
+  const linkedId = linkedEventIdFromPayload(payload)
+  const rows: Array<Array<{ text: string; callback_data: string }>> = []
+
+  if (postType === 'cancellation' || postType === 'update') {
+    if (!linkedId) {
+      const candidates = await listEventLinkCandidates(event, {
+        cityId: String(submission.city_id),
+        titleHint: String(payload.title || ''),
+        limit: 5,
+      })
+      for (const candidate of candidates) {
+        const label = candidate.title.length > 26 ? `${candidate.title.slice(0, 26)}…` : candidate.title
+        rows.push([
+          {
+            text: `🔗 ${label}`,
+            callback_data: `inuu:sub:link:${submissionId}:${candidate.id}`,
+          },
+        ])
+      }
+    } else {
+      rows.push([{ text: '✓ Событие привязано', callback_data: `inuu:sub:noop:${submissionId}` }])
+      if (postType === 'cancellation') {
+        rows.push([
+          {
+            text: '⛔ Отменить в базе',
+            callback_data: `inuu:sub:cancel_db:${submissionId}:${linkedId}`,
+          },
+        ])
+      }
+    }
+
+    if (linkedId) {
+      rows.push([
         { text: '✅ Опубликовать', callback_data: `inuu:sub:approve:${submissionId}` },
         { text: '✏️ На доработку', callback_data: `inuu:sub:revise:${submissionId}` },
-      ],
-      [
-        { text: '❌ Отклонить', callback_data: `inuu:sub:reject:${submissionId}` },
-      ],
-      [
-        // web_app и t.me?startapp= в группах не работают → callback → личка с web_app
-        { text: '🛠 Редактировать', callback_data: `inuu:sub:edit:${submissionId}` },
-      ],
-    ],
+      ])
+    } else {
+      rows.push([
+        { text: '⚠️ Сначала привяжите событие', callback_data: `inuu:sub:noop:${submissionId}` },
+      ])
+    }
+  } else {
+    rows.push([
+      { text: '✅ Опубликовать', callback_data: `inuu:sub:approve:${submissionId}` },
+      { text: '✏️ На доработку', callback_data: `inuu:sub:revise:${submissionId}` },
+    ])
   }
+
+  rows.push([{ text: '❌ Отклонить', callback_data: `inuu:sub:reject:${submissionId}` }])
+  rows.push([{ text: '🛠 Редактировать', callback_data: `inuu:sub:edit:${submissionId}` }])
+
+  return { inline_keyboard: rows }
 }
 
 function buildMaxContentSubmissionAttachments(editLinks: { httpsUrl: string | null; telegramUrl: string | null } | null) {
@@ -555,7 +610,7 @@ export async function sendContentSubmissionModerationCards(
     payload: ((submission as any).payload || {}) as EventParseResult,
   })
 
-  const keyboard = buildContentSubmissionMainKeyboard(String(submission.id))
+  const keyboard = await buildContentSubmissionMainKeyboard(event, submission as Record<string, unknown>)
   const coverUrl = submissionCoverUrl(((submission as any).payload || {}) as Record<string, unknown>)
   const primaryChat = String(args.primaryChatId || uniqueChatIds[0] || '').trim()
   let primaryMessageId: number | null = null
@@ -654,10 +709,18 @@ export async function refreshContentSubmissionModerationCard(
   event: H3Event,
   args: { submissionId: string; botToken: string },
 ): Promise<void> {
+  const client = await serverSupabaseServiceRole(event)
+  const { data: submission } = await client
+    .from('content_submissions')
+    .select(MODERATION_CARD_SELECT)
+    .eq('id', args.submissionId)
+    .maybeSingle()
+  if (!submission?.id) return
+
   await updateContentSubmissionModerationCardInChat(event, {
     submissionId: args.submissionId,
     botToken: args.botToken,
-    keyboard: buildContentSubmissionMainKeyboard(args.submissionId),
+    keyboard: await buildContentSubmissionMainKeyboard(event, submission as Record<string, unknown>),
   })
 }
 
@@ -779,8 +842,19 @@ export async function notifyContentSubmissionTelegramChats(
 }
 
 export function parseInuuSubCallback(data: string): {
-  action: 'approve' | 'revise' | 'reject' | 'rej' | 'rej_cancel' | 'score' | 'edit'
+  action:
+    | 'approve'
+    | 'revise'
+    | 'reject'
+    | 'rej'
+    | 'rej_cancel'
+    | 'score'
+    | 'edit'
+    | 'link'
+    | 'cancel_db'
+    | 'noop'
   submissionId: string
+  eventId?: string
   rejectCode?: string
   score?: number
 } | null {
@@ -789,6 +863,16 @@ export function parseInuuSubCallback(data: string): {
   const action = parts[2]
   const submissionId = parts[3]?.trim()
   if (!submissionId) return null
+
+  if (action === 'link' && parts[4]) {
+    return { action: 'link', submissionId, eventId: parts[4].trim() }
+  }
+  if (action === 'cancel_db' && parts[4]) {
+    return { action: 'cancel_db', submissionId, eventId: parts[4].trim() }
+  }
+  if (action === 'noop') {
+    return { action: 'noop', submissionId }
+  }
 
   if (action === 'approve' || action === 'revise' || action === 'reject' || action === 'rej_cancel' || action === 'edit') {
     return { action, submissionId }
@@ -935,7 +1019,7 @@ export async function handleInuuSubTelegramCallback(
     await telegram(args.botToken, 'editMessageReplyMarkup', {
       chat_id: args.chatId,
       message_id: args.messageId,
-      reply_markup: buildContentSubmissionMainKeyboard(parsed.submissionId),
+      reply_markup: await buildContentSubmissionMainKeyboard(event, submission),
     })
     return { alertText: 'Отменено', showAlert: false }
   }
@@ -947,7 +1031,68 @@ export async function handleInuuSubTelegramCallback(
     updated_at: new Date().toISOString(),
   }
 
+  if (parsed.action === 'noop') {
+    return { alertText: 'Привяжите событие кнопкой 🔗 выше', showAlert: false }
+  }
+
+  if (parsed.action === 'link' && parsed.eventId) {
+    await setSubmissionLinkedEvent(event, {
+      submissionId: parsed.submissionId,
+      eventId: parsed.eventId,
+    })
+    const { data: refreshed } = await client
+      .from('content_submissions')
+      .select(MODERATION_CARD_SELECT)
+      .eq('id', parsed.submissionId)
+      .maybeSingle()
+    if (refreshed) {
+      await updateContentSubmissionModerationCardInChat(event, {
+        submissionId: parsed.submissionId,
+        botToken: args.botToken,
+        chatId: String(args.chatId),
+        messageId: args.messageId,
+        keyboard: await buildContentSubmissionMainKeyboard(event, refreshed as Record<string, unknown>),
+      }).catch((err) => console.error('[inuuContentModeration] link refresh card:', err))
+    }
+    return { alertText: 'Событие привязано', showAlert: false }
+  }
+
+  if (parsed.action === 'cancel_db' && parsed.eventId) {
+    const cityId = String((submission as any).city_id)
+    const cancelled = await cancelLinkedEventInDatabase(event, {
+      cityId,
+      eventId: parsed.eventId,
+      note: String((submission.payload as Record<string, unknown> | undefined)?.title || ''),
+    })
+    await client
+      .from('content_submissions')
+      .update({
+        status: 'approved',
+        published_entity_type: 'event',
+        published_entity_id: parsed.eventId,
+        updated_at: new Date().toISOString(),
+        ...reviewedPatch,
+      } as any)
+      .eq('id', parsed.submissionId)
+    await updateContentSubmissionModerationCardInChat(event, {
+      submissionId: parsed.submissionId,
+      botToken: args.botToken,
+      chatId: String(args.chatId),
+      messageId: args.messageId,
+      keyboard: { inline_keyboard: [] },
+      statusSuffix: `⛔ Отменено в базе · /events/${cancelled.slug}`,
+    }).catch((err) => console.error('[inuuContentModeration] cancel_db card:', err))
+    return { alertText: 'Событие отменено в базе', showAlert: false }
+  }
+
   if (parsed.action === 'approve') {
+    const payload = (submission.payload && typeof submission.payload === 'object'
+      ? submission.payload
+      : {}) as Record<string, unknown>
+    const postType = ingestPostTypeFromPayload(payload)
+    if ((postType === 'cancellation' || postType === 'update') && !linkedEventIdFromPayload(payload)) {
+      return { alertText: 'Сначала привяжите событие кнопкой 🔗', showAlert: true }
+    }
     let publishLabel = 'Одобрено'
     let publishedEvent = false
     let publishPath: string | null = null

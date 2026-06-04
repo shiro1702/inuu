@@ -8,6 +8,7 @@
 | [ACTIVE_TASKS.md](./ACTIVE_TASKS.md) | **Активная очередь** (≤3 задачи на чат) — вместо кэша в Cursor |
 | [TASK-003-public-org-venue-storefront.md](./TASK-003-public-org-venue-storefront.md) | Runbook исполнения TASK-003 (org/venue, CTA, stories) |
 | [TASK-008-web-parsing-pipeline.md](./TASK-008-web-parsing-pipeline.md) | Runbook web crawl TASK-008–010 (classifier, rules, alerts) |
+| [WAVE_3B_README.md](../runbooks/WAVE_3B_README.md) | **Волна 3b:** индекс проверки (WebP, статусы, weekend check) + URL прод/localhost |
 
 ## Как пользоваться
 

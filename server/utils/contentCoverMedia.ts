@@ -1,6 +1,7 @@
 import type { H3Event } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import { normalizeRemoteMediaUrl } from '~/server/utils/remoteMediaUrl'
+import { compressImageToWebp } from '~/server/utils/coverWebpCompress'
 
 export { normalizeRemoteMediaUrl } from '~/server/utils/remoteMediaUrl'
 
@@ -8,24 +9,14 @@ const USER_AGENT = 'INUU-ContentBot/1.0 (+https://inuu.ru)'
 const FETCH_TIMEOUT_MS = 12_000
 const MAX_BYTES = 5 * 1024 * 1024
 
-function guessImageExtension(contentType: string, sourceUrl: string): string {
-  const type = contentType.toLowerCase()
-  if (type.includes('png')) return 'png'
-  if (type.includes('webp')) return 'webp'
-  if (type.includes('gif')) return 'gif'
-  const path = sourceUrl.split('?')[0] || ''
-  const match = path.match(/\.(jpe?g|png|webp|gif)$/i)
-  if (match?.[1]) return match[1].toLowerCase().replace('jpeg', 'jpg')
-  return 'jpg'
-}
-
 export type ResolvedCoverMedia = {
   url: string
   stored: boolean
+  mime?: string
 }
 
 /**
- * Tries to mirror remote poster into Supabase storage; on failure returns a direct HTTPS URL.
+ * Tries to mirror remote poster into Supabase storage as WebP; on failure returns a direct HTTPS URL.
  */
 export async function resolveIngestCoverMediaUrl(
   event: H3Event,
@@ -58,18 +49,22 @@ export async function resolveIngestCoverMediaUrl(
       return { url: normalized, stored: false }
     }
 
-    const bytes = Buffer.from(await res.arrayBuffer())
-    if (!bytes.byteLength || bytes.byteLength > MAX_BYTES) {
+    const rawBytes = Buffer.from(await res.arrayBuffer())
+    if (!rawBytes.byteLength || rawBytes.byteLength > MAX_BYTES) {
       return { url: normalized, stored: false }
     }
 
-    const ext = guessImageExtension(contentType, normalized)
+    const webpBytes = await compressImageToWebp(rawBytes)
+    const uploadBytes = webpBytes && webpBytes.byteLength ? webpBytes : rawBytes
+    const uploadMime = webpBytes && webpBytes.byteLength ? 'image/webp' : contentType.split(';')[0] || 'image/jpeg'
+    const ext = uploadMime.includes('webp') ? 'webp' : 'jpg'
+
     const safeKey = args.key.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 64)
     const objectPath = `inuu-content/${args.cityId}/${Date.now()}-${safeKey}.${ext}`
 
     const client = await serverSupabaseServiceRole(event)
-    const upload = await client.storage.from('organization-media').upload(objectPath, bytes, {
-      contentType: contentType.split(';')[0] || 'image/jpeg',
+    const upload = await client.storage.from('organization-media').upload(objectPath, uploadBytes, {
+      contentType: uploadMime,
       upsert: true,
     })
 
@@ -83,7 +78,7 @@ export async function resolveIngestCoverMediaUrl(
       return { url: normalized, stored: false }
     }
 
-    return { url: publicUrl, stored: true }
+    return { url: publicUrl, stored: true, mime: uploadMime }
   } catch (err) {
     console.warn('[contentCoverMedia] fetch/upload failed:', err)
     return { url: normalized, stored: false }

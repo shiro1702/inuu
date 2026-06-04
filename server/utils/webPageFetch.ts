@@ -10,6 +10,14 @@ export type FetchedWebPage = {
   html: string
   finalUrl: string
   contentType: string
+  status?: number
+}
+
+export type WebPageHealthFetch = {
+  status: number
+  html: string
+  finalUrl: string
+  contentType: string
 }
 
 function getFirecrawlKey(): string {
@@ -85,22 +93,45 @@ export async function fetchWebPageHtml(url: string): Promise<FetchedWebPage | nu
       redirect: 'follow',
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     })
-    if (!res.ok) return null
     const contentType = String(res.headers.get('content-type') || '').toLowerCase()
     const body = await res.text()
     const finalUrl = res.url || url
+    if (!res.ok) {
+      return { html: body.slice(0, 8000), finalUrl, contentType, status: res.status }
+    }
     if (contentType.includes('text/html') || body.trim().startsWith('<')) {
-      return { html: body, finalUrl, contentType: contentType || 'text/html' }
+      return { html: body, finalUrl, contentType: contentType || 'text/html', status: res.status }
     }
     if (contentType.includes('text/plain') || contentType.includes('text/markdown')) {
       return {
         html: `<pre>${body.replace(/</g, '&lt;')}</pre>`,
         finalUrl,
         contentType,
+        status: res.status,
       }
     }
     return null
   } catch {
     return null
   }
+}
+
+/** Health-check fetch: returns HTTP status when the request completes. */
+export async function fetchWebPageForHealthCheck(url: string): Promise<WebPageHealthFetch | null> {
+  const page = await fetchWebPageHtml(url)
+  if (!page) return null
+  return {
+    status: page.status ?? 200,
+    html: page.html,
+    finalUrl: page.finalUrl,
+    contentType: page.contentType,
+  }
+}
+
+const CANCELLED_ON_SITE_RE =
+  /отмен(?:а|ено|ен|ена)?|sold\s*out|распродан|мероприятие\s+не\s+состоится/i
+
+export function detectCancelledOnSourcePage(html: string): boolean {
+  const text = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 12_000)
+  return CANCELLED_ON_SITE_RE.test(text)
 }

@@ -15,6 +15,13 @@
           loading="lazy"
         />
         <div v-else class="absolute inset-0 bg-gradient-to-br from-indigo-100 to-violet-50" />
+        <span
+          v-if="statusBadge"
+          class="absolute left-2 top-2 z-10 rounded-full px-2.5 py-1 text-xs font-semibold shadow-sm"
+          :class="statusBadgeClass"
+        >
+          {{ statusBadge }}
+        </span>
       </div>
       <div class="p-4">
         <p class="text-xs font-medium uppercase tracking-wide text-indigo-600">
@@ -37,7 +44,7 @@
       </div>
     </NuxtLink>
 
-    <div v-if="cta?.url" class="border-t border-gray-100 px-4 pb-4 pt-0">
+    <div v-if="cta?.url && !hideCta" class="border-t border-gray-100 px-4 pb-4 pt-0">
       <a
         :href="cta.url"
         target="_blank"
@@ -54,6 +61,7 @@
 
 <script setup lang="ts">
 import type { EventCta, EventSaleMode } from '~/types/storefront'
+import { eventStatusLabel, shouldHideEventCta } from '~/utils/eventLifecycleDisplay'
 
 const posterFrameStyle = { aspectRatio: '768 / 480' } as const
 
@@ -69,6 +77,7 @@ const props = defineProps<{
     price?: number
     cover_media_url?: string | null
     series_date_count?: number
+    event_status?: string | null
   }
   saleMode?: EventSaleMode
   cta?: EventCta | null
@@ -105,6 +114,18 @@ const formattedDate = computed(() => {
 })
 
 const cta = computed(() => props.cta ?? null)
+
+const statusBadge = computed(() => eventStatusLabel(props.event.event_status))
+
+const statusBadgeClass = computed(() => {
+  const status = String(props.event.event_status || 'active')
+  if (status === 'cancelled') return 'bg-red-600 text-white'
+  if (status === 'sold_out') return 'bg-gray-900 text-white'
+  if (status === 'postponed') return 'bg-amber-500 text-white'
+  return 'bg-white/90 text-gray-800'
+})
+
+const hideCta = computed(() => shouldHideEventCta(props.event.event_status))
 
 const ctaButtonClass = computed(() => {
   if (props.saleMode === 'parsed') {

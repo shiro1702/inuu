@@ -42,9 +42,9 @@
 
 ## Текущий вектор (03.06.2026)
 
-**Волна 3a закрыта:** TASK-004, 005, 018 → архив.
+**Волна 3b закрыта:** TASK-019, 020, 021 → архив.
 
-**Следующая волна 3b:** TASK-019–021 (запланировано ниже) — можно брать в активные (лимит 3).
+**Следующая:** волна 3c из [бэклога](#бэклог-волны-3c-не-активно) (лимит 3 активных).
 
 Индексы брейнштормов: [01.06.2026](../../fix/brainstorm/01.06.2026.md), [02.05.2026](../../fix/brainstorm/02.05.2026.md), [03.06.2026](../../fix/brainstorm/03.06.2026.md).
 
@@ -52,68 +52,7 @@
 
 ## Активные задачи
 
-> **Слоты свободны** (0/3). Старт 3b: `@ACTIVE_TASKS.md` + взять TASK-019 в `in_progress`.
-
----
-
-## Запланировано · Волна 3b — «Качество ingest + карточка»
-
-> Статус `todo` · **не в лимите 3 активных** · старт после волны 3a.  
-> Очередь волны: **3 задачи** (по одной в активных или параллельно).
-
-### TASK-019 · WebP афиш + Groq cascade 429
-
-- **Статус:** `todo`
-- **Размер:** M
-- **Матрица:** §4 «Сжатие афиш WebP» · «Groq: каскад 8b/70b + graceful 429»
-- **Цель:** лёгкие обложки при ingest и устойчивый парсинг при лимитах Groq
-- **Спеки:** [24-mvp-launch-checklist-ulan-ude.md](../features/content/24-mvp-launch-checklist-ulan-ude.md), [11-tech-stack.md](../11-tech-stack.md)
-- **In scope:**
-  - Сжатие cover → WebP при ingest (цель < 300 KB)
-  - Fallback модели / retry при 429 в `groqEventParser`
-  - Логирование в `ai_parse_logs` при деградации
-- **Out of scope:** CDN отдельно от Storage, платный резервный провайдер
-- **Ключевые файлы:** `server/utils/contentCoverMedia.ts`, `server/utils/ai/groqEventParser.ts`, ingest publish path
-- **Критерии готовности:**
-  - [ ] Новый ingest сохраняет WebP URL (или webp mime) в `cover_media_url`
-  - [ ] При 429 парсинг не падает 500 — очередь/лог с понятным warning
-- **Заметки:** зависит от стабильного ingest (TASK-004)
-
-### TASK-020 · Отмена / перенос / SOLD OUT на витрине
-
-- **Статус:** `todo`
-- **Размер:** M
-- **Матрица:** §2 «Плашки ОТМЕНЕНО / SOLD OUT» · §4 `post_type` (UI)
-- **Цель:** пользователь видит статус события, карточка не исчезает молча
-- **Спеки:** [16-parsing-pipeline-extensions.md](../features/content/16-parsing-pipeline-extensions.md), [15-event-detail-series-venues.md](../features/content/15-event-detail-series-venues.md)
-- **In scope:**
-  - Поле статуса на `events` (или `source_metadata`) из `post_type` update/cancellation
-  - Плашки на `CityEventCard` и детальной странице
-  - Модерация: кнопка «Отменить в базе» (MVP — ручной approve → `is_cancelled` / скрытие CTA)
-- **Out of scope:** fuzzy auto-match отмены по тексту без модератора (расширение TASK-018)
-- **Ключевые файлы:** `supabase/migrations/`, `CityEventCard.vue`, `pages/[city_slug]/events/[eventSlug].vue`, `contentSubmissionPublish.ts`
-- **Критерии готовности:**
-  - [ ] Событие с флагом отмены показывает плашку «Отменено»
-  - [ ] Sold out / перенос — отдельная плашка или бейдж на карточке
-- **Заметки:** опирается на `post_type` из TASK-018
-
-### TASK-021 · AI-чек источников перед выходными
-
-- **Статус:** `todo`
-- **Размер:** M
-- **Матрица:** §4 «AI-чек источников (404, отмена на сайте)»
-- **Цель:** менеджер видит расхождения афиши на сайте источника и в базе до выходных
-- **Спеки:** [16-parsing-pipeline-extensions.md](../features/content/16-parsing-pipeline-extensions.md), [02.05.2026](../../fix/brainstorm/02.05.2026.md)
-- **In scope:**
-  - Cron или ручной триггер: re-fetch whitelisted web sources
-  - Сравнение «событие ещё в афише» vs опубликовано у нас
-  - Запись в `scraping_alerts` / уведомление в manager chat
-- **Out of scope:** полный мониторинг всех внешних сайтов, VK
-- **Ключевые файлы:** `server/api/cron/`, `scrapingAlerts.ts`, `web-sources-crawl.post.ts`, dashboard alerts UI
-- **Критерии готовности:**
-  - [ ] Тестовый 404/«отмена» на странице источника → alert в dashboard
-  - [ ] Runbook: когда запускать (чт–пт перед выходными)
-- **Заметки:** после стабильного web cron (TASK-004 + 008–010)
+> **Слоты свободны** (0/3). Старт 3c: `@ACTIVE_TASKS.md` + задача из бэклога.
 
 ---
 
@@ -147,7 +86,10 @@
 | TASK-004 | Каталог источников Улан-Удэ + backfill | 03.06.2026 | `045_wave3a_ulan_ude_ingest_sources.sql`, [runbook](./TASK-004-ulan-ude-sources-backfill.md) |
 | TASK-005 | Санитар + TL;DR + vibe на карточках | 03.06.2026 | `046_events_tldr_vibe.sql`, `CityEventCard.vue`, Groq parse/publish |
 | TASK-018 | Groq `publication_date` + `post_type` | 03.06.2026 | `eventIngestPostType.ts`, `contentIngestCore.ts`, `tests/eventIngestPostType.spec.ts` |
+| TASK-019 | WebP афиш + Groq cascade 429 | 03.06.2026 | `sharp`, `coverWebpCompress.ts`, `groqParseErrors.ts` |
+| TASK-020 | Плашки отмена/sold out + модерация link | 03.06.2026 | `047_events_lifecycle_status.sql`, `eventModerationLink.ts` |
+| TASK-021 | AI-чек источников перед выходными | 03.06.2026 | `048_scraping_alerts_event_id.sql`, [SOURCE_WEEKEND_CHECK.md](../runbooks/SOURCE_WEEKEND_CHECK.md) |
 
 ---
 
-**Последнее обновление:** 03.06.2026 · активных: **0** · запланировано: **019–021** (3b, `todo`) · бэклог: **3c+**
+**Последнее обновление:** 03.06.2026 · активных: **0** · бэклог: **3c+**

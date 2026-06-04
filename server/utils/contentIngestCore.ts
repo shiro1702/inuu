@@ -2,8 +2,10 @@ import type { H3Event } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import { evaluateContentPrefilter } from '~/server/utils/ai/contentPrefilter'
 import { parseEventsWithGroq } from '~/server/utils/ai/groqEventParser'
+import { GroqParseExhaustedError } from '~/server/utils/ai/groqParseErrors'
 import type { EventDigestMeta, EventParseInput, EventParseResult, IngestPostType } from '~/server/utils/ai/eventParseSchema'
 import { normalizeIngestPostType, moderationStatusForPostType, shouldSkipPersistForPostType } from '~/server/utils/eventIngestPostType'
+import { normalizeUpdateKind } from '~/server/utils/eventLifecycleStatus'
 import { writeAiParseLog } from '~/server/utils/ai/aiParseLogs'
 import { enrichRawTextWithUrls } from '~/server/utils/contentUrlEnricher'
 import {
@@ -136,6 +138,8 @@ export type ContentIngestResult = {
   skippedByPastEvent?: boolean
   skippedByPostType?: boolean
   ingestPostType?: IngestPostType
+  /** Groq 429 / exhausted — ingest returns needs_revision without HTTP 500 */
+  parseDegraded?: boolean
 }
 
 async function resolveEventResult(
@@ -181,11 +185,13 @@ async function persistBatchSubmissions(args: PersistBatchArgs): Promise<{
     const item = args.items[0]
     const envelope = args.fullPayload as {
       post_type?: string
+      update_kind?: string | null
       publication_date?: string | null
     }
     const submissionPayload = {
       ...item.parse,
       ingest_post_type: envelope.post_type || 'new_event',
+      ingest_update_kind: envelope.update_kind || null,
       ingest_publication_date: envelope.publication_date || null,
     }
     if (externalId) {
@@ -563,16 +569,103 @@ export async function runContentIngest(
       latencyMs: 0,
     }
   } else {
-    parseOutput = await parseEventsWithGroq({
-      ...input,
-      rawText: enriched.rawText,
-      hints: taxonomyHints,
-    })
-    events = [...parseOutput.result.events]
+    try {
+      parseOutput = await parseEventsWithGroq({
+        ...input,
+        rawText: enriched.rawText,
+        hints: taxonomyHints,
+      })
+      events = [...parseOutput.result.events]
+    } catch (err) {
+      if (err instanceof GroqParseExhaustedError && err.rateLimited) {
+        await writeAiParseLog(event, {
+          sourceKind: input.sourceKind,
+          sourceUrl: input.sourceUrl ?? null,
+          sourceExternalId: input.sourceExternalId ?? null,
+          citySlug: citySlugHint,
+          model: err.modelsTried.join('→') || 'groq',
+          status: 'failed',
+          latencyMs: 0,
+          errorMessage: 'groq_rate_limited',
+          payload: {
+            groq_rate_limited: true,
+            modelsTried: err.modelsTried,
+            attempts: err.attempts,
+          },
+        })
+
+        const emptyParse = stampEventParse({
+          title: '',
+          description_short: '',
+          description_full: '',
+          description: '',
+          cover_media_url: effectiveCoverMediaUrl,
+          city_slug: citySlugHint,
+          event_kind: 'event',
+          category_slug: null,
+          venue: { name: null, address: null },
+          organization: { name: null },
+          source: {
+            kind: input.sourceKind,
+            url: input.sourceUrl || null,
+            external_id: input.sourceExternalId || null,
+            intake: resolvedIntake,
+          },
+          is_free: false,
+          price_from: null,
+          capacity: null,
+          registration_url: null,
+          topic_tags: [],
+          recurrence: { rule: 'none', dates: [] },
+          confidence: 0,
+          missing_fields: ['groq_rate_limited'],
+        } as EventParseResult)
+
+        return {
+          city: cityForTaxonomy
+            ? {
+                id: cityForTaxonomy.id,
+                slug: cityForTaxonomy.slug,
+                name: cityForTaxonomy.name,
+                timezone: cityForTaxonomy.timezone,
+              }
+            : {
+                id: '',
+                slug: citySlugHint || '',
+                name: citySlugHint || '',
+                timezone: input.timezone || 'Asia/Irkutsk',
+              },
+          parseKind: 'single',
+          digest: null,
+          events: [],
+          items: [
+            {
+              parse: emptyParse,
+              moderationStatus: 'needs_revision',
+              duplicates: { checked: false, items: [], seriesMatches: [] },
+              submissionId: null,
+              batchIndex: 0,
+            },
+          ],
+          batchId: null,
+          parentSubmissionId: null,
+          parse: emptyParse,
+          moderationStatus: 'needs_revision',
+          duplicates: { checked: false, items: [], seriesMatches: [] },
+          persisted: { ok: false, id: null, warning: 'groq_rate_limited' },
+          model: err.modelsTried.join('→') || 'groq',
+          latencyMs: 0,
+          enrichedUrls: enriched.enrichedUrls,
+          parseDegraded: true,
+        }
+      }
+      throw err
+    }
   }
 
   const digestResult = parseOutput.result
   const ingestPostType = normalizeIngestPostType(digestResult.post_type)
+  const ingestUpdateKind = normalizeUpdateKind(digestResult.update_kind)
   const ingestPublicationDate = digestResult.publication_date || null
 
   if (shouldSkipPersistForPostType(ingestPostType)) {
@@ -817,6 +910,7 @@ export async function runContentIngest(
   const fullPayload = {
     parse_kind: parseKind,
     post_type: ingestPostType,
+    update_kind: ingestUpdateKind,
     publication_date: ingestPublicationDate,
     digest,
     events,
