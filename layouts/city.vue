@@ -35,21 +35,19 @@
             Партнёрам
           </NuxtLink>
           <NuxtLink
-            v-if="hasDashboardAccess"
+            v-if="showCabinetLink"
             to="/dashboard/content-ai"
             class="rounded-lg border border-primary bg-primary/5 px-2 py-1.5 text-sm font-medium text-primary hover:bg-primary/10"
           >
             Кабинет
           </NuxtLink>
-          <NuxtLink
-            v-else-if="showGuestProfileLink"
-            to="/profile"
-            class="rounded-lg border border-gray-200 px-2 py-1.5 text-gray-700 hover:bg-gray-50"
-          >
-            Профиль
-          </NuxtLink>
+          <CityGuestUserMenu
+            v-else-if="showGuestUserMenu"
+            :subscriptions-path="`${cityBasePath}/subscriptions`"
+            :logout-redirect-path="`${cityBasePath}/events`"
+          />
           <button
-            v-if="showGuestBotLogin"
+            v-else-if="showGuestBotLogin"
             type="button"
             class="rounded-lg border border-primary px-2 py-1.5 text-sm font-medium text-primary hover:bg-primary/5"
             @click="openGuestAuthModal"
@@ -114,14 +112,18 @@ const cityAuthChannels = computed((): AuthChannel[] => {
 
 const hasBotAuth = computed(() => cityAuthChannels.value.length > 0)
 
-const showGuestProfileLink = computed(() => {
-  if (!authReady.value || !dashboardAccessChecked.value) return false
+const navAuthReady = computed(() => authReady.value && dashboardAccessChecked.value)
+
+const showCabinetLink = computed(() => navAuthReady.value && hasDashboardAccess.value)
+
+const showGuestUserMenu = computed(() => {
+  if (!navAuthReady.value) return false
   if (hasDashboardAccess.value) return false
-  return true
+  return !!user.value
 })
 
 const showGuestBotLogin = computed(() => {
-  if (!authReady.value || !dashboardAccessChecked.value) return false
+  if (!navAuthReady.value) return false
   if (hasDashboardAccess.value) return false
   if (isMessengerMiniAppChrome.value) return false
   if (user.value) return false
