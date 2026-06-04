@@ -142,8 +142,8 @@
 | [ ] | Client-side video render (WebCodecs + GSAP) | 5 | P3 | — | [35-html-carousel-video-studio.md](../features/content/35-html-carousel-video-studio.md) |
 | [x] | Обзоры/посты о местах через manager chat (AI, видео, org) | 4 | P1 | сред | [30-manager-chat-place-editorial.md](../features/content/30-manager-chat-place-editorial.md) |
 | [x] | Stories через manager chat (слайды, org) | 3 | P1 | выс | [30-manager-chat-place-editorial.md](../features/content/30-manager-chat-place-editorial.md) |
-| [ ] | `topic_tags` на подборках + наследование вайбов в дайджесте | 2 | P1 | — | [31-content-tags-vibes-taxonomy.md](../features/content/31-content-tags-vibes-taxonomy.md) |
-| [ ] | Смарт-лента: фильтр по тегам (events + editorial + lists) | 3 | P1 | — | [31-content-tags-vibes-taxonomy.md](../features/content/31-content-tags-vibes-taxonomy.md) |
+| [x] | `topic_tags` на подборках + наследование вайбов в дайджесте | 2 | P1 | — | [31-content-tags-vibes-taxonomy.md](../features/content/31-content-tags-vibes-taxonomy.md) |
+| [x] | Смарт-лента: фильтр по тегам (events + editorial + lists) | 3 | P1 | — | [31-content-tags-vibes-taxonomy.md](../features/content/31-content-tags-vibes-taxonomy.md) |
 
 ---
 
@@ -154,7 +154,7 @@
 | [x] | Страница `/subscriptions` + API сохранения интересов | 2 | P1 | — | [12-afisha-tag-subscriptions.md](../features/content/12-afisha-tag-subscriptions.md) |
 | [x] | Кнопка «Получать подборку в боте» с афиши | 2 | P1 | — | [12-afisha-tag-subscriptions.md](../features/content/12-afisha-tag-subscriptions.md) |
 | [x] | `/subscribe` + callbacks `inuu:notify:*` | 3 | P1 | — | [12-afisha-tag-subscriptions.md](../features/content/12-afisha-tag-subscriptions.md) |
-| [ ] | Push при publish события (match по тегам) | 3 | P1 | выс | [06-bot-digest-subscriptions.md](../features/content/06-bot-digest-subscriptions.md) |
+| [x] | Push при publish события (match по тегам) | 3 | P1 | выс | [06-bot-digest-subscriptions.md](../features/content/06-bot-digest-subscriptions.md) |
 | [ ] | Подписка «сообщить, когда» (артист / тема / формат) | 3 | P1 | выс | [06-bot-digest-subscriptions.md](../features/content/06-bot-digest-subscriptions.md), [02.05.2026](../../fix/brainstorm/02.05.2026.md) |
 | [ ] | Push при publish подборки / новости | 3 | P1 | сред | [06-bot-digest-subscriptions.md](../features/content/06-bot-digest-subscriptions.md) |
 | [ ] | Карусели editorial по вайбам в TG (media group) | 3 | P1 | выс | [36-bot-vibes-editorial-delivery.md](../features/content/36-bot-vibes-editorial-delivery.md) |
@@ -266,14 +266,14 @@
 
 ---
 
-## Сводка (на 03.06.2026)
+## Сводка (на 04.06.2026)
 
 | | Кол-во |
 |---|--------|
 | Всего строк | 169 |
-| `[x]` сделано | 76 |
+| `[x]` сделано | 79 |
 | `[~]` в работе | 0 |
-| `[ ]` в плане | 93 |
+| `[ ]` в плане | 90 |
 
 > **Примечание:** `[x]` = есть рабочий код или MVP закрыт по спеке; `[~]` = идёт реализация; `[ ]` = не начато или только спека. Строки «снято» (§11) не входят в «в плане». При расхождении с кодом — править здесь первым делом.
 

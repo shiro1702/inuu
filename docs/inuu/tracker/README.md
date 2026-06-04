@@ -9,6 +9,8 @@
 | [TASK-003-public-org-venue-storefront.md](./TASK-003-public-org-venue-storefront.md) | Runbook исполнения TASK-003 (org/venue, CTA, stories) |
 | [TASK-008-web-parsing-pipeline.md](./TASK-008-web-parsing-pipeline.md) | Runbook web crawl TASK-008–010 (classifier, rules, alerts) |
 | [WAVE_3B_README.md](../runbooks/WAVE_3B_README.md) | **Волна 3b:** индекс проверки (WebP, статусы, weekend check) + URL прод/localhost |
+| [WAVE_3C_README.md](../runbooks/WAVE_3C_README.md) | **Волна 3c:** topic_tags на lists, смарт-лента, push при publish события (TASK-022–024) |
+| [WAVE_3D_README.md](../runbooks/WAVE_3D_README.md) | **Волна 3d:** PNG для каруселей и сторис (TASK-025–027); video — 3f+ |
 
 ## Как пользоваться
 
