@@ -1,5 +1,6 @@
 <template>
   <div v-if="pending" class="text-sm text-gray-500">Загрузка…</div>
+  <div v-else-if="loadError" class="text-sm text-red-600">{{ loadError }}</div>
   <div v-else-if="!post" class="text-sm text-gray-500">Материал не найден.</div>
   <article v-else class="mx-auto max-w-3xl space-y-6">
     <NuxtLink :to="`${cityBasePath}/guides`" class="text-sm text-primary hover:underline">
@@ -25,14 +26,14 @@
     </header>
 
     <video
-      v-if="post.video_url"
+      v-if="post.video_url && !hasGallery"
       :src="post.video_url"
       class="max-h-[480px] w-full rounded-xl bg-black"
       controls
       playsinline
     />
     <img
-      v-else-if="post.cover_media_url && !hasImageInBody"
+      v-else-if="post.cover_media_url && !hasImageInBody && !hasGallery"
       :src="post.cover_media_url"
       :alt="post.title"
       class="max-h-[480px] w-full rounded-xl object-cover"
@@ -42,12 +43,19 @@
       :blocks="bodyBlocks"
       :place-embeds="placeEmbedCards"
       :fallback-body="post.body"
+      :gallery="post.gallery"
     />
+
+    <section v-if="linkedVenueCard" class="space-y-2">
+      <h2 class="text-sm font-medium uppercase tracking-wide text-gray-500">Место</h2>
+      <CityVenueCard :venue="linkedVenueCard" />
+    </section>
   </article>
 </template>
 
 <script setup lang="ts">
 import type { EditorialBodyBlock } from '~/server/utils/editorialBodyJson'
+import type { EditorialGalleryItem } from '~/utils/editorialTelegramGallery'
 
 definePageMeta({ layout: 'city' })
 
@@ -67,15 +75,47 @@ type EditorialDetail = {
     cover_media_url?: string | null
     address?: string | null
     rating_avg?: number | null
+    editorial_quote?: string | null
+    vibe_tags?: string[] | null
   }>
+  gallery?: EditorialGalleryItem[]
+  linked_entity_type?: string | null
+  linked_entity_id?: string | null
 }
 
 const route = useRoute()
 const { slug: citySlug, cityBasePath, displayName } = useCity()
-const postSlug = computed(() => String(route.params.slug || ''))
 
-const pending = ref(true)
-const post = ref<EditorialDetail | null>(null)
+const citySlugParam = computed(() => {
+  const raw = route.params.city_slug
+  const fromRoute = typeof raw === 'string' ? raw : Array.isArray(raw) ? raw[0] : ''
+  return (fromRoute || citySlug.value || '').trim()
+})
+
+const postSlug = computed(() => String(route.params.slug || '').trim())
+
+async function fetchEditorialPost() {
+  const city = citySlugParam.value
+  const slug = postSlug.value
+  if (!city || !slug) return { ok: false as const, post: undefined }
+  return await $fetch<{ ok: boolean; post?: EditorialDetail }>(
+    `/api/cities/${city}/editorial/${slug}`,
+  )
+}
+
+const { data, pending, error, refresh } = await useAsyncData(
+  () => `editorial-post:${citySlugParam.value}:${postSlug.value}`,
+  fetchEditorialPost,
+  { watch: [citySlugParam, postSlug], lazy: true },
+)
+
+const post = computed(() => data.value?.post ?? null)
+const loadError = computed(() => {
+  if (error.value) {
+    return 'Не удалось загрузить материал. Попробуйте обновить страницу.'
+  }
+  return null
+})
 
 const bodyBlocks = computed(() => post.value?.body_json ?? [])
 const placeEmbedCards = computed(() => {
@@ -85,6 +125,8 @@ const placeEmbedCards = computed(() => {
     title: string
     cover_media_url?: string | null
     address?: string | null
+    editorial_quote?: string | null
+    vibe_tags?: string[] | null
   }> = {}
   for (const [id, v] of Object.entries(embeds)) {
     out[id] = {
@@ -92,32 +134,38 @@ const placeEmbedCards = computed(() => {
       title: v.title,
       cover_media_url: v.cover_media_url,
       address: v.address,
+      editorial_quote: v.editorial_quote,
+      vibe_tags: v.vibe_tags,
     }
   }
   return out
 })
 
 const hasImageInBody = computed(() => bodyBlocks.value.some((b) => b.type === 'image'))
+const hasGallery = computed(() => (post.value?.gallery?.length ?? 0) > 0)
 
-const { trackScroll } = useEditorialScrollDepth({ citySlug, postSlug })
+const hasPlaceEmbedInBody = computed(() =>
+  bodyBlocks.value.some((b) => b.type === 'place_embed'),
+)
 
-watch([citySlug, postSlug], async () => {
-  pending.value = true
-  try {
-    const res = await $fetch<{ ok: boolean; post?: EditorialDetail }>(
-      `/api/cities/${citySlug.value}/editorial/${postSlug.value}`,
-    )
-    post.value = res?.post ?? null
-  } catch {
-    post.value = null
-  } finally {
-    pending.value = false
+const linkedVenueCard = computed(() => {
+  const p = post.value
+  if (p?.linked_entity_type !== 'venue' || !p.linked_entity_id || hasPlaceEmbedInBody.value) {
+    return null
   }
-}, { immediate: true })
+  const embed = placeEmbedCards.value[p.linked_entity_id]
+  if (!embed) return null
+  return embed
+})
+
+const { trackScroll } = useEditorialScrollDepth({ citySlug: citySlugParam, postSlug })
 
 let stopScroll: (() => void) | undefined
 onMounted(() => {
   stopScroll = trackScroll()
+  if (!data.value?.post && !pending.value && !error.value) {
+    void refresh()
+  }
 })
 onUnmounted(() => {
   stopScroll?.()

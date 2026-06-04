@@ -1,7 +1,12 @@
 import { createError, defineEventHandler, setResponseHeader } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
-import { enrichEditorialBodyBlocks } from '~/server/utils/editorialPublic'
+import { enrichEditorialBodyBlocks, enrichEditorialLinkedVenue } from '~/server/utils/editorialPublic'
 import { resolveCityBySlug } from '~/server/utils/inuuCity'
+import type { EditorialGalleryItem } from '~/utils/editorialTelegramGallery'
+import {
+  parseEditorialTelegramGalleryComment,
+  stripEditorialTelegramGalleryComment,
+} from '~/utils/editorialTelegramGallery'
 
 export default defineEventHandler(async (event) => {
   setResponseHeader(event, 'Cache-Control', 'public, max-age=60, s-maxage=120')
@@ -32,14 +37,59 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: 'Editorial post not found' })
   }
 
-  const { blocks, placeEmbeds } = await enrichEditorialBodyBlocks(event, city.id, (post as any).body_json)
+  const bodyRaw = String(post.body || '')
+  const postType = String((post as { post_type?: string }).post_type || '')
+  const isAfishaDigest = postType === 'afisha_digest'
+  const hasGalleryComment = bodyRaw.includes('inuu-telegram-gallery')
+
+  const [{ blocks, placeEmbeds: bodyPlaceEmbeds }, mediaResult] = await Promise.all([
+    enrichEditorialBodyBlocks(event, city.id, (post as any).body_json),
+    isAfishaDigest
+      ? client
+          .from('editorial_post_media')
+          .select('media_type,media_url,sort_order')
+          .eq('post_id', post.id)
+          .order('sort_order', { ascending: true })
+      : Promise.resolve({ data: null, error: null }),
+  ])
+
+  let gallery: EditorialGalleryItem[] = []
+  const mediaRows = mediaResult.data
+  if (mediaRows?.length) {
+    for (const row of mediaRows) {
+      const type = (row as { media_type?: string }).media_type
+      const url = String((row as { media_url?: string }).media_url || '').trim()
+      if ((type !== 'photo' && type !== 'video') || !url) continue
+      gallery.push({
+        type,
+        url,
+        sort_order: typeof (row as { sort_order?: number }).sort_order === 'number'
+          ? (row as { sort_order: number }).sort_order
+          : undefined,
+      })
+    }
+  } else if (hasGalleryComment) {
+    gallery = parseEditorialTelegramGalleryComment(bodyRaw) ?? []
+  }
+
+  const body = hasGalleryComment ? stripEditorialTelegramGalleryComment(bodyRaw) : bodyRaw
+
+  const placeEmbeds = await enrichEditorialLinkedVenue(
+    event,
+    city.id,
+    (post as { linked_entity_type?: string }).linked_entity_type,
+    (post as { linked_entity_id?: string }).linked_entity_id,
+    bodyPlaceEmbeds,
+  )
 
   return {
     ok: true,
     post: {
       ...post,
+      body,
       body_json: blocks.length ? blocks : null,
       place_embeds: placeEmbeds,
+      gallery,
     },
   }
 })

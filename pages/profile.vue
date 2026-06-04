@@ -2,6 +2,24 @@
   <div class="profile-page">
     <h1>Профиль</h1>
 
+    <div
+      v-if="hasDashboardAccess"
+      class="mb-4 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-gray-800"
+    >
+      <p class="font-medium text-gray-900">
+        Вы вошли как менеджер или редактор города.
+      </p>
+      <p class="mt-1 text-gray-600">
+        Эта страница — для гостей афиши (Telegram, подписки, «читать потом»). Рабочие инструменты — в кабинете.
+      </p>
+      <NuxtLink
+        to="/dashboard/content-ai"
+        class="mt-3 inline-flex rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+      >
+        Открыть кабинет города
+      </NuxtLink>
+    </div>
+
     <div class="card">
       <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
@@ -244,6 +262,7 @@ declare const useRuntimeConfig: any
 declare const navigateTo: (to: any) => Promise<void> | void
 
 const user = useSupabaseUser()
+const { hasDashboardAccess } = useDashboardAccess()
 const supabase = useSupabaseClient()
 const route = useRoute()
 const { tenantPath, tenantKey } = useTenant()
@@ -393,7 +412,7 @@ const resolvedProfileName = computed<string>(() => {
 
 const telegramDisplay = computed(() => {
   if (telegramId.value !== null) return `Привязан, ID ${telegramId.value}`
-  if (isTelegram.value && messengerUser.value?.id) {
+  if (isMessengerMiniApp.value && isTelegram.value && messengerUser.value?.id) {
     const username = typeof messengerUser.value.username === 'string' && messengerUser.value.username.trim()
       ? ` (@${messengerUser.value.username.trim()})`
       : ''
@@ -411,7 +430,7 @@ const maxDisplay = computed(() => {
 })
 
 const messengerDebugLabel = computed(() => {
-  if (isTelegram.value) return 'Telegram Mini App'
+  if (isMessengerMiniApp.value && isTelegram.value) return 'Telegram Mini App'
   if (isMaxMiniApp.value) return 'MAX Mini App'
   if (user.value) return 'Аккаунт сайта'
   return ''

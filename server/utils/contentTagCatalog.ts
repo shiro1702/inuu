@@ -31,7 +31,7 @@ export const TAG_GROUP_LABELS: Record<ContentTagGroup, string> = {
   format: 'На площадке',
   gastro: 'Еда и напитки',
   'content-format': 'Тип контента',
-  legacy: 'Темы',
+  legacy: 'Тематика',
 }
 
 /** Canonical master list — spec 31-content-tags-vibes-taxonomy.md */

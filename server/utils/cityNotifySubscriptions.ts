@@ -2,6 +2,7 @@ import type { H3Event } from 'h3'
 import { createError } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import { listCityContentTags } from '~/server/utils/cityContentTaxonomy'
+import { listCityContentTagsInScope } from '~/server/utils/cityContentTagsInUse'
 import {
   detectSubscriptionChannel,
   type SubscriptionChannel,
@@ -95,7 +96,8 @@ export async function loadCitySubscriptionSettings(args: {
       .eq('channel', channel)
     : { data: [] as Array<{ topic_slug: string }> }
 
-  const availableTags = await listCityContentTags(args.event, args.cityId)
+  const catalog = await listCityContentTags(args.event, args.cityId)
+  const availableTags = await listCityContentTagsInScope(args.event, args.cityId, 'events', catalog)
 
   const topics = ((subsRes.data ?? []) as Array<{ topic_slug: string }>)
     .map((row) => String(row.topic_slug))

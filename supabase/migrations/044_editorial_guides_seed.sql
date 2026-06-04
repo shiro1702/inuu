@@ -81,11 +81,7 @@ select
   'Панорамная терраса с видом на закат — лучшее время для визита после 19:00.',
   jsonb_build_array(
     jsonb_build_object('type', 'paragraph', 'text', 'Панорамная терраса с видом на закат — лучшее время для визита после 19:00.'),
-    jsonb_build_object(
-      'type', 'image',
-      'url', 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80',
-      'caption', 'Вид с террасы'
-    )
+    jsonb_build_object('type', 'place_embed', 'venue_id', v.id)
   ),
   'Обзор террасы Baikal View.',
   'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80',

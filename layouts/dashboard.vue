@@ -16,12 +16,24 @@
               <NuxtLink to="/dashboard/manager/cities" class="hover:text-gray-900">Города менеджера</NuxtLink>
               <NuxtLink to="/dashboard/admin/cities" class="hover:text-gray-900">Города admin</NuxtLink>
               <NuxtLink to="/dashboard/settings/organization" class="hover:text-gray-900">Настройки</NuxtLink>
+              <NuxtLink to="/dashboard/settings/profile" class="hover:text-gray-900">Аккаунт</NuxtLink>
               <NuxtLink to="/dashboard/integrations" class="hover:text-gray-900">Уведомления</NuxtLink>
             </nav>
           </div>
-          <NuxtLink :to="storefrontPath" class="whitespace-nowrap text-sm text-gray-600 hover:text-gray-900">
-            На витрину
-          </NuxtLink>
+          <div class="flex shrink-0 items-center gap-3">
+            <NuxtLink :to="storefrontPath" class="whitespace-nowrap text-sm text-gray-600 hover:text-gray-900">
+              На витрину
+            </NuxtLink>
+            <button
+              v-if="user"
+              type="button"
+              class="whitespace-nowrap text-sm text-red-600 hover:text-red-700 disabled:opacity-50"
+              :disabled="isSigningOut"
+              @click="logout"
+            >
+              {{ isSigningOut ? 'Выход…' : 'Выйти' }}
+            </button>
+          </div>
         </div>
       </div>
     </header>
@@ -33,14 +45,29 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useSupabaseUser } from '#imports'
 
 declare const useRuntimeConfig: () => any
+
+const user = useSupabaseUser()
+const { signOutAndRedirect, isSigningOut } = useAuthSignOut()
 const config = useRuntimeConfig()
 const defaultCity =
   typeof config.public.defaultCitySlug === 'string' && config.public.defaultCitySlug.trim()
     ? config.public.defaultCitySlug.trim()
     : 'ulan-ude'
 const storefrontPath = ref(`/${defaultCity}`)
+
+async function logout() {
+  try {
+    await signOutAndRedirect('/dashboard/login')
+  } catch (e) {
+    console.error('Logout error:', e)
+    if (process.client) {
+      window.alert('Не удалось выйти. Обновите страницу и попробуйте снова.')
+    }
+  }
+}
 
 onMounted(() => {
   fetch('/api/dashboard/storefront')

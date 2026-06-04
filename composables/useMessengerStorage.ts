@@ -15,11 +15,11 @@ export function parseMessengerStorageValue(raw: unknown): string | null {
  * Облако Telegram CloudStorage vs MAX DeviceStorage — единый async API для ключей checkout/адресов.
  */
 export function useMessengerStorage() {
-  const { isTelegram, isMaxMiniApp } = useTelegram()
+  const { isTelegramSdk, isMaxMiniApp } = useTelegram()
 
   function canUseMessengerStorage(): boolean {
     if (!process.client) return false
-    if (isTelegram.value && window.Telegram?.WebApp?.CloudStorage) {
+    if (isTelegramSdk.value && window.Telegram?.WebApp?.CloudStorage) {
       return true
     }
     if (isMaxMiniApp.value && window.WebApp?.DeviceStorage) {
@@ -30,7 +30,7 @@ export function useMessengerStorage() {
 
   async function setItem(key: string, value: string): Promise<void> {
     const tg = window.Telegram?.WebApp
-    if (isTelegram.value && tg?.CloudStorage) {
+    if (isTelegramSdk.value && tg?.CloudStorage) {
       try {
         await new Promise<void>((resolve) => {
           ;(tg as any).CloudStorage.setItem(key, value, (err: unknown) => {
@@ -56,7 +56,7 @@ export function useMessengerStorage() {
 
   async function getItem(key: string): Promise<string | null> {
     const tg = window.Telegram?.WebApp
-    if (isTelegram.value && tg?.CloudStorage) {
+    if (isTelegramSdk.value && tg?.CloudStorage) {
       return new Promise((resolve) => {
         ;(tg as any).CloudStorage.getItem(key, (_err: unknown, v: string | null) => {
           resolve(v ?? null)

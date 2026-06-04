@@ -1,7 +1,10 @@
 <template>
-  <div class="app-root min-h-screen bg-gray-50 text-gray-900" :style="rootStyle">
+  <div class="app-root flex min-h-dvh flex-col bg-gray-50 text-gray-900" :style="rootStyle">
     <AppHeader v-if="showLegacyHeader" />
-    <div :class="showLegacyHeader && !isMessengerMiniApp ? 'pt-16' : ''">
+    <div
+      class="flex flex-1 flex-col"
+      :class="showLegacyHeader && !isMessengerMiniAppChrome ? 'pt-16' : ''"
+    >
       <NuxtLayout>
         <NuxtPage />
       </NuxtLayout>
@@ -13,7 +16,7 @@
     />
     <AppToastStack />
     <footer
-      v-if="isStorefrontRoute"
+      v-if="isStorefrontRoute && !isCityInuuRoute"
       class="mt-12 border-t border-gray-200 bg-white/95"
     >
       <div class="mx-auto max-w-7xl px-4 py-6 text-xs leading-6 text-gray-600 sm:px-6">
@@ -60,7 +63,7 @@ import { useRoute } from 'vue-router'
 import { useTelegram } from './composables/useTelegram'
 import { useTenant } from './composables/useTenant'
 
-const { isMessengerMiniApp } = useTelegram()
+const { isMessengerMiniAppChrome } = useTelegram()
 const { cssVars, loadTenantSettings } = useTenant()
 const route = useRoute()
 const config = useRuntimeConfig()
@@ -86,9 +89,22 @@ const isCityInuuRoute = computed(() => {
   return !hasTenantSlug
 })
 
-const showLegacyHeader = computed(() => {
+const routeLayoutName = computed(() => {
+  const raw = route.meta?.layout
+  return typeof raw === 'string' ? raw : ''
+})
+
+const isDashboardShell = computed(() => {
   const routePath = typeof route.path === 'string' ? route.path : ''
-  if (routePath.startsWith('/dashboard') || routePath.startsWith('/platform')) return false
+  if (routePath.startsWith('/dashboard') || routePath.startsWith('/platform')) return true
+  const layout = routeLayoutName.value
+  return layout === 'dashboard' || layout === 'dashboard-auth'
+})
+
+const showLegacyHeader = computed(() => {
+  if (isDashboardShell.value) return false
+  const routePath = typeof route.path === 'string' ? route.path : ''
+  if (routePath === '/' || routePath === '') return false
   if (routePath.startsWith('/moderation') || routePath.startsWith('/content-submission')) return false
   if (isCityInuuRoute.value) return false
   return true

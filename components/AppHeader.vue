@@ -47,7 +47,7 @@
 
       <!-- Miniapp (Telegram / MAX): без «ЛК» — заказы и бонусы в выпадающем меню как у авторизованного на сайте -->
       <div
-        v-if="isMessengerMiniApp && showMiniappCustomerLinks"
+        v-if="isMessengerMiniAppChrome && showMiniappCustomerLinks"
         ref="miniappMenuRootRef"
         class="relative z-[51] shrink-0"
       >
@@ -101,20 +101,29 @@
       </div>
 
       <div
-        v-if="!isMessengerMiniApp"
+        v-if="showWebHeaderActions"
         class="flex items-center gap-2 sm:gap-3" 
       >
         <NuxtLink
           to="/partners"
-          class="hidden rounded-lg px-3 py-2 text-sm font-medium transition sm:inline-flex"
+          class="rounded-lg px-3 py-2 text-sm font-medium transition"
           :style="ghostButtonStyle"
         >
           Партнёрам
         </NuxtLink>
 
-        <!-- Авторизован: на мобилке — иконка, на десктопе — текстовая кнопка -->
+        <NuxtLink
+          v-if="user && hasDashboardAccess"
+          to="/dashboard/content-ai"
+          class="rounded-lg px-4 py-2 text-sm font-medium"
+          :style="ghostButtonStyle"
+        >
+          Кабинет
+        </NuxtLink>
+
+        <!-- Гость афиши / заказы: меню «Профиль» -->
         <div
-          v-if="user"
+          v-else-if="user"
           ref="userMenuRootRef"
           class="relative z-[51]"
         >
@@ -234,7 +243,9 @@ declare const useSupabaseClient: any
 declare const useSupabaseUser: any
 declare const useRuntimeConfig: any
 
-const { isMessengerMiniApp } = useTelegram()
+const { isMessengerMiniAppChrome } = useTelegram()
+const { hasDashboardAccess } = useDashboardAccess()
+const { signOutAndRedirect } = useAuthSignOut()
 const user = useSupabaseUser()
 const config = useRuntimeConfig()
 const route = useRoute()
@@ -355,6 +366,12 @@ const isDashboardRoute = computed(() => {
   }
   return false
 })
+/** Партнёрам / Профиль / Войти — на витрине и на /profile, /partners (не в mini app на витрине). */
+const showWebHeaderActions = computed(() => {
+  if (isNonTenantRoute.value) return true
+  return !isMessengerMiniAppChrome.value
+})
+
 const isNonTenantRoute = computed(() => {
   const routePath = typeof route.path === 'string' ? route.path : ''
   const nonTenantPrefixes = [
@@ -577,14 +594,12 @@ async function logout() {
   const redirectPath = currentTenantSlug && citySlug ? `/${citySlug}/${currentTenantSlug}` : aggregatorPath
 
   try {
-    const { error } = await supabase.auth.signOut()
-    if (error) {
-      console.error('Supabase signOut error:', error)
-    }
+    await signOutAndRedirect(redirectPath)
   } catch (e) {
     console.error('Logout error:', e)
-  } finally {
-    await router.push(redirectPath)
+    if (typeof window !== 'undefined') {
+      window.alert('Не удалось выйти. Попробуйте ещё раз.')
+    }
   }
 }
 

@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gray-50 text-gray-900">
+  <div class="flex min-h-full flex-1 flex-col bg-gray-50 text-gray-900">
     <header class="sticky top-0 z-40 border-b border-gray-200 bg-white/95 backdrop-blur">
       <div class="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
         <NuxtLink :to="cityBasePath" class="truncate text-base font-semibold text-gray-900">
@@ -28,31 +28,47 @@
             Карта
           </NuxtLink>
           <NuxtLink
-            v-if="user"
+            to="/partners"
+            class="rounded-lg px-2 py-1.5 text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+            active-class="bg-gray-100 font-medium text-gray-900"
+          >
+            Партнёрам
+          </NuxtLink>
+          <NuxtLink
+            v-if="hasDashboardAccess"
+            to="/dashboard/content-ai"
+            class="rounded-lg border border-primary bg-primary/5 px-2 py-1.5 text-sm font-medium text-primary hover:bg-primary/10"
+          >
+            Кабинет
+          </NuxtLink>
+          <NuxtLink
+            v-else-if="showGuestProfileLink"
             to="/profile"
             class="rounded-lg border border-gray-200 px-2 py-1.5 text-gray-700 hover:bg-gray-50"
           >
             Профиль
           </NuxtLink>
           <button
-            v-else-if="hasBotAuth"
+            v-if="showGuestBotLogin"
             type="button"
             class="rounded-lg border border-primary px-2 py-1.5 text-sm font-medium text-primary hover:bg-primary/5"
-            @click="showAuthModal = true"
+            @click="openGuestAuthModal"
           >
-            Войти
+            Войти в бот
           </button>
         </nav>
       </div>
     </header>
-    <main class="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+    <main class="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6">
       <slot />
     </main>
 
+    <CitySiteFooter />
+
     <AuthChannelModal
-      v-model="showAuthModal"
-      title="Выберите способ входа"
-      description="Войдите через Telegram или MAX, чтобы сохранять избранное и записи."
+      v-model="guestAuthModalOpen"
+      title="Вход для гостей"
+      description="Через Telegram или MAX — чтобы сохранять подписки и записи. Это не кабинет редакции города."
       :channels="cityAuthChannels"
       intent="login"
       variant="light"
@@ -63,18 +79,21 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { AuthChannel } from '~/types/authChannel'
 
 const { cityBasePath, displayName, slug } = useCity()
 const { consentPath } = useLegalPaths()
+const { isMessengerMiniAppChrome } = useTelegram()
 const user = useSupabaseUser()
+const authReady = ref(false)
 const config = useRuntimeConfig()
 const route = useRoute()
 const router = useRouter()
 
-const showAuthModal = ref(false)
+const { hasDashboardAccess, dashboardAccessChecked } = useDashboardAccess()
+const { guestAuthModalOpen, openGuestAuthModal } = useCityGuestAuth()
 
 const telegramBotName = (config.public.telegramBotName as string | undefined) || ''
 const telegramBotUrl = computed(() =>
@@ -95,6 +114,30 @@ const cityAuthChannels = computed((): AuthChannel[] => {
 
 const hasBotAuth = computed(() => cityAuthChannels.value.length > 0)
 
+const showGuestProfileLink = computed(() => {
+  if (!authReady.value || !dashboardAccessChecked.value) return false
+  if (hasDashboardAccess.value) return false
+  return true
+})
+
+const showGuestBotLogin = computed(() => {
+  if (!authReady.value || !dashboardAccessChecked.value) return false
+  if (hasDashboardAccess.value) return false
+  if (isMessengerMiniAppChrome.value) return false
+  if (user.value) return false
+  return hasBotAuth.value
+})
+
+const supabase = useSupabaseClient()
+
+onMounted(async () => {
+  try {
+    await supabase.auth.getSession()
+  } finally {
+    authReady.value = true
+  }
+})
+
 function resolvePostLoginRedirectPath(): string {
   const raw = typeof route.fullPath === 'string' ? route.fullPath.trim() : ''
   const fallback = cityBasePath.value
@@ -113,7 +156,7 @@ function onAuthChannelSubmit(channel: AuthChannel) {
 }
 
 async function openTelegramAuth() {
-  showAuthModal.value = false
+  guestAuthModalOpen.value = false
   if (!telegramBotUrl.value || typeof window === 'undefined') return
   const redirectPath = resolvePostLoginRedirectPath()
   try {
@@ -145,7 +188,7 @@ async function openTelegramAuth() {
 }
 
 async function openMaxAuth() {
-  showAuthModal.value = false
+  guestAuthModalOpen.value = false
   if (!maxBotUrl.value || typeof window === 'undefined') return
   const redirectPath = resolvePostLoginRedirectPath()
   try {

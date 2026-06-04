@@ -95,12 +95,34 @@ export function useTelegram() {
     }
   }
 
-  /** Mini App открыт в Telegram (initData на iOS может появиться с задержкой после ready). */
-  const isTelegram = computed(() => {
+  /** SDK подключён на странице (скрипт в nuxt head — не значит, что мы в mini app). */
+  const isTelegramSdk = computed(() => {
     if (!isClient) return false
     // @ts-ignore: Telegram WebApp может быть не объявлен
     return typeof window.Telegram?.WebApp !== 'undefined'
   })
+
+  function readTelegramInitDataNow(): string {
+    const fromBridge = window.Telegram?.WebApp?.initData?.trim() || ''
+    if (fromBridge) return fromBridge
+    return readInitDataFromUrl() || readCachedInitData()
+  }
+
+  /** Telegram mini app в WebView (без sessionStorage — только для UI). */
+  const isTelegramMiniAppInHost = computed(() => {
+    if (!isClient) return false
+    const init = window.Telegram?.WebApp?.initData?.trim() || readInitDataFromUrl()
+    return !!init
+  })
+
+  /** Telegram mini app для API/storage (допускает кэш initData). */
+  const isTelegramMiniApp = computed(() => {
+    if (!isClient) return false
+    return !!readTelegramInitDataNow()
+  })
+
+  /** @deprecated Используйте isTelegramSdk (SDK) или isTelegramMiniApp (внутри WebView). */
+  const isTelegram = isTelegramSdk
 
   /** MAX мини-приложение: глобальный window.WebApp (не Telegram.WebApp). initData может быть только в hash/sessionStorage. */
   const isMaxMiniApp = computed(() => {
@@ -111,7 +133,18 @@ export function useTelegram() {
     return !!init
   })
 
-  const isMessengerMiniApp = computed(() => isTelegram.value || isMaxMiniApp.value)
+  /** MAX в WebView: только живой initData (без sessionStorage). */
+  const isMaxMiniAppInHost = computed(() => {
+    if (!isClient) return false
+    if (window.Telegram?.WebApp?.initData) return false
+    if (typeof window.WebApp === 'undefined') return false
+    const init = window.WebApp?.initData || readInitDataFromUrl()
+    return !!init
+  })
+
+  const isMessengerMiniApp = computed(() => isTelegramMiniApp.value || isMaxMiniApp.value)
+
+  const isMessengerMiniAppChrome = computed(() => isTelegramMiniAppInHost.value || isMaxMiniAppInHost.value)
 
   const webApp = computed(() => {
     if (!isClient) return null
@@ -190,7 +223,7 @@ export function useTelegram() {
   }
 
   function messengerClientChannel(): MessengerClientChannel {
-    if (isTelegram.value) return 'telegram_mini'
+    if (isTelegramMiniApp.value) return 'telegram_mini'
     if (isMaxMiniApp.value) return 'max_mini'
     return 'web'
   }
@@ -244,8 +277,13 @@ export function useTelegram() {
 
   return {
     isTelegram,
+    isTelegramSdk,
+    isTelegramMiniApp,
+    isTelegramMiniAppInHost,
     isMaxMiniApp,
+    isMaxMiniAppInHost,
     isMessengerMiniApp,
+    isMessengerMiniAppChrome,
     webApp,
     messengerWebApp,
     messengerInitData,

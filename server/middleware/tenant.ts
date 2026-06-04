@@ -17,6 +17,26 @@ const REQUIRED_PATHS = [
 
 const CUSTOM_DOMAIN_REWRITE_PATHS = new Set(['/'])
 
+/** Сегменты витрины INUU под `/:city_slug/...` — не slug ресторана. */
+const CITY_STOREFRONT_SEGMENTS = new Set([
+  'festival',
+  'events',
+  'venues',
+  'map',
+  'guides',
+  'lists',
+  'legal',
+  'organizations',
+  'subscriptions',
+  'tag',
+  'favorites',
+  'bookings',
+])
+
+function isCityStorefrontSegment(segment: string | undefined): boolean {
+  return !!segment && CITY_STOREFRONT_SEGMENTS.has(segment)
+}
+
 function normalizeHost(host: string | null | undefined): string | null {
   if (!host) return null
   return host.trim().toLowerCase().replace(/:\d+$/, '') || null
@@ -74,9 +94,7 @@ function extractTenantSlugFromPath(path: string, defaultCitySlug: string | null)
   if (/\.[a-z0-9]+$/i.test(firstSegment)) return null
 
   if (defaultCitySlug && firstSegment === defaultCitySlug) {
-    if (secondSegment === 'festival' || secondSegment === 'events' || secondSegment === 'venues' || secondSegment === 'map') {
-      return null
-    }
+    if (isCityStorefrontSegment(secondSegment)) return null
     return secondSegment ?? null
   }
 
@@ -116,7 +134,7 @@ function extractCityAndTenantFromPath(path: string): { citySlug: string; tenantS
     'bookings',
     'legal',
   ].includes(citySlug)) return null
-  if (tenantSlug === 'festival' || tenantSlug === 'events' || tenantSlug === 'venues') return null
+  if (isCityStorefrontSegment(tenantSlug)) return null
   if (/\.[a-z0-9]+$/i.test(citySlug) || /\.[a-z0-9]+$/i.test(tenantSlug)) return null
   return { citySlug, tenantSlug }
 }

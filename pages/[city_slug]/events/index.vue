@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div :class="{ 'pb-28': showFixedSubscribe }">
     <h1 class="text-2xl font-bold text-gray-900">Афиша</h1>
     <p class="mt-2 text-sm text-gray-600">События в {{ displayName }}</p>
 
@@ -22,15 +22,18 @@
         </div>
       </div>
 
-      <div v-if="tagGroups.length || tags.length">
+      <div v-if="displayTagGroups.length">
         <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
           <p class="text-xs font-medium uppercase tracking-wide text-gray-500">Теги</p>
           <p v-if="tagFilters.length > 1" class="text-xs text-gray-400">показаны события с любым из выбранных</p>
         </div>
-        <div class="mb-3">
+        <div
+          class="gap-2 px-1 pb-1"
+          :class="useGroupedTagUi ? '-mx-1 flex flex-wrap' : '-mx-1 flex overflow-x-auto sm:flex-wrap sm:overflow-visible'"
+        >
           <button
             type="button"
-            class="rounded-full px-3 py-1.5 text-sm font-medium transition"
+            class="shrink-0 rounded-full px-3 py-1.5 text-sm font-medium transition"
             :class="!tagFilters.length
               ? 'bg-indigo-100 text-indigo-800 ring-1 ring-indigo-200'
               : 'border border-gray-200 bg-white text-gray-700 hover:border-indigo-200 hover:text-indigo-800'"
@@ -38,16 +41,31 @@
           >
             Все
           </button>
-        </div>
-        <div
-          v-for="group in tagGroups"
-          :key="group.id"
-          class="mb-3"
-        >
-          <p class="mb-1.5 text-xs font-medium text-gray-500">{{ group.label }}</p>
-          <div class="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+
+          <template v-if="useGroupedTagUi">
             <button
-              v-for="tag in group.items"
+              v-for="group in displayTagGroups"
+              :key="group.id"
+              type="button"
+              class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition"
+              :class="groupActiveCount(group) > 0
+                ? 'bg-indigo-100 text-indigo-800 ring-1 ring-indigo-200'
+                : 'border border-gray-200 bg-white text-gray-700 hover:border-indigo-200 hover:text-indigo-800'"
+              @click="openTagGroupModal(group)"
+            >
+              <span>{{ group.label }}</span>
+              <span
+                v-if="groupActiveCount(group) > 0"
+                class="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-indigo-200/80 px-1.5 text-xs font-semibold tabular-nums"
+              >
+                {{ groupActiveCount(group) }}
+              </span>
+            </button>
+          </template>
+
+          <template v-else>
+            <button
+              v-for="tag in displayTagsFlat"
               :key="tag.slug"
               type="button"
               class="inline-flex shrink-0 items-center gap-1.5 rounded-full py-1.5 pl-3 pr-2 text-sm font-medium transition"
@@ -63,31 +81,95 @@
                 aria-hidden="true"
               >+</span>
             </button>
-          </div>
+          </template>
         </div>
 
-        <div v-if="tagFilters.length" class="mt-3 flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            class="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/5 px-4 py-2 text-sm font-medium text-primary transition hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
-            :disabled="subscribePending || subscribedToSelection"
-            @click="onSubscribeClick"
-          >
-            <span v-if="subscribePending">Сохраняем…</span>
-            <span v-else-if="subscribedToSelection">Вы подписаны на эти теги</span>
-            <span v-else>Получать подборку в боте</span>
-          </button>
-          <NuxtLink
-            v-if="subscribedToSelection"
-            :to="`${cityBasePath}/subscriptions`"
-            class="text-sm text-primary hover:underline"
-          >
-            Настроить подписки
-          </NuxtLink>
-          <p v-if="subscribeError" class="text-sm text-red-600">{{ subscribeError }}</p>
+        <div
+          v-if="tagFilters.length"
+          ref="subscribeAnchorRef"
+          class="mt-4"
+        >
+          <EventsTagSubscribeCta
+            :subscribed="subscribedToSelection"
+            :pending="subscribePending"
+            :error="subscribeError"
+            :settings-href="`${cityBasePath}/subscriptions`"
+            @subscribe="onSubscribeClick"
+          />
         </div>
       </div>
     </div>
+
+    <Teleport to="body">
+      <Transition name="events-tag-modal-fade">
+        <div
+          v-if="activeTagGroup"
+          class="fixed inset-0 z-[90] flex items-end justify-center sm:items-center sm:p-4"
+          role="dialog"
+          aria-modal="true"
+          :aria-labelledby="tagModalTitleId"
+        >
+          <div class="absolute inset-0 bg-black/40" aria-hidden="true" @click="closeTagGroupModal" />
+          <div
+            class="relative max-h-[min(85vh,32rem)] w-full overflow-hidden rounded-t-2xl bg-white shadow-xl sm:max-w-md sm:rounded-2xl"
+          >
+            <div class="flex items-center justify-between gap-3 border-b border-gray-100 px-4 py-3">
+              <h2 :id="tagModalTitleId" class="text-base font-semibold text-gray-900">
+                {{ activeTagGroup.label }}
+              </h2>
+              <button
+                type="button"
+                class="rounded-lg px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+                @click="closeTagGroupModal"
+              >
+                Закрыть
+              </button>
+            </div>
+            <div class="overflow-y-auto px-4 py-3">
+              <div class="flex flex-wrap gap-2">
+                <button
+                  v-for="tag in activeTagGroup.items"
+                  :key="tag.slug"
+                  type="button"
+                  class="inline-flex items-center gap-1.5 rounded-full py-1.5 pl-3 pr-2 text-sm font-medium transition"
+                  :class="isTagActive(tag.slug)
+                    ? 'bg-indigo-100 text-indigo-800 ring-1 ring-indigo-200'
+                    : 'border border-gray-200 bg-white text-gray-700 hover:border-indigo-200 hover:text-indigo-800'"
+                  @click="toggleTag(tag.slug)"
+                >
+                  <span>{{ tag.name }}</span>
+                  <span
+                    class="inline-flex h-4 w-4 items-center justify-center text-base leading-none transition-transform duration-150"
+                    :class="isTagActive(tag.slug) ? 'rotate-45' : ''"
+                    aria-hidden="true"
+                  >+</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <Teleport to="body">
+      <Transition name="events-tag-subscribe-slide">
+        <div
+          v-if="showFixedSubscribe"
+          class="fixed inset-x-0 bottom-0 z-[80] border-t border-gray-200 bg-white/95 px-4 py-3 shadow-[0_-4px_24px_rgba(0,0,0,0.08)] backdrop-blur sm:px-6"
+        >
+          <div class="mx-auto max-w-6xl">
+            <EventsTagSubscribeCta
+              :subscribed="subscribedToSelection"
+              :pending="subscribePending"
+              :error="subscribeError"
+              :settings-href="`${cityBasePath}/subscriptions`"
+              compact
+              @subscribe="onSubscribeClick"
+            />
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
 
     <div v-if="pending" class="mt-8 text-sm text-gray-500">Загрузка…</div>
     <div v-else-if="items.length" class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -113,6 +195,10 @@ import { parseTagSlugsFromQuery } from '~/utils/eventListDisplay'
 
 definePageMeta({ layout: 'city' })
 
+const AFISHA_HIDDEN_TAG_GROUPS = new Set(['content-format'])
+/** Больше этого числа тегов на афише — показываем группы, иначе все теги списком. */
+const TAG_GROUPED_UI_MIN = 12
+
 type TagItem = { slug: string; name: string; tagGroup?: string }
 type TagGroup = { id: string; label: string; items: TagItem[] }
 type DatePresetId = 'all' | 'today' | 'tomorrow' | 'week'
@@ -122,13 +208,17 @@ const router = useRouter()
 const user = useSupabaseUser()
 const { slug, displayName, city, cityBasePath } = useCity()
 const { messengerInitData, buildMessengerAuthHeaders } = useTelegram()
+const { openGuestAuthModal } = useCityGuestAuth()
 const { pushToast } = useAppToast()
 const config = useRuntimeConfig()
 
 const pending = ref(true)
 const items = ref<Array<Record<string, any>>>([])
-const tags = ref<TagItem[]>([])
 const tagGroups = ref<TagGroup[]>([])
+const activeTagGroup = ref<TagGroup | null>(null)
+const tagModalTitleId = 'events-tag-group-modal-title'
+const subscribeAnchorRef = ref<HTMLElement | null>(null)
+const subscribeAnchorVisible = ref(true)
 const subscribedToSelection = ref(false)
 const subscribePending = ref(false)
 const subscribeError = ref('')
@@ -153,6 +243,30 @@ const dateTo = computed(() => {
 const timezone = computed(() => city.value?.timezone || 'Asia/Irkutsk')
 
 const isAuthenticated = computed(() => !!user.value || !!messengerInitData.value)
+
+const displayTagGroups = computed(() =>
+  tagGroups.value.filter((g) => !AFISHA_HIDDEN_TAG_GROUPS.has(g.id) && g.items.length > 0),
+)
+
+const displayTagsFlat = computed(() => displayTagGroups.value.flatMap((g) => g.items))
+
+const useGroupedTagUi = computed(() => displayTagsFlat.value.length > TAG_GROUPED_UI_MIN)
+
+const showFixedSubscribe = computed(
+  () => tagFilters.value.length > 0 && !subscribeAnchorVisible.value,
+)
+
+function groupActiveCount(group: TagGroup) {
+  return group.items.filter((tag) => tagFilters.value.includes(tag.slug)).length
+}
+
+function openTagGroupModal(group: TagGroup) {
+  activeTagGroup.value = group
+}
+
+function closeTagGroupModal() {
+  activeTagGroup.value = null
+}
 
 const datePresets = [
   { id: 'all' as const, label: 'Все' },
@@ -247,13 +361,11 @@ function buildSubscriptionQuery() {
 
 async function loadTags() {
   try {
-    const res = await $fetch<{ ok: boolean; items?: TagItem[]; groups?: TagGroup[] }>(
-      `/api/cities/${slug.value}/content-tags`,
+    const res = await $fetch<{ ok: boolean; groups?: TagGroup[] }>(
+      `/api/cities/${slug.value}/content-tags?scope=events`,
     )
-    tags.value = res?.items ?? []
     tagGroups.value = res?.groups?.length ? res.groups : []
   } catch {
-    tags.value = []
     tagGroups.value = []
   }
 }
@@ -282,7 +394,7 @@ async function onSubscribeClick() {
   if (!tagFilters.value.length) return
 
   if (!isAuthenticated.value) {
-    void navigateTo(`/login?redirect=${encodeURIComponent(route.fullPath)}`)
+    openGuestAuthModal()
     return
   }
 
@@ -341,5 +453,79 @@ watch(slug, () => {
   void loadTags()
 }, { immediate: true })
 
+let subscribeAnchorObserver: IntersectionObserver | null = null
+
+function disconnectSubscribeAnchorObserver() {
+  subscribeAnchorObserver?.disconnect()
+  subscribeAnchorObserver = null
+}
+
+function observeSubscribeAnchor(el: HTMLElement | null) {
+  disconnectSubscribeAnchorObserver()
+  if (!el || typeof IntersectionObserver === 'undefined') {
+    subscribeAnchorVisible.value = true
+    return
+  }
+  subscribeAnchorObserver = new IntersectionObserver(
+    ([entry]) => {
+      subscribeAnchorVisible.value = entry?.isIntersecting ?? false
+    },
+    { threshold: 0, rootMargin: '0px 0px -1px 0px' },
+  )
+  subscribeAnchorObserver.observe(el)
+}
+
+watch(subscribeAnchorRef, (el) => {
+  observeSubscribeAnchor(el)
+}, { flush: 'post' })
+
+watch(tagFilters, (filters) => {
+  if (!filters.length) {
+    subscribeAnchorVisible.value = true
+    closeTagGroupModal()
+  }
+})
+
+watch(useGroupedTagUi, (grouped) => {
+  if (!grouped) closeTagGroupModal()
+})
+
+onUnmounted(() => {
+  disconnectSubscribeAnchorObserver()
+})
+
 useHead({ title: () => `Афиша — ${displayName.value}` })
 </script>
+
+<style scoped>
+.events-tag-modal-fade-enter-active,
+.events-tag-modal-fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.events-tag-modal-fade-enter-active .relative,
+.events-tag-modal-fade-leave-active .relative {
+  transition: transform 0.2s ease;
+}
+
+.events-tag-modal-fade-enter-from,
+.events-tag-modal-fade-leave-to {
+  opacity: 0;
+}
+
+.events-tag-modal-fade-enter-from .relative,
+.events-tag-modal-fade-leave-to .relative {
+  transform: translateY(1rem);
+}
+
+.events-tag-subscribe-slide-enter-active,
+.events-tag-subscribe-slide-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.events-tag-subscribe-slide-enter-from,
+.events-tag-subscribe-slide-leave-to {
+  opacity: 0;
+  transform: translateY(100%);
+}
+</style>

@@ -7,13 +7,14 @@
     </p>
 
     <div v-if="!isAuthenticated" class="mt-8 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-      <p>Войдите, чтобы управлять подписками.</p>
+      <p>Войдите через Telegram или MAX, чтобы управлять подписками.</p>
       <button
+        v-if="!isMessengerMiniApp"
         type="button"
         class="mt-3 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white"
-        @click="goLogin"
+        @click="openGuestAuthModal"
       >
-        Войти
+        Войти через бот
       </button>
     </div>
 
@@ -129,10 +130,10 @@ type SettingsPayload = {
   topicOptions?: Array<{ slug: TopicSlug; label: string; emoji: string }>
 }
 
-const route = useRoute()
 const user = useSupabaseUser()
 const { slug, displayName, cityBasePath } = useCity()
-const { buildMessengerAuthHeaders } = useTelegram()
+const { buildMessengerAuthHeaders, isMessengerMiniApp, messengerInitData } = useTelegram()
+const { openGuestAuthModal } = useCityGuestAuth()
 const { pushToast } = useAppToast()
 
 const pending = ref(true)
@@ -142,7 +143,9 @@ const selectedTags = ref<string[]>([])
 const selectedTopics = ref<TopicSlug[]>([])
 const marketingOptOut = ref(false)
 
-const isAuthenticated = computed(() => !!user.value)
+const isAuthenticated = computed(
+  () => !!user.value || !!messengerInitData.value || isMessengerMiniApp.value,
+)
 
 const topicOptions = computed(() =>
   settings.value?.topicOptions || [
@@ -157,10 +160,6 @@ function toggleTag(tagSlug: string) {
   if (set.has(tagSlug)) set.delete(tagSlug)
   else set.add(tagSlug)
   selectedTags.value = [...set]
-}
-
-function goLogin() {
-  void navigateTo(`/login?redirect=${encodeURIComponent(route.fullPath)}`)
 }
 
 async function loadSettings() {
@@ -187,7 +186,7 @@ async function loadSettings() {
 
 async function save() {
   if (!isAuthenticated.value) {
-    goLogin()
+    openGuestAuthModal()
     return
   }
   saving.value = true

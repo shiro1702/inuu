@@ -1,54 +1,78 @@
 <template>
-  <div class="auth-page">
-    <h1>Вход в дашборд</h1>
-
-    <p class="subtitle">
-      Войдите в аккаунт, чтобы открыть кабинет управления магазином.
+  <div class="mx-auto max-w-sm">
+    <h1 class="text-lg font-semibold text-gray-900">
+      Кабинет управления городом
+    </h1>
+    <p class="mt-1 text-sm text-gray-600">
+      Вход по email и паролю для редакторов и менеджеров контента. Это не гостевой профиль на афише —
+      после входа откроется раздел «Контент AI» и другие инструменты дашборда.
     </p>
 
-    <form class="form" @submit.prevent="onSubmit">
-      <label class="field">
+    <form class="mt-6 flex flex-col gap-3" @submit.prevent="onSubmit">
+      <label class="flex flex-col gap-1 text-sm text-gray-700">
         <span>Email</span>
         <input
           v-model="email"
           type="email"
           required
           autocomplete="email"
-        />
+          class="rounded-lg border border-gray-300 px-3 py-2"
+        >
       </label>
 
-      <label class="field">
+      <label class="flex flex-col gap-1 text-sm text-gray-700">
         <span>Пароль</span>
         <input
           v-model="password"
           type="password"
           required
           autocomplete="current-password"
-        />
+          class="rounded-lg border border-gray-300 px-3 py-2"
+        >
       </label>
 
-      <p v-if="errorMessage" class="error">
+      <p v-if="errorMessage" class="text-sm text-red-600">
         {{ errorMessage }}
       </p>
 
       <button
         type="submit"
-        class="btn-primary"
+        class="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
         :disabled="isLoading"
       >
-        <span v-if="isLoading">Вход...</span>
-        <span v-else>Войти</span>
+        <span v-if="isLoading">Вход…</span>
+        <span v-else>Войти в кабинет</span>
       </button>
     </form>
+
+    <NuxtLink
+      :to="cityBasePath"
+      class="mt-6 inline-block text-sm text-gray-500 hover:text-gray-800"
+    >
+      ← На афишу города
+    </NuxtLink>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, useRoute, useRouter, useSupabaseClient } from '#imports'
+import { computed, onMounted, ref } from 'vue'
+
+declare const useRuntimeConfig: () => { public: { defaultCitySlug?: string } }
+import { useRoute, useRouter } from 'vue-router'
+
+definePageMeta({ layout: 'dashboard-auth' })
 
 const route = useRoute()
 const router = useRouter()
 const supabase = useSupabaseClient()
+const config = useRuntimeConfig()
+const cityBasePath = computed(() => {
+  const slug =
+    typeof config.public.defaultCitySlug === 'string' && config.public.defaultCitySlug.trim()
+      ? config.public.defaultCitySlug.trim()
+      : 'ulan-ude'
+  return `/${slug}`
+})
 
 const email = ref('')
 const password = ref('')
@@ -58,14 +82,21 @@ const errorMessage = ref<string | null>(null)
 const redirectPath = computed(() => {
   const value = route.query.redirect
   if (typeof value === 'string' && value.startsWith('/dashboard')) return value
-  return '/dashboard'
+  return '/dashboard/content-ai'
 })
 
 async function goAfterAuth() {
   await router.replace({ path: redirectPath.value })
 }
 
-const onSubmit = async () => {
+onMounted(async () => {
+  const { data } = await supabase.auth.getSession()
+  if (data.session) {
+    await goAfterAuth()
+  }
+})
+
+async function onSubmit() {
   isLoading.value = true
   errorMessage.value = null
 
@@ -88,80 +119,3 @@ const onSubmit = async () => {
   }
 }
 </script>
-
-<style scoped>
-.auth-page {
-  max-width: 420px;
-  margin: 0 auto;
-  padding: 2.5rem 1.5rem;
-}
-
-h1 {
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin-bottom: 0.5rem;
-}
-
-.subtitle {
-  font-size: 0.9rem;
-  color: #4b5563;
-  margin-bottom: 1.5rem;
-}
-
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  font-size: 0.9rem;
-}
-
-.field span {
-  color: #374151;
-}
-
-.field input {
-  padding: 0.6rem 0.75rem;
-  border-radius: 0.4rem;
-  border: 1px solid #d1d5db;
-  font-size: 0.95rem;
-}
-
-.field input:focus {
-  outline: none;
-  border-color: #e25e2d;
-  box-shadow: 0 0 0 1px rgba(226, 94, 45, 0.3);
-}
-
-.btn-primary {
-  margin-top: 0.5rem;
-  padding: 0.6rem 1.2rem;
-  border-radius: 0.4rem;
-  border: none;
-  cursor: pointer;
-  background: #e25e2d;
-  color: #ffffff;
-  font-size: 0.95rem;
-  font-weight: 500;
-  transition: background-color 0.15s ease;
-}
-
-.btn-primary:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn-primary:not(:disabled):hover {
-  background: #c84e24;
-}
-
-.error {
-  font-size: 0.85rem;
-  color: #dc2626;
-}
-</style>
