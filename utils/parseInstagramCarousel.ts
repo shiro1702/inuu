@@ -1,4 +1,6 @@
 import type { CarouselSlide, EditorialCarouselMetadata } from '~/types/editorialCarousel'
+import { buildCarouselFromEvents } from '~/utils/buildCarouselFromEvents'
+import { resolveCarouselGradientFromTags } from '~/utils/carouselVibeTheme'
 import { listMaterialCoverUrls } from '~/utils/resolveMaterialCoverUrl'
 
 function splitCarouselBlocks(raw: string): string[] {
@@ -101,9 +103,18 @@ export function buildEditorialCarouselMetadata(args: {
     sourceMetadata: { media_urls: args.mediaUrls || [] },
   })
 
-  const withMedia = slides.map((slide, index) => {
-    const fromGallery = gallery[index] || null
-    const media_url = slide.media_url || fromGallery || null
+  let bodyMediaIndex = 0
+  const withMedia = slides.map((slide) => {
+    if (slide.role === 'outro') {
+      return { ...slide, gradient }
+    }
+    if (slide.role === 'cover') {
+      const media_url = slide.media_url || gallery[0] || null
+      return { ...slide, media_url, gradient }
+    }
+    bodyMediaIndex += 1
+    const media_url =
+      slide.media_url || gallery[bodyMediaIndex] || gallery[0] || null
     return { ...slide, media_url, gradient }
   })
 
@@ -126,6 +137,149 @@ export function mergeEditorialPostMetadata(
   if (carousel) base.carousel = carousel
   if (extra) Object.assign(base, extra)
   return base
+}
+
+export type EditorialLinkedVenueInput = {
+  slug: string
+  title: string
+  cover_media_url?: string | null
+  address?: string | null
+  editorial_quote?: string | null
+  vibe_tags?: string[] | null
+}
+
+export type EditorialPostCarouselInput = {
+  title: string
+  excerpt?: string | null
+  body?: string | null
+  cover_media_url?: string | null
+  topic_tags?: string[] | null
+  metadata?: Record<string, unknown> | null
+  linked_venues?: EditorialLinkedVenueInput[]
+}
+
+function editorialPostDescriptionShort(post: EditorialPostCarouselInput): string | undefined {
+  const excerpt = post.excerpt?.trim()
+  if (excerpt) return excerpt
+
+  const body = post.body?.trim()
+  if (!body) return undefined
+
+  const firstParagraph = body.split(/\n{2,}/).map((p) => p.trim()).find(Boolean)
+  const source = firstParagraph || body
+  return source.length > 420 ? `${source.slice(0, 420).trim()}…` : source
+}
+
+function isValidCarouselMetadata(raw: unknown): raw is EditorialCarouselMetadata {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return false
+  const slides = (raw as EditorialCarouselMetadata).slides
+  return Array.isArray(slides) && slides.length >= 2
+}
+
+function excerptBullets(excerpt: string): string[] {
+  return excerpt
+    .split(/[.!?]\s+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 8)
+    .slice(0, 4)
+}
+
+function buildCarouselFromLinkedVenues(
+  post: EditorialPostCarouselInput,
+  venues: EditorialLinkedVenueInput[],
+): EditorialCarouselMetadata {
+  const allTags = [
+    ...(post.topic_tags || []),
+    ...venues.flatMap((v) => v.vibe_tags || []),
+  ]
+  const gradient = resolveCarouselGradientFromTags(allTags)
+  const carousel = buildCarouselFromEvents({
+    events: venues.map((venue) => ({
+      entityType: 'venue' as const,
+      title: venue.title,
+      slug: venue.slug,
+      excerpt: venue.editorial_quote,
+      address: venue.address,
+      coverMediaUrl: venue.cover_media_url,
+      topicTags: venue.vibe_tags || [],
+    })),
+    citySlug: '',
+    cityName: '',
+    timezone: 'Asia/Irkutsk',
+    coverTitle: post.title,
+    coverMediaUrl: post.cover_media_url,
+    outroCta: 'Читать в INUU',
+    vibe: gradient,
+  })
+
+  const excerpt = post.excerpt?.trim()
+  if (!excerpt || venues.length === 0) return carousel
+
+  const outro = carousel.slides.at(-1)
+  const bodySlides = carousel.slides.slice(1, -1)
+  const introSlide: CarouselSlide = {
+    role: 'body',
+    title: 'О маршруте',
+    bullets: excerptBullets(excerpt),
+    gradient,
+  }
+
+  return {
+    ...carousel,
+    slides: [carousel.slides[0]!, introSlide, ...bodySlides, outro!],
+  }
+}
+
+/** Saved carousel → content_pack → venues → title/excerpt/body fallback for Carousel Studio. */
+export function resolveCarouselFromEditorialPost(
+  post: EditorialPostCarouselInput,
+): EditorialCarouselMetadata | null {
+  const metadata =
+    post.metadata && typeof post.metadata === 'object' && !Array.isArray(post.metadata)
+      ? post.metadata
+      : null
+
+  const saved = metadata?.carousel
+  if (isValidCarouselMetadata(saved)) {
+    return saved
+  }
+
+  const fallback = {
+    title: post.title,
+    descriptionShort: editorialPostDescriptionShort(post),
+  }
+
+  const pack = metadata?.content_pack as { instagram_carousel?: string } | undefined
+  if (pack?.instagram_carousel?.trim()) {
+    const fromPack = buildEditorialCarouselMetadata({
+      instagramCarousel: pack.instagram_carousel,
+      coverMediaUrl: post.cover_media_url,
+      topicTags: post.topic_tags || undefined,
+      fallback,
+    })
+    if (fromPack) return fromPack
+  }
+
+  const venues = (post.linked_venues || []).filter((v) => v.title?.trim())
+  if (venues.length) {
+    return buildCarouselFromLinkedVenues(post, venues)
+  }
+
+  const fromText = buildEditorialCarouselMetadata({
+    instagramCarousel: '',
+    coverMediaUrl: post.cover_media_url,
+    topicTags: post.topic_tags || undefined,
+    fallback,
+  })
+  if (fromText) {
+    const outro = fromText.slides.at(-1)
+    if (outro?.role === 'outro') {
+      outro.cta_text = 'Читать в INUU'
+    }
+    return fromText
+  }
+
+  return null
 }
 
 export function resolveCarouselFromPayload(

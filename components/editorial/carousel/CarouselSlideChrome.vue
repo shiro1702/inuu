@@ -35,8 +35,9 @@
     </div>
 
     <div
-      class="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex items-end justify-between gap-4 px-10 pb-10 pt-16"
+      class="pointer-events-none absolute inset-x-0 z-30 flex items-end justify-between gap-4 px-10 pb-10 pt-16"
       :class="footerClass"
+      :style="footerBottomStyle"
     >
       <p class="max-w-[55%] text-sm font-medium leading-snug drop-shadow" :class="sourceClass">
         {{ sourceLine }}
@@ -52,20 +53,27 @@
 </template>
 
 <script setup lang="ts">
+import type { CarouselAspect } from '~/types/editorialCarousel'
+import { carouselChromeFooterBottomStyle } from '~/utils/carouselSafeZone'
+
 const props = withDefaults(
   defineProps<{
     slideIndex: number
     totalSlides: number
+    aspect?: CarouselAspect
     brandName?: string
     cityName?: string
     logoUrl?: string
     variant?: 'dark' | 'light'
   }>(),
   {
+    aspect: '4:5',
     brandName: 'INUU',
     variant: 'dark',
   },
 )
+
+const footerBottomStyle = computed(() => carouselChromeFooterBottomStyle(props.aspect))
 
 const logoBroken = ref(false)
 const showLogoImage = computed(() => Boolean(props.logoUrl) && !logoBroken.value)

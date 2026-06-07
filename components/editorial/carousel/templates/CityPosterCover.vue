@@ -1,5 +1,5 @@
 <template>
-  <div class="relative h-full w-full p-8 pb-32 pt-36">
+  <div class="relative h-full w-full px-8 pt-36 carousel-slide-pad-bottom">
     <div
       class="relative flex h-full w-full flex-col overflow-hidden border-[10px] border-white shadow-2xl"
       :class="theme.gradientClass"

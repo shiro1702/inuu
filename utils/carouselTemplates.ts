@@ -27,6 +27,26 @@ export const CAROUSEL_TEMPLATE_OPTIONS: CarouselTemplateOption[] = [
     label: 'Городская афиша',
     description: 'Постер с рамкой и жирным uppercase',
   },
+  {
+    id: 'stockholm-calm',
+    label: 'Stockholm Calm',
+    description: 'Скандинавский минимализм: овсяный фон, воздух, мягкая типографика',
+  },
+  {
+    id: 'kyoto-tea',
+    label: 'Kyoto Tea',
+    description: 'Японский ваби-саби: тонкие линии, serif, приглушённые тона',
+  },
+  {
+    id: 'parisian-atelier',
+    label: 'Parisian Atelier',
+    description: 'Журнальный шик: паспарту, serif, элегантные акценты',
+  },
+  {
+    id: 'event-digest',
+    label: 'Дайджест афиши',
+    description: 'Stories-стиль: фото сверху, чёрная плашка, фиолетовый бейдж даты',
+  },
 ]
 
 export const DEFAULT_CAROUSEL_TEMPLATE_ID: CarouselTemplateId = 'minimal-ios'

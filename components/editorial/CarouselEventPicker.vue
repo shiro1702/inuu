@@ -141,6 +141,8 @@ export type PickerMaterialItem = {
   excerpt?: string | null
   tldr?: string | null
   coverMediaUrl?: string | null
+  sourceMetadata?: unknown
+  source_metadata?: unknown
   price?: number | null
   currency?: string | null
   venueTitle?: string | null

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   buildEditorialCarouselMetadata,
   parseInstagramCarouselToSlides,
+  resolveCarouselFromEditorialPost,
 } from '~/utils/parseInstagramCarousel'
 
 describe('parseInstagramCarouselToSlides', () => {
@@ -51,5 +52,57 @@ describe('buildEditorialCarouselMetadata', () => {
     })
     expect(meta?.slides[0]?.media_url).toBe('https://example.com/cover.jpg')
     expect(meta?.template_id).toBe('minimal-ios')
+  })
+})
+
+describe('resolveCarouselFromEditorialPost', () => {
+  it('prefers saved metadata.carousel', () => {
+    const saved = {
+      template_id: 'minimal-ios' as const,
+      aspect: '4:5' as const,
+      slides: [
+        { role: 'cover' as const, title: 'Saved cover' },
+        { role: 'outro' as const, cta_text: 'CTA' },
+      ],
+    }
+    const meta = resolveCarouselFromEditorialPost({
+      title: 'Ignored title',
+      metadata: { carousel: saved },
+    })
+    expect(meta?.slides[0]?.title).toBe('Saved cover')
+  })
+
+  it('builds slides from journal fields when carousel is missing', () => {
+    const meta = resolveCarouselFromEditorialPost({
+      title: 'Гид по кофейням',
+      excerpt: 'Три места с альтернативным обжаром. Уютные залы и десерты.',
+      cover_media_url: 'https://example.com/cover.jpg',
+      topic_tags: ['coffee'],
+    })
+    expect(meta?.slides[0]?.title).toBe('Гид по кофейням')
+    expect(meta?.slides[0]?.media_url).toBe('https://example.com/cover.jpg')
+    expect(meta?.slides.some((s) => s.role === 'body')).toBe(true)
+    expect(meta?.slides.at(-1)?.role).toBe('outro')
+  })
+
+  it('adds linked venue slides from journal post', () => {
+    const meta = resolveCarouselFromEditorialPost({
+      title: 'Барный кроул: 4 места в центре',
+      excerpt: 'Четыре остановки для тёплого вечера в Улан-Удэ.',
+      cover_media_url: 'https://example.com/cover.jpg',
+      topic_tags: ['nightlife'],
+      linked_venues: [
+        {
+          slug: 'art-kvartal',
+          title: 'Арт-квартал',
+          address: 'ул. Ленина, 24',
+          editorial_quote: 'Уютное место для вечера',
+        },
+      ],
+    })
+    expect(meta?.slides[0]?.title).toBe('Барный кроул: 4 места в центре')
+    expect(meta?.slides.some((s) => s.title === 'Арт-квартал')).toBe(true)
+    expect(meta?.slides.some((s) => s.title === 'О маршруте')).toBe(true)
+    expect(meta?.slides.at(-1)?.cta_text).toBe('Читать в INUU')
   })
 })

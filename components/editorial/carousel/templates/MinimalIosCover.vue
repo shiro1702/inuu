@@ -14,7 +14,7 @@
     />
     <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
-    <div class="relative z-10 flex h-full flex-col justify-end px-12 pb-32 pt-36">
+    <div class="relative z-10 flex h-full flex-col justify-end px-12 carousel-slide-pad-bottom pt-36">
       <h1
         class="text-5xl font-bold leading-tight drop-shadow-lg"
         :class="theme.textClass"

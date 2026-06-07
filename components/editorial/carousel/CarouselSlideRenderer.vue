@@ -3,6 +3,7 @@
     <CarouselSlideChrome
       :slide-index="slideIndex"
       :total-slides="totalSlides"
+      :aspect="aspect"
       :brand-name="brandName"
       :city-name="cityName"
       :logo-url="logoUrl"
@@ -11,8 +12,11 @@
       <component
         :is="templateComponent"
         :slide="slide"
+        :aspect="aspect"
         :topic-tags="topicTags"
         :link-hint="linkHint"
+        :city-name="cityName"
+        :brand-name="brandName"
       />
     </CarouselSlideChrome>
   </CarouselSlideFrame>
@@ -26,15 +30,27 @@ import CarouselSlideFrame from '~/components/editorial/carousel/CarouselSlideFra
 import CityPosterBody from '~/components/editorial/carousel/templates/CityPosterBody.vue'
 import CityPosterCover from '~/components/editorial/carousel/templates/CityPosterCover.vue'
 import CityPosterOutro from '~/components/editorial/carousel/templates/CityPosterOutro.vue'
+import EventDigestBody from '~/components/editorial/carousel/templates/EventDigestBody.vue'
+import EventDigestCover from '~/components/editorial/carousel/templates/EventDigestCover.vue'
+import EventDigestOutro from '~/components/editorial/carousel/templates/EventDigestOutro.vue'
 import EditorialBoldBody from '~/components/editorial/carousel/templates/EditorialBoldBody.vue'
 import EditorialBoldCover from '~/components/editorial/carousel/templates/EditorialBoldCover.vue'
 import EditorialBoldOutro from '~/components/editorial/carousel/templates/EditorialBoldOutro.vue'
+import KyotoTeaBody from '~/components/editorial/carousel/templates/KyotoTeaBody.vue'
+import KyotoTeaCover from '~/components/editorial/carousel/templates/KyotoTeaCover.vue'
+import KyotoTeaOutro from '~/components/editorial/carousel/templates/KyotoTeaOutro.vue'
 import MinimalIosBody from '~/components/editorial/carousel/templates/MinimalIosBody.vue'
 import MinimalIosCover from '~/components/editorial/carousel/templates/MinimalIosCover.vue'
 import MinimalIosOutro from '~/components/editorial/carousel/templates/MinimalIosOutro.vue'
+import ParisianAtelierBody from '~/components/editorial/carousel/templates/ParisianAtelierBody.vue'
+import ParisianAtelierCover from '~/components/editorial/carousel/templates/ParisianAtelierCover.vue'
+import ParisianAtelierOutro from '~/components/editorial/carousel/templates/ParisianAtelierOutro.vue'
 import PhotoCardBody from '~/components/editorial/carousel/templates/PhotoCardBody.vue'
 import PhotoCardCover from '~/components/editorial/carousel/templates/PhotoCardCover.vue'
 import PhotoCardOutro from '~/components/editorial/carousel/templates/PhotoCardOutro.vue'
+import StockholmCalmBody from '~/components/editorial/carousel/templates/StockholmCalmBody.vue'
+import StockholmCalmCover from '~/components/editorial/carousel/templates/StockholmCalmCover.vue'
+import StockholmCalmOutro from '~/components/editorial/carousel/templates/StockholmCalmOutro.vue'
 import { DEFAULT_CAROUSEL_TEMPLATE_ID, normalizeCarouselTemplateId } from '~/utils/carouselTemplates'
 
 type TemplateSet = {
@@ -67,6 +83,30 @@ const TEMPLATE_SETS: Record<CarouselTemplateId, TemplateSet> = {
     cover: CityPosterCover,
     body: CityPosterBody,
     outro: CityPosterOutro,
+    chromeVariant: 'dark',
+  },
+  'stockholm-calm': {
+    cover: StockholmCalmCover,
+    body: StockholmCalmBody,
+    outro: StockholmCalmOutro,
+    chromeVariant: 'light',
+  },
+  'kyoto-tea': {
+    cover: KyotoTeaCover,
+    body: KyotoTeaBody,
+    outro: KyotoTeaOutro,
+    chromeVariant: 'light',
+  },
+  'parisian-atelier': {
+    cover: ParisianAtelierCover,
+    body: ParisianAtelierBody,
+    outro: ParisianAtelierOutro,
+    chromeVariant: 'light',
+  },
+  'event-digest': {
+    cover: EventDigestCover,
+    body: EventDigestBody,
+    outro: EventDigestOutro,
     chromeVariant: 'dark',
   },
 }

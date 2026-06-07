@@ -4,7 +4,7 @@ export default defineNuxtConfig({
   // sharp uses native .node binaries — must stay external (not nitro inline/rollup bundle).
   nitro: {
     externals: {
-      traceInclude: ['sharp', /^@img\/sharp-/],
+      external: ['sharp', /^@img\/sharp-/],
     },
   },
   devtools: { enabled: true },

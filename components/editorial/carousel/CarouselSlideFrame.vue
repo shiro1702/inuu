@@ -2,6 +2,7 @@
   <div
     ref="frameRef"
     class="relative overflow-hidden font-sans"
+    :class="{ 'carousel-slide-frame--9-16': aspect === '9:16' }"
     :style="frameStyle"
   >
     <slot />
@@ -32,3 +33,38 @@ function getFrameElement(): HTMLElement | null {
 
 defineExpose({ frameRef, getFrameElement })
 </script>
+
+<style>
+.carousel-slide-frame {
+  text-rendering: geometricPrecision;
+  -webkit-font-smoothing: antialiased;
+}
+
+.carousel-slide-frame,
+.carousel-slide-frame * {
+  hyphens: none !important;
+  -webkit-hyphens: none !important;
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+}
+
+.carousel-slide-pad-bottom {
+  padding-bottom: 8rem;
+}
+
+.carousel-slide-frame--9-16 {
+  --carousel-stories-safe-bottom: 280px;
+}
+
+.carousel-slide-frame--9-16 .carousel-slide-pad-bottom {
+  padding-bottom: calc(8rem + var(--carousel-stories-safe-bottom));
+}
+
+.carousel-slide-safe-bottom {
+  bottom: 8rem;
+}
+
+.carousel-slide-frame--9-16 .carousel-slide-safe-bottom {
+  bottom: calc(8rem + var(--carousel-stories-safe-bottom));
+}
+</style>

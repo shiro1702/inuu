@@ -12,7 +12,7 @@
       :class="slide.media_url ? 'bg-black/20' : theme.gradientClass"
     />
     <div class="absolute inset-0 bg-gradient-to-t from-black/95 via-black/50 to-transparent" />
-    <div class="relative z-10 flex h-full flex-col justify-end px-12 pb-32 pt-36">
+    <div class="relative z-10 flex h-full flex-col justify-end px-12 carousel-slide-pad-bottom pt-36">
       <h2 v-if="slide.title" class="mb-6 text-4xl font-bold leading-tight text-white">
         {{ slide.title }}
       </h2>

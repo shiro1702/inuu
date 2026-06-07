@@ -1,5 +1,5 @@
 <template>
-  <div class="flex h-full w-full flex-col bg-[#f4efe6] px-12 pb-32 pt-36 text-stone-900">
+  <div class="flex h-full w-full flex-col bg-[#f4efe6] px-12 carousel-slide-pad-bottom pt-36 text-stone-900">
     <div
       v-if="slide.media_url"
       class="mb-10 min-h-0 flex-1 overflow-hidden rounded-[2rem] shadow-2xl ring-1 ring-stone-900/10"

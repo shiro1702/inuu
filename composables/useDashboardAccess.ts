@@ -1,8 +1,20 @@
 import { ref, watch } from 'vue'
 
-type DashboardAccessResponse = {
+export type DashboardAccessResponse = {
   ok: boolean
+  userId?: string
+  shopId?: string | null
   role?: string | null
+}
+
+/** Одноразовая проверка доступа (логин, редирект после auth). */
+export async function fetchDashboardAccess(): Promise<DashboardAccessResponse> {
+  const { authHeaders } = useDashboardFetch()
+  const headers = await authHeaders()
+  return $fetch<DashboardAccessResponse>('/api/dashboard/access', {
+    credentials: 'include',
+    headers,
+  })
 }
 
 /** Есть ли у текущего Supabase-пользователя доступ в /dashboard (shop_members). */

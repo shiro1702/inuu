@@ -10,6 +10,7 @@
       :style="innerStyle"
     >
       <CarouselSlideRenderer
+        ref="rendererRef"
         :slide="slide"
         :aspect="aspect"
         :template-id="templateId"
@@ -54,7 +55,14 @@ const props = withDefaults(
 )
 
 const hostRef = ref<HTMLElement | null>(null)
+const rendererRef = ref<InstanceType<typeof CarouselSlideRenderer> | null>(null)
 const hostWidth = ref(280)
+
+function getFrameElement(): HTMLElement | null {
+  return rendererRef.value?.getFrameElement?.() ?? null
+}
+
+defineExpose({ getFrameElement })
 
 const exportSize = computed(() => CAROUSEL_EXPORT_SIZES[props.aspect])
 

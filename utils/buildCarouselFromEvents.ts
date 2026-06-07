@@ -74,6 +74,8 @@ export function buildCarouselFromEvents(options: {
   cityName: string
   timezone: string
   coverTitle?: string
+  coverMediaUrl?: string | null
+  outroCta?: string
   aspect?: CarouselAspect
   vibe?: string
   templateId?: CarouselTemplateId
@@ -85,7 +87,10 @@ export function buildCarouselFromEvents(options: {
 
   const slides: CarouselSlide[] = []
 
-  const firstCover = materials.map((m) => resolvedCover(m)).find(Boolean) ?? null
+  const firstCover =
+    options.coverMediaUrl?.trim() ||
+    materials.map((m) => resolvedCover(m)).find(Boolean) ||
+    null
   slides.push({
     role: 'cover',
     title: coverTitle,
@@ -107,7 +112,7 @@ export function buildCarouselFromEvents(options: {
 
   slides.push({
     role: 'outro',
-    cta_text: 'Вся афиша в INUU',
+    cta_text: options.outroCta?.trim() || 'Вся афиша в INUU',
     gradient: vibe,
   })
 

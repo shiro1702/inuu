@@ -22,10 +22,13 @@ export type EditorialDashboardItem = {
   title: string
   excerpt: string | null
   body: string
+  body_json?: unknown
   cover_media_url: string | null
   topic_tags: string[] | null
   category_slug: string | null
   post_type: string | null
+  linked_entity_type: string | null
+  linked_entity_id: string | null
   is_published: boolean
   published_at: string | null
   created_at: string
@@ -34,7 +37,7 @@ export type EditorialDashboardItem = {
 }
 
 export const editorialDashboardSelectFields =
-  'id,slug,title,excerpt,body,cover_media_url,topic_tags,category_slug,post_type,is_published,published_at,created_at,updated_at,metadata'
+  'id,slug,title,excerpt,body,body_json,cover_media_url,topic_tags,category_slug,post_type,linked_entity_type,linked_entity_id,is_published,published_at,created_at,updated_at,metadata'
 
 function slugify(input: string): string {
   return input

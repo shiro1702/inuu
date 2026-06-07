@@ -110,58 +110,18 @@
         </article>
       </div>
 
-      <div class="space-y-4 lg:sticky lg:top-4">
-        <div class="flex items-center justify-between gap-2">
-          <h3 class="text-sm font-medium text-gray-700">Превью</h3>
-          <span class="text-xs text-gray-500">{{ aspectLabel }}</span>
-        </div>
-        <div class="rounded-xl border border-gray-200 bg-gray-100/80 p-3">
-          <CarouselSlidePreview
-            :slide="previewSlide"
-            :aspect="aspect"
-            :template-id="templateId"
-            :brand-name="serviceBrandName"
-            :city-name="cityDisplayName"
-            :logo-url="logoUrl"
-            :topic-tags="[vibeKey]"
-            :link-hint="linkHint"
-            :slide-index="previewIndex + 1"
-            :total-slides="slides.length"
-            :max-width="aspect === '9:16' ? 280 : 380"
-          />
-        </div>
-        <p class="text-xs text-gray-500">
-          Слайд {{ previewIndex + 1 }} / {{ slides.length }} —
-          <button
-            v-for="(_, i) in slides"
-            :key="i"
-            type="button"
-            class="mx-0.5 underline"
-            :class="i === previewIndex ? 'text-primary font-medium' : 'text-gray-500'"
-            @click="previewIndex = i"
-          >
-            {{ i + 1 }}
-          </button>
-        </p>
+      <div class="lg:sticky lg:top-4">
+        <h3 class="mb-3 text-sm font-medium text-gray-700">Превью</h3>
+        <EditorialCarousel
+          ref="previewCarouselRef"
+          :carousel="previewCarousel"
+          :brand-name="cityDisplayName"
+          :topic-tags="[vibeKey]"
+          :link-hint="linkHint"
+          :max-width="aspect === '9:16' ? 280 : 380"
+          :show-heading="false"
+        />
       </div>
-    </div>
-
-    <div class="pointer-events-none fixed -left-[9999px] top-0 opacity-0" aria-hidden="true">
-      <CarouselSlideRenderer
-        v-for="(slide, index) in slides"
-        :key="`export-${slide.role}-${index}`"
-        :ref="(el) => setRendererRef(el, index)"
-        :slide="slideWithVibe(slide)"
-        :aspect="aspect"
-        :template-id="templateId"
-        :brand-name="serviceBrandName"
-        :city-name="cityDisplayName"
-        :logo-url="logoUrl"
-        :topic-tags="[vibeKey]"
-        :link-hint="linkHint"
-        :slide-index="index + 1"
-        :total-slides="slides.length"
-      />
     </div>
 
     <div class="flex flex-wrap gap-3">
@@ -201,11 +161,12 @@
 
 <script setup lang="ts">
 import type { CarouselAspect, CarouselSlide, EditorialCarouselMetadata } from '~/types/editorialCarousel'
-import CarouselSlidePreview from '~/components/editorial/carousel/CarouselSlidePreview.vue'
-import CarouselSlideRenderer from '~/components/editorial/carousel/CarouselSlideRenderer.vue'
+import EditorialCarousel from '~/components/editorial/EditorialCarousel.vue'
 import { resolveCarouselBrandLogo } from '~/utils/carouselBrandLogo'
 import { CAROUSEL_TEMPLATE_OPTIONS, DEFAULT_CAROUSEL_TEMPLATE_ID, normalizeCarouselTemplateId } from '~/utils/carouselTemplates'
 import { CAROUSEL_VIBE_KEYS } from '~/utils/carouselVibeTheme'
+import { delayMs, waitForQrImages } from '~/utils/carouselExport'
+import { generateCarouselQrDataUrl } from '~/utils/carouselQrCode'
 import { downloadBlob, preloadCarouselMedia, renderSlideToPng } from '~/utils/renderSlideToPng'
 
 const props = defineProps<{
@@ -231,7 +192,6 @@ const cityDisplayName = computed(() => props.brandName?.trim() || '')
 const logoUrl = computed(() => resolveCarouselBrandLogo(config))
 const vibeKey = ref('party')
 const linkHint = ref(props.defaultLinkHint || '')
-const previewIndex = ref(0)
 const exporting = ref(false)
 const saving = ref(false)
 const statusText = ref('')
@@ -276,14 +236,11 @@ function slideWithVibe(slide: CarouselSlide): CarouselSlide {
   return { ...slide, gradient: vibeKey.value }
 }
 
-const previewSlide = computed(() => {
-  const s = slides.value[previewIndex.value]
-  return s ? slideWithVibe(s) : null
-})
-
-const aspectLabel = computed(() =>
-  aspect.value === '9:16' ? 'Stories 9:16' : 'Instagram 4:5',
-)
+const previewCarousel = computed((): EditorialCarouselMetadata => ({
+  template_id: templateId.value,
+  aspect: aspect.value,
+  slides: slides.value.map((s) => slideWithVibe(s)),
+}))
 
 const templateDescription = computed(
   () => templateOptions.find((t) => t.id === templateId.value)?.description || '',
@@ -317,9 +274,6 @@ function canRemoveSlide(index: number): boolean {
 function removeSlide(index: number) {
   if (!canRemoveSlide(index)) return
   slides.value = slides.value.filter((_, i) => i !== index)
-  if (previewIndex.value >= slides.value.length) {
-    previewIndex.value = Math.max(0, slides.value.length - 1)
-  }
 }
 
 function bulletsText(index: number): string {
@@ -332,11 +286,7 @@ function setBulletsFromText(index: number, text: string) {
   slide.bullets = text.split('\n').map((l) => l.trim()).filter(Boolean)
 }
 
-const rendererRefs = ref<Array<InstanceType<typeof CarouselSlideRenderer> | null>>([])
-
-function setRendererRef(el: unknown, index: number) {
-  rendererRefs.value[index] = el as InstanceType<typeof CarouselSlideRenderer> | null
-}
+const previewCarouselRef = ref<InstanceType<typeof EditorialCarousel> | null>(null)
 
 function buildCarouselPayload(): EditorialCarouselMetadata {
   return {
@@ -380,14 +330,23 @@ async function downloadPngs() {
   statusText.value = ''
   exporting.value = true
   try {
-    await preloadCarouselMedia(slides.value.map((s) => s.media_url))
-    await nextTick()
+    const qrDataUrl = linkHint.value.trim()
+      ? await generateCarouselQrDataUrl(linkHint.value, { size: 960 })
+      : null
+    await preloadCarouselMedia([...slides.value.map((s) => s.media_url), qrDataUrl])
+
+    const preview = previewCarouselRef.value
+    if (!preview?.prepareSlideForExport) {
+      throw new Error('Превью не готово — обновите страницу')
+    }
+
     for (let i = 0; i < slides.value.length; i++) {
-      const node = rendererRefs.value[i]?.getFrameElement?.()
-      if (!node) throw new Error(`Слайд ${i + 1} не готов`)
+      const slide = slides.value[i]!
+      const node = await preview.prepareSlideForExport(i)
+      if (slide.role === 'outro') await waitForQrImages(node)
       const blob = await renderSlideToPng(node, { aspect: aspect.value })
-      const role = slides.value[i]?.role || `slide-${i + 1}`
-      downloadBlob(blob, `carousel-${role}-${i + 1}.png`)
+      downloadBlob(blob, `carousel-${i + 1}.png`)
+      if (i < slides.value.length - 1) await delayMs(250)
     }
     statusOk.value = true
     statusText.value = 'PNG скачаны'

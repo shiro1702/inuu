@@ -64,7 +64,10 @@
 import type { EditorialCarouselMetadata } from '~/types/editorialCarousel'
 import CarouselStudio from '~/components/editorial/CarouselStudio.vue'
 import CarouselEventPicker, { type PickerMaterialItem } from '~/components/editorial/CarouselEventPicker.vue'
-import { buildEditorialCarouselMetadata } from '~/utils/parseInstagramCarousel'
+import {
+  buildEditorialCarouselMetadata,
+  resolveCarouselFromEditorialPost,
+} from '~/utils/parseInstagramCarousel'
 import {
   buildCarouselFromEvents,
   carouselLinkHintForCity,
@@ -143,6 +146,8 @@ function pickerEventsToInput(events: PickerMaterialItem[]): CarouselEventInput[]
     excerpt: item.excerpt,
     tldr: item.tldr,
     coverMediaUrl: item.coverMediaUrl,
+    sourceMetadata: item.sourceMetadata,
+    source_metadata: item.source_metadata,
     price: item.price,
     currency: item.currency,
     venueTitle: item.venueTitle,
@@ -245,15 +250,34 @@ async function loadContext() {
     if (postId.value && sourceKind.value === 'article') {
       const res = await $fetch<{
         ok: boolean
-        item?: { slug: string; title: string; metadata?: Record<string, unknown> }
+        item?: {
+          slug: string
+          title: string
+          excerpt?: string | null
+          body?: string | null
+          cover_media_url?: string | null
+          topic_tags?: string[] | null
+          metadata?: Record<string, unknown> | null
+          linked_venues?: Array<{
+            slug: string
+            title: string
+            cover_media_url?: string | null
+            address?: string | null
+            editorial_quote?: string | null
+            vibe_tags?: string[] | null
+          }>
+        }
       }>(`/api/dashboard/manager/cities/${city}/editorial-news/${postId.value}`)
       if (res?.item) {
         postSlug.value = res.item.slug
-        const raw = res.item.metadata?.carousel
-        if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
-          initialCarousel.value = raw as EditorialCarouselMetadata
-        }
-        contextHint.value = `Статья: ${res.item.title}`
+        initialCarousel.value = resolveCarouselFromEditorialPost(res.item)
+        const venueNames = (res.item.linked_venues || [])
+          .map((v) => v.title?.trim())
+          .filter(Boolean)
+        const venueHint = venueNames.length ? ` · ${venueNames.join(', ')}` : ''
+        contextHint.value = initialCarousel.value
+          ? `Статья: ${res.item.title}${venueHint}`
+          : `Статья: ${res.item.title}${venueHint} — заполните слайды вручную`
         bumpStudioKey()
       }
       return

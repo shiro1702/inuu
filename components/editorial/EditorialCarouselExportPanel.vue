@@ -2,12 +2,12 @@
   <div class="space-y-2 rounded-lg border border-dashed border-gray-200 p-3">
     <p class="text-sm font-medium text-gray-800">Экспорт карусели (PNG)</p>
     <p class="text-xs text-gray-500">{{ carousel.slides.length }} слайдов · {{ carousel.aspect }}</p>
-    <div class="pointer-events-none fixed -left-[9999px] top-0 opacity-0">
+    <div class="pointer-events-none fixed -left-[10000px] top-0">
       <CarouselSlideRenderer
-        v-for="(slide, index) in carousel.slides"
-        :key="`${slide.role}-${index}`"
-        :ref="(el) => setRendererRef(el, index)"
-        :slide="slide"
+        v-show="exporting"
+        ref="exportRendererRef"
+        :key="`${exportSlideIndex}-${exportingSlide?.role ?? 'slide'}`"
+        :slide="exportingSlide ?? carousel.slides[0]!"
         :aspect="carousel.aspect"
         :template-id="carousel.template_id"
         :brand-name="serviceBrandName"
@@ -15,7 +15,7 @@
         :logo-url="logoUrl"
         :topic-tags="topicTags"
         :link-hint="linkHint"
-        :slide-index="index + 1"
+        :slide-index="exportSlideIndex"
         :total-slides="carousel.slides.length"
       />
     </div>
@@ -35,6 +35,8 @@
 import type { EditorialCarouselMetadata } from '~/types/editorialCarousel'
 import CarouselSlideRenderer from '~/components/editorial/carousel/CarouselSlideRenderer.vue'
 import { resolveCarouselBrandLogo } from '~/utils/carouselBrandLogo'
+import { delayMs, waitForCarouselPaint, waitForQrImages } from '~/utils/carouselExport'
+import { generateCarouselQrDataUrl } from '~/utils/carouselQrCode'
 import { downloadBlob, preloadCarouselMedia, renderSlideToPng } from '~/utils/renderSlideToPng'
 
 const props = defineProps<{
@@ -54,28 +56,54 @@ const logoUrl = computed(() => resolveCarouselBrandLogo(config))
 
 const exporting = ref(false)
 const errorText = ref('')
-const rendererRefs = ref<Array<InstanceType<typeof CarouselSlideRenderer> | null>>([])
+const exportingSlide = ref<EditorialCarouselMetadata['slides'][number] | null>(null)
+const exportSlideIndex = ref(1)
+const exportRendererRef = ref<InstanceType<typeof CarouselSlideRenderer> | null>(null)
 
-function setRendererRef(el: unknown, index: number) {
-  rendererRefs.value[index] = el as InstanceType<typeof CarouselSlideRenderer> | null
+async function resolveExportFrameElement(slideNumber: number): Promise<HTMLElement> {
+  for (let attempt = 0; attempt < 10; attempt++) {
+    await nextTick()
+    await waitForCarouselPaint()
+    const node = exportRendererRef.value?.getFrameElement?.()
+    if (node) return node
+    await delayMs(50)
+  }
+  throw new Error(`Слайд ${slideNumber} не готов`)
 }
 
 async function exportAll() {
   errorText.value = ''
+  const firstSlide = props.carousel.slides[0]
+  if (!firstSlide) {
+    errorText.value = 'Нет слайдов для экспорта'
+    return
+  }
+
   exporting.value = true
+  exportingSlide.value = firstSlide
+  exportSlideIndex.value = 1
+
   try {
-    await preloadCarouselMedia(props.carousel.slides.map((s) => s.media_url))
-    await nextTick()
+    const qrDataUrl = props.linkHint?.trim()
+      ? await generateCarouselQrDataUrl(props.linkHint, { size: 960 })
+      : null
+    await preloadCarouselMedia([...props.carousel.slides.map((s) => s.media_url), qrDataUrl])
+    await resolveExportFrameElement(1)
+
     for (let i = 0; i < props.carousel.slides.length; i++) {
-      const node = rendererRefs.value[i]?.getFrameElement?.()
-      if (!node) throw new Error(`Слайд ${i + 1} не готов`)
+      const slide = props.carousel.slides[i]!
+      exportSlideIndex.value = i + 1
+      exportingSlide.value = slide
+      const node = await resolveExportFrameElement(i + 1)
+      if (slide.role === 'outro') await waitForQrImages(node)
       const blob = await renderSlideToPng(node, { aspect: props.carousel.aspect })
-      const role = props.carousel.slides[i]?.role || `slide-${i + 1}`
-      downloadBlob(blob, `carousel-${role}-${i + 1}.png`)
+      downloadBlob(blob, `carousel-${i + 1}.png`)
+      if (i < props.carousel.slides.length - 1) await delayMs(250)
     }
   } catch (err: unknown) {
     errorText.value = err instanceof Error ? err.message : 'Ошибка экспорта'
   } finally {
+    exportingSlide.value = null
     exporting.value = false
   }
 }

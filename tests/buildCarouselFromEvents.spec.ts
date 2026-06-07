@@ -34,6 +34,25 @@ describe('buildCarouselFromEvents', () => {
     expect(carousel.slides[0]?.media_url).toBe('https://cdn.example.com/k.jpg')
     expect(carousel.slides[1]?.media_url).toBe('https://cdn.example.com/k.jpg')
     expect(carousel.slides[1]?.bullets?.length).toBeGreaterThan(0)
+    expect(carousel.slides[2]?.media_url).toBeNull()
+    expect(carousel.slides.at(-1)?.media_url).toBeUndefined()
+  })
+
+  it('resolves body cover from source_metadata when column is empty', () => {
+    const carousel = buildCarouselFromEvents({
+      citySlug: 'ulan-ude',
+      cityName: 'Улан-Удэ',
+      timezone: 'Asia/Irkutsk',
+      events: [
+        {
+          title: 'Джаз',
+          slug: 'jazz',
+          source_metadata: { media_urls: ['https://cdn.example.com/jazz.jpg'] },
+        },
+      ],
+    })
+    expect(carousel.slides[1]?.role).toBe('body')
+    expect(carousel.slides[1]?.media_url).toBe('https://cdn.example.com/jazz.jpg')
   })
 
   it('builds list link hint', () => {
