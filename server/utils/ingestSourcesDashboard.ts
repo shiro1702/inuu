@@ -172,6 +172,23 @@ export const WEB_SOURCE_SELECT = `
   id,url,display_name,${WEB_SOURCE_SELECT_TAIL}
 `
 
+/** List view: omit heavy parsing_rules JSONB. */
+export const WEB_SOURCE_LIST_SELECT = `
+  id,url,display_name,
+  context_type,organization_id,cron_enabled,is_active,last_crawled_at,notes,
+  parsing_strategy,rules_validated_at,
+  created_at,updated_at,
+  shops:organization_id(id,slug,name,ui_settings)
+`
+
+export const WEB_SOURCE_LIST_SELECT_LEGACY = `
+  id,url,
+  context_type,organization_id,cron_enabled,is_active,last_crawled_at,notes,
+  parsing_strategy,rules_validated_at,
+  created_at,updated_at,
+  shops:organization_id(id,slug,name,ui_settings)
+`
+
 export const WEB_SOURCE_SELECT_LEGACY = `
   id,url,${WEB_SOURCE_SELECT_TAIL}
 `
@@ -315,6 +332,20 @@ export async function listWebSources(event: H3Event, cityId: string): Promise<We
 
   if (error) throw createError({ statusCode: 500, statusMessage: error.message })
   return ((data as unknown[]) ?? []).map(mapWebSourceRow)
+}
+
+export async function listWebSourcesForDashboard(event: H3Event, cityId: string): Promise<WebSourceDto[]> {
+  const client = await serverSupabaseServiceRole(event)
+  const { data, error } = await queryWebSourcesWith(WEB_SOURCE_LIST_SELECT, WEB_SOURCE_LIST_SELECT_LEGACY, (select) =>
+    client
+      .from('city_web_sources')
+      .select(select)
+      .eq('city_id', cityId)
+      .order('created_at', { ascending: false }),
+  )
+
+  if (error) throw createError({ statusCode: 500, statusMessage: error.message })
+  return ((data as unknown[]) ?? []).map((row) => mapWebSourceRow({ ...row, parsing_rules: null }))
 }
 
 export async function listTelegramSources(event: H3Event, cityId: string): Promise<TelegramSourceDto[]> {

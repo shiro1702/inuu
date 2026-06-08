@@ -10,7 +10,8 @@
     <div v-if="loading" class="text-sm text-gray-600">Загрузка источников...</div>
     <div v-else-if="errorMessage" class="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">{{ errorMessage }}</div>
 
-    <template v-else>
+    <template v-if="!loading || webSources.length || telegramSources.length">
+      <p v-if="refreshing" class="text-xs text-gray-500">Обновляем список…</p>
       <div class="flex flex-wrap items-center justify-between gap-3 rounded border border-gray-100 bg-gray-50 p-3">
         <div class="flex flex-wrap gap-4">
           <label class="inline-flex items-center gap-2 text-sm text-gray-800">
@@ -89,7 +90,7 @@
                   </div>
                   <p v-if="item.lastCrawledAt" class="mt-1 text-[10px] text-gray-400">crawl: {{ formatDate(item.lastCrawledAt) }}</p>
                   <div
-                    v-if="item.parsingStrategy || item.parsingRules"
+                    v-if="item.parsingStrategy || item.parsingRules || item.rulesValidatedAt"
                     class="mt-2 max-w-md rounded border border-gray-100 bg-gray-50 p-2 text-[10px] text-gray-600"
                   >
                     <p v-if="item.parsingStrategy?.page_type" class="font-medium">
@@ -99,7 +100,8 @@
                       </span>
                     </p>
                     <pre v-if="item.parsingRules" class="mt-1 max-h-24 overflow-auto whitespace-pre-wrap">{{ pretty(item.parsingRules) }}</pre>
-                    <p v-if="item.rulesValidatedAt" class="mt-1 text-gray-400">rules OK: {{ formatDate(item.rulesValidatedAt) }}</p>
+                    <p v-else-if="item.rulesValidatedAt" class="mt-1 text-gray-500">rules: настроены · {{ formatDate(item.rulesValidatedAt) }}</p>
+                    <p v-if="item.rulesValidatedAt && item.parsingRules" class="mt-1 text-gray-400">rules OK: {{ formatDate(item.rulesValidatedAt) }}</p>
                     <div class="mt-1 flex flex-wrap gap-1">
                       <button
                         type="button"
@@ -287,6 +289,8 @@
 import { ref, watch } from 'vue'
 
 const props = defineProps<{ citySlug: string }>()
+const { dashboardFetch } = useDashboardFetch()
+const { getCached, fetchIngestSources, invalidate } = useContentAiIngestSources()
 
 type ShopItem = { id: string; slug: string; name: string; isClaimed: boolean }
 type SourceOrg = ShopItem | null
@@ -327,6 +331,7 @@ type TgSource = {
 }
 
 const loading = ref(false)
+const refreshing = ref(false)
 const errorMessage = ref('')
 const prefilterEnabled = ref(true)
 const rejectPastEventsEnabled = ref(true)
@@ -393,39 +398,50 @@ function pretty(value: unknown): string {
   }
 }
 
-async function loadShops() {
-  if (!props.citySlug) return
-  const res = await fetch(`/api/dashboard/manager/cities/${props.citySlug}/shops`)
-  const payload = await res.json() as { ok: boolean; items: ShopItem[] }
-  shops.value = payload.ok ? payload.items : []
+async function ensureShopsLoaded() {
+  if (!props.citySlug || shops.value.length) return
+  const res = await dashboardFetch(`/api/dashboard/manager/cities/${props.citySlug}/ingest-sources?alerts=0&shops=1`)
+  const payload = await res.json() as { ok?: boolean; shops?: ShopItem[] }
+  if (payload.ok && payload.shops) {
+    shops.value = payload.shops
+  }
 }
 
-async function loadSources() {
+function applySourcesPayload(payload: ReturnType<typeof getCached>) {
+  if (!payload) return
+  contextTypes.value = payload.contextTypes
+  webSources.value = payload.webSources as WebSource[]
+  telegramSources.value = payload.telegramSources as TgSource[]
+  prefilterEnabled.value = payload.ingestSettings?.prefilter_enabled !== false
+  rejectPastEventsEnabled.value = payload.ingestSettings?.reject_past_events_enabled !== false
+  scrapingAlerts.value = payload.alerts as ScrapingAlert[]
+}
+
+async function loadSources(options?: { force?: boolean }) {
   if (!props.citySlug) return
-  loading.value = true
+
+  const cached = getCached(props.citySlug)
+  if (cached && !options?.force) {
+    applySourcesPayload(cached)
+  }
+
+  if (!cached) {
+    loading.value = true
+  } else if (options?.force) {
+    refreshing.value = true
+  }
   errorMessage.value = ''
+
   try {
-    const [sourcesRes, alertsRes] = await Promise.all([
-      fetch(`/api/dashboard/manager/cities/${props.citySlug}/ingest-sources`),
-      fetch(`/api/dashboard/manager/cities/${props.citySlug}/ingest-sources/scraping-alerts`),
-      loadShops(),
-    ])
-    const payload = await sourcesRes.json() as any
-    if (!payload.ok) {
-      errorMessage.value = payload.message || 'Не удалось загрузить источники'
-      return
-    }
-    contextTypes.value = payload.contextTypes || []
-    webSources.value = payload.webSources || []
-    telegramSources.value = payload.telegramSources || []
-    prefilterEnabled.value = payload.ingestSettings?.prefilter_enabled !== false
-    rejectPastEventsEnabled.value = payload.ingestSettings?.reject_past_events_enabled !== false
-    const alertsPayload = await alertsRes.json().catch(() => ({}))
-    scrapingAlerts.value = alertsPayload.ok ? alertsPayload.alerts || [] : []
+    const payload = await fetchIngestSources(props.citySlug, { force: options?.force })
+    applySourcesPayload(payload)
   } catch (err: any) {
-    errorMessage.value = err?.message || 'Ошибка загрузки'
+    if (!cached) {
+      errorMessage.value = err?.message || 'Ошибка загрузки'
+    }
   } finally {
     loading.value = false
+    refreshing.value = false
   }
 }
 
@@ -433,7 +449,7 @@ async function saveIngestSettings() {
   if (!props.citySlug) return
   ingestSettingsMessage.value = 'Сохраняем...'
   try {
-    const res = await fetch(`/api/dashboard/manager/cities/${props.citySlug}/content-settings`, {
+    const res = await dashboardFetch(`/api/dashboard/manager/cities/${props.citySlug}/content-settings`, {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
@@ -450,6 +466,7 @@ async function saveIngestSettings() {
 }
 
 function openWebForm(item?: WebSource) {
+  void ensureShopsLoaded()
   webForm.value = {
     id: item?.id || '',
     url: item?.url || '',
@@ -477,7 +494,7 @@ async function saveWebForm() {
   const url = isEdit
     ? `/api/dashboard/manager/cities/${props.citySlug}/ingest-sources/web/${webForm.value.id}`
     : `/api/dashboard/manager/cities/${props.citySlug}/ingest-sources/web`
-  const res = await fetch(url, {
+  const res = await dashboardFetch(url, {
     method: isEdit ? 'PUT' : 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),
@@ -488,18 +505,20 @@ async function saveWebForm() {
     return
   }
   webFormOpen.value = false
-  await loadSources()
+  invalidate(props.citySlug)
+  await loadSources({ force: true })
 }
 
 async function deleteWeb(item: WebSource) {
   if (!confirm(`Удалить ${item.url}?`)) return
-  await fetch(`/api/dashboard/manager/cities/${props.citySlug}/ingest-sources/web/${item.id}`, { method: 'DELETE' })
-  await loadSources()
+  await dashboardFetch(`/api/dashboard/manager/cities/${props.citySlug}/ingest-sources/web/${item.id}`, { method: 'DELETE' })
+  invalidate(props.citySlug)
+  await loadSources({ force: true })
 }
 
 async function testCrawl(item: WebSource) {
   testResultText.value = 'Запуск test crawl (без очереди)...'
-  const res = await fetch(`/api/dashboard/manager/cities/${props.citySlug}/ingest-sources/web/${item.id}/test-crawl`, {
+  const res = await dashboardFetch(`/api/dashboard/manager/cities/${props.citySlug}/ingest-sources/web/${item.id}/test-crawl`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({}),
@@ -509,7 +528,8 @@ async function testCrawl(item: WebSource) {
     errorMessage.value = payload?.statusMessage || 'Test crawl failed'
   }
   testResultText.value = pretty(payload)
-  await loadSources()
+  invalidate(props.citySlug)
+  await loadSources({ force: true })
 }
 
 async function runCrawl(item: WebSource) {
@@ -522,7 +542,7 @@ async function runCrawl(item: WebSource) {
   testResultText.value = 'Ручной запуск парсера (persist)...'
   errorMessage.value = ''
   try {
-    const res = await fetch(`/api/dashboard/manager/cities/${props.citySlug}/ingest-sources/web/${item.id}/run-crawl`, {
+    const res = await dashboardFetch(`/api/dashboard/manager/cities/${props.citySlug}/ingest-sources/web/${item.id}/run-crawl`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ createShadowOrg: true }),
@@ -541,7 +561,8 @@ async function runCrawl(item: WebSource) {
     } else {
       testResultText.value = pretty(payload)
     }
-    await loadSources()
+    invalidate(props.citySlug)
+    await loadSources({ force: true })
   } catch (err: unknown) {
     errorMessage.value = err instanceof Error ? err.message : 'Ошибка запуска'
   } finally {
@@ -550,7 +571,7 @@ async function runCrawl(item: WebSource) {
 }
 
 async function createShadowOrg(item: WebSource) {
-  const res = await fetch(`/api/dashboard/manager/cities/${props.citySlug}/ingest-sources/web/${item.id}/create-shadow-org`, {
+  const res = await dashboardFetch(`/api/dashboard/manager/cities/${props.citySlug}/ingest-sources/web/${item.id}/create-shadow-org`, {
     method: 'POST',
   })
   const payload = await res.json()
@@ -560,12 +581,13 @@ async function createShadowOrg(item: WebSource) {
   } else {
     testResultText.value = pretty(payload)
   }
-  await loadSources()
+  invalidate(props.citySlug)
+  await loadSources({ force: true })
 }
 
 async function resetWebStrategy(item: WebSource) {
   if (!confirm('Сбросить parsing_strategy и parsing_rules для этого источника?')) return
-  const res = await fetch(
+  const res = await dashboardFetch(
     `/api/dashboard/manager/cities/${props.citySlug}/ingest-sources/web/${item.id}/reset-strategy`,
     { method: 'POST' },
   )
@@ -574,12 +596,13 @@ async function resetWebStrategy(item: WebSource) {
     errorMessage.value = err?.statusMessage || 'Не удалось сбросить strategy'
     return
   }
-  await loadSources()
+  invalidate(props.citySlug)
+  await loadSources({ force: true })
 }
 
 async function resetWebRules(webSourceId: string) {
   if (!confirm('Сбросить parsing_rules?')) return
-  const res = await fetch(
+  const res = await dashboardFetch(
     `/api/dashboard/manager/cities/${props.citySlug}/ingest-sources/web/${webSourceId}/reset-rules`,
     { method: 'POST' },
   )
@@ -588,11 +611,12 @@ async function resetWebRules(webSourceId: string) {
     errorMessage.value = err?.statusMessage || 'Не удалось сбросить rules'
     return
   }
-  await loadSources()
+  invalidate(props.citySlug)
+  await loadSources({ force: true })
 }
 
 async function resolveAlert(alert: ScrapingAlert) {
-  const res = await fetch(
+  const res = await dashboardFetch(
     `/api/dashboard/manager/cities/${props.citySlug}/ingest-sources/scraping-alerts/${alert.id}/resolve`,
     { method: 'POST' },
   )
@@ -601,10 +625,12 @@ async function resolveAlert(alert: ScrapingAlert) {
     errorMessage.value = err?.statusMessage || 'Не удалось закрыть alert'
     return
   }
-  await loadSources()
+  invalidate(props.citySlug)
+  await loadSources({ force: true })
 }
 
 function openTgForm(item?: TgSource) {
+  void ensureShopsLoaded()
   tgForm.value = {
     id: item?.id || '',
     sourceKey: item?.sourceKey || '',
@@ -628,7 +654,7 @@ async function saveTgForm() {
   const url = isEdit
     ? `/api/dashboard/manager/cities/${props.citySlug}/ingest-sources/telegram/${tgForm.value.id}`
     : `/api/dashboard/manager/cities/${props.citySlug}/ingest-sources/telegram`
-  const res = await fetch(url, {
+  const res = await dashboardFetch(url, {
     method: isEdit ? 'PUT' : 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),
@@ -639,16 +665,18 @@ async function saveTgForm() {
     return
   }
   tgFormOpen.value = false
-  await loadSources()
+  invalidate(props.citySlug)
+  await loadSources({ force: true })
 }
 
 async function deleteTg(item: TgSource) {
   if (!confirm(`Удалить @${item.sourceKey}?`)) return
-  await fetch(`/api/dashboard/manager/cities/${props.citySlug}/ingest-sources/telegram/${item.id}`, { method: 'DELETE' })
-  await loadSources()
+  await dashboardFetch(`/api/dashboard/manager/cities/${props.citySlug}/ingest-sources/telegram/${item.id}`, { method: 'DELETE' })
+  invalidate(props.citySlug)
+  await loadSources({ force: true })
 }
 
 watch(() => props.citySlug, () => {
-  if (props.citySlug) loadSources()
+  if (props.citySlug) void loadSources()
 }, { immediate: true })
 </script>

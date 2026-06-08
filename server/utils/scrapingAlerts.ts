@@ -57,6 +57,34 @@ export async function insertScrapingAlertIfNew(args: {
   return true
 }
 
+function mapScrapingAlertRow(
+  row: {
+    id: string
+    web_source_id?: string | null
+    event_id?: string | null
+    url: string
+    reason: string
+    snapshot?: string | null
+    created_at: string
+    events?: { slug: string; title: string } | Array<{ slug: string; title: string }> | null
+  },
+  urlById: Map<string, string>,
+): ScrapingAlertDto {
+  const eventRow = Array.isArray(row.events) ? row.events[0] : row.events
+  return {
+    id: String(row.id),
+    webSourceId: row.web_source_id ? String(row.web_source_id) : null,
+    webSourceUrl: row.web_source_id ? urlById.get(String(row.web_source_id)) || null : null,
+    eventId: row.event_id ? String(row.event_id) : null,
+    eventSlug: eventRow?.slug ? String(eventRow.slug) : null,
+    eventTitle: eventRow?.title ? String(eventRow.title) : null,
+    url: String(row.url),
+    reason: String(row.reason),
+    snapshot: row.snapshot ? String(row.snapshot) : null,
+    createdAt: String(row.created_at),
+  }
+}
+
 export async function listOpenScrapingAlerts(
   event: H3Event,
   cityId: string,
@@ -70,81 +98,39 @@ export async function listOpenScrapingAlerts(
   const sourceIds = (sources ?? []).map((s: { id: string }) => s.id)
   const urlById = new Map((sources ?? []).map((s: { id: string; url: string }) => [s.id, s.url]))
 
-  let sourceAlerts: unknown[] = []
-  if (sourceIds.length) {
-    const { data, error: sourceError } = await client
+  const [sourceAlertsResult, eventAlertsResult] = await Promise.all([
+    sourceIds.length
+      ? client
+        .from('scraping_alerts')
+        .select('id,web_source_id,event_id,url,reason,snapshot,created_at')
+        .in('web_source_id', sourceIds)
+        .is('resolved_at', null)
+        .order('created_at', { ascending: false })
+        .limit(100)
+      : Promise.resolve({ data: [], error: null }),
+    client
       .from('scraping_alerts')
-      .select('id,web_source_id,event_id,url,reason,snapshot,created_at')
-      .in('web_source_id', sourceIds)
+      .select('id,web_source_id,event_id,url,reason,snapshot,created_at,events!inner(slug,title,city_id)')
+      .eq('events.city_id', cityId)
       .is('resolved_at', null)
       .order('created_at', { ascending: false })
-      .limit(100)
-    if (sourceError) return []
-    sourceAlerts = data ?? []
+      .limit(50),
+  ])
+
+  if (sourceAlertsResult.error && eventAlertsResult.error) return []
+
+  const sourceAlerts = sourceAlertsResult.error ? [] : (sourceAlertsResult.data ?? [])
+  const eventAlerts = eventAlertsResult.error ? [] : (eventAlertsResult.data ?? [])
+
+  const merged = new Map<string, ScrapingAlertDto>()
+  for (const row of [...sourceAlerts, ...eventAlerts]) {
+    const mapped = mapScrapingAlertRow(row as any, urlById)
+    merged.set(mapped.id, mapped)
   }
 
-  const { data: cityEvents } = await client.from('events').select('id').eq('city_id', cityId)
-  const cityEventIds = (cityEvents ?? []).map((row: { id: string }) => String(row.id))
-
-  let eventAlerts: unknown[] = []
-  if (cityEventIds.length) {
-    const { data, error: eventError } = await client
-      .from('scraping_alerts')
-      .select('id,web_source_id,event_id,url,reason,snapshot,created_at')
-      .in('event_id', cityEventIds)
-      .is('resolved_at', null)
-      .order('created_at', { ascending: false })
-      .limit(50)
-    if (eventError) return []
-    eventAlerts = data ?? []
-  }
-
-  const eventIds = [
-    ...new Set(
-      (eventAlerts ?? [])
-        .map((row: { event_id?: string }) => row.event_id)
-        .filter(Boolean)
-        .map(String),
-    ),
-  ]
-  const eventsById = new Map<string, { slug: string; title: string }>()
-  if (eventIds.length) {
-    const { data: events } = await client
-      .from('events')
-      .select('id,slug,title')
-      .eq('city_id', cityId)
-      .in('id', eventIds)
-    for (const ev of events ?? []) {
-      eventsById.set(String((ev as { id: string }).id), {
-        slug: String((ev as { slug: string }).slug),
-        title: String((ev as { title: string }).title),
-      })
-    }
-  }
-
-  const merged = [...(sourceAlerts ?? []), ...(eventAlerts ?? [])]
-    .filter((row: { event_id?: string }) => {
-      if (!row.event_id) return true
-      const ev = eventsById.get(String(row.event_id))
-      return Boolean(ev)
-    })
+  return Array.from(merged.values())
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     .slice(0, 100)
-
-  return merged.map((row: any) => {
-    const eventMeta = row.event_id ? eventsById.get(String(row.event_id)) : null
-    return {
-      id: String(row.id),
-      webSourceId: row.web_source_id ? String(row.web_source_id) : null,
-      webSourceUrl: row.web_source_id ? urlById.get(String(row.web_source_id)) || null : null,
-      eventId: row.event_id ? String(row.event_id) : null,
-      eventSlug: eventMeta?.slug || null,
-      eventTitle: eventMeta?.title || null,
-      url: String(row.url),
-      reason: String(row.reason),
-      snapshot: row.snapshot ? String(row.snapshot) : null,
-      createdAt: String(row.created_at),
-    }
-  })
 }
 
 export async function resolveScrapingAlert(args: {
