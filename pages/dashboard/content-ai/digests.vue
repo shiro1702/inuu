@@ -60,6 +60,8 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
 
+definePageMeta({ layout: 'dashboard-content-ai' })
+
 const { dashboardFetch } = useDashboardFetch()
 const { selectedCitySlug } = useContentAiCity()
 

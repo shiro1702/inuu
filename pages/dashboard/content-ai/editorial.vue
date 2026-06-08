@@ -228,10 +228,13 @@
       </div>
     </div>
   </article>
+  <p v-else class="text-sm text-gray-500">Выберите город.</p>
 </template>
 
 <script setup lang="ts">
 import { nextTick, onMounted, reactive, ref, watch } from 'vue'
+
+definePageMeta({ layout: 'dashboard-content-ai' })
 
 const { dashboardFetch } = useDashboardFetch()
 const { selectedCitySlug, selectedCityName } = useContentAiCity()

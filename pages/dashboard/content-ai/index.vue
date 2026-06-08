@@ -91,6 +91,8 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref, watch } from 'vue'
 
+definePageMeta({ layout: 'dashboard-content-ai' })
+
 const { dashboardFetch } = useDashboardFetch()
 const { selectedCitySlug } = useContentAiCity()
 

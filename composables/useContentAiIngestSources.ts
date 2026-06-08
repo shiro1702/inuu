@@ -9,7 +9,6 @@ export type IngestSourcesPayload = {
   alerts: unknown[]
 }
 
-const cache = useState<Record<string, IngestSourcesPayload>>('dashboard-content-ai-ingest-sources-cache', () => ({}))
 const inflight = new Map<string, Promise<IngestSourcesPayload | null>>()
 
 function normalizePayload(raw: Record<string, unknown>): IngestSourcesPayload {
@@ -26,6 +25,7 @@ function normalizePayload(raw: Record<string, unknown>): IngestSourcesPayload {
 
 export function useContentAiIngestSources() {
   const { dashboardFetch } = useDashboardFetch()
+  const cache = useState<Record<string, IngestSourcesPayload>>('dashboard-content-ai-ingest-sources-cache', () => ({}))
 
   function getCached(citySlug: string): IngestSourcesPayload | null {
     return cache.value[citySlug] ?? null

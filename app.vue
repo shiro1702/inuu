@@ -101,7 +101,7 @@ const isDashboardShell = computed(() => {
   const routePath = typeof route.path === 'string' ? route.path : ''
   if (routePath.startsWith('/dashboard') || routePath.startsWith('/platform')) return true
   const layout = routeLayoutName.value
-  return layout === 'dashboard' || layout === 'dashboard-auth'
+  return layout === 'dashboard' || layout === 'dashboard-auth' || layout === 'dashboard-content-ai'
 })
 
 const showLegacyHeader = computed(() => {

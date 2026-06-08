@@ -4,5 +4,7 @@
 </template>
 
 <script setup lang="ts">
+definePageMeta({ layout: 'dashboard-content-ai' })
+
 const { selectedCitySlug } = useContentAiCity()
 </script>
