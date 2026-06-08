@@ -233,17 +233,65 @@ function emitBuild() {
   })
 }
 
+const CAROUSEL_HIDDEN_TAG_GROUPS = new Set(['content-format'])
+
+type ContentTagsResponse = {
+  ok: boolean
+  items?: VibeTag[]
+  groups?: Array<{ id: string; items: VibeTag[] }>
+}
+
+function buildManagerContentTagsUrl(scope?: 'events') {
+  const base = `/api/dashboard/manager/cities/${props.citySlug}/content-tags`
+  return scope ? `${base}?scope=${scope}` : base
+}
+
+function pickAfishaTagsForCarousel(
+  items: VibeTag[],
+  groups: Array<{ id: string; items: VibeTag[] }>,
+): VibeTag[] {
+  const vibeItems = items.filter((t) => t.tagGroup === 'vibes')
+  if (vibeItems.length) return vibeItems
+
+  const vibeFromGroups = groups
+    .filter((g) => g.id === 'vibes')
+    .flatMap((g) => g.items)
+  if (vibeFromGroups.length) return vibeFromGroups
+
+  const fromGroups = groups
+    .filter((g) => !CAROUSEL_HIDDEN_TAG_GROUPS.has(g.id))
+    .flatMap((g) => g.items)
+  if (fromGroups.length) return fromGroups
+
+  return items.filter((t) => t.tagGroup !== 'content-format')
+}
+
+async function fetchManagerContentTags(scope?: 'events'): Promise<ContentTagsResponse | null> {
+  try {
+    return await $fetch<ContentTagsResponse>(buildManagerContentTagsUrl(scope))
+  } catch {
+    return null
+  }
+}
+
 async function loadVibeTags() {
   if (!props.citySlug) return
-  try {
-    const res = await $fetch<{ ok: boolean; items?: VibeTag[] }>(
-      `/api/dashboard/manager/cities/${props.citySlug}/content-tags`,
+
+  const scoped = await fetchManagerContentTags('events')
+  let picked = pickAfishaTagsForCarousel(
+    scoped?.ok && scoped.items?.length ? scoped.items : [],
+    scoped?.ok && scoped.groups?.length ? scoped.groups : [],
+  )
+
+  if (!picked.length) {
+    const full = await fetchManagerContentTags()
+    picked = pickAfishaTagsForCarousel(
+      full?.ok && full.items?.length ? full.items : [],
+      full?.ok && full.groups?.length ? full.groups : [],
     )
-    const items = res?.ok && res.items?.length ? res.items : []
-    vibeTags.value = items.filter((t) => t.tagGroup === 'vibes')
-  } catch {
-    vibeTags.value = []
   }
+
+  vibeTags.value = picked
 }
 
 async function loadCuratedLists() {
@@ -323,6 +371,7 @@ function onListChange() {
 watch(
   () => props.citySlug,
   async () => {
+    vibeTagFilters.value = []
     if (props.mode === 'events') {
       await loadVibeTags()
       await loadEventPool()
@@ -347,6 +396,16 @@ watch(
       await loadCuratedLists()
     }
   },
+)
+
+watch(
+  vibeTagFilters,
+  () => {
+    if (props.mode === 'events' && props.citySlug) {
+      void loadEventPool()
+    }
+  },
+  { deep: true },
 )
 
 defineExpose({ reload: loadEventPool })
