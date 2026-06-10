@@ -20,16 +20,23 @@
 
 ---
 
-## Матрица вайб → тема
+## Матрица вайб → тема (реализовано)
 
-| Vibe (пример) | Tailwind gradient | Шрифт | Декор |
-|---------------|-------------------|-------|-------|
-| romance / wine | `from-rose-950 via-purple-900 to-slate-950` | serif | glow, тонкая рамка |
-| underground / techno | `from-zinc-950 via-stone-900 to-black` | mono | неон border, noise |
-| vegan / eco | `from-emerald-950 via-green-900 to-stone-950` | sans | скругления, иконки |
-| party | `from-violet-600 via-fuchsia-600 to-indigo-900` | display black | glitch |
+**Канон:** `utils/carouselVibeTheme.ts` · поле слайда `gradient` · UI-селект в `CarouselStudio`.
 
-Хранить в `city_content_tags.metadata.theme` или отдельный JSON seed.
+| Ключ `gradient` | Алиасы тегов | Tailwind gradient | Акцент border |
+|-----------------|--------------|-------------------|---------------|
+| `party` | party, active | `from-violet-600 via-fuchsia-600 to-indigo-900` | fuchsia |
+| `nightlife` | nightlife, night, late-night, loud, drive | = romance (rose/purple) | rose |
+| `romance` | romance, date, wine | `from-rose-950 via-purple-900 to-slate-950` | rose |
+| `underground` | underground, speakeasy, techno | `from-zinc-950 via-stone-900 to-black` | cyan glow |
+| `vegan` | vegan, eco | `from-emerald-950 via-green-900 to-stone-950` | emerald |
+| `tourism` | tourism, chill, zen | = vegan gradient | emerald |
+
+`resolveCarouselGradientFromTags(topic_tags)` — для сборки из событий/подборок.  
+Default fallback: `party`.
+
+Шаблоны с **собственной палитрой** (не только vibe): `stockholm-calm`, `kyoto-tea`, `parisian-atelier`, `editorial-bold`, `event-digest` — фон зашит в компонентах; vibe gradient используется как fallback без фото.
 
 ---
 
@@ -49,16 +56,26 @@ Groq из [34](./34-groq-editorial-content-multiplier.md) разбивает т�
 
 ---
 
-## Библиотека шаблонов
+## Библиотека шаблонов (реализовано в коде)
 
-| ID | Название | Стиль |
-|----|----------|-------|
-| `editorial-gloss` | Глянец | Serif, пастель, рамки |
-| `acid-brutal` | Кислотный брутализм | Mono, неон, шум |
-| `minimal-ios` | Минимал | Glassmorphism, Inter |
-| `split-media` | Сплит | 50/50 фото + текст |
+**Канон:** `utils/carouselTemplates.ts` · `types/editorialCarousel.ts` · `CarouselSlideRenderer.vue`.
 
-Vue: `<CarouselSlide :template="id" :slide="data" />` — dynamic component.
+Каждый шаблон — **тройка** Vue-компонентов `Cover` / `Body` / `Outro` + `chromeVariant` (`dark` | `light`) для шапки/футера (`CarouselSlideChrome`).
+
+| ID | UI label | Chrome | Визуальный характер | Шрифты / палитра (Tailwind) |
+|----|----------|--------|---------------------|------------------------------|
+| `minimal-ios` | Minimal iOS | dark | Фото на весь экран + градиент-оверлей, крупный заголовок внизу | `font-bold`, vibe gradient; default template |
+| `photo-card` | Фото-карточка | dark | Full-bleed фото, заголовок в нижней зоне | sans, белый текст на градиенте |
+| `editorial-bold` | Редакционный | light | Светлый фон `#f4efe6`, фото в рамке, serif-заголовок | `font-serif`, stone-900 |
+| `city-poster` | Городская афиша | dark | Белая рамка 10px, бейдж «Афиша», uppercase black | `font-black uppercase`, poster frame |
+| `stockholm-calm` | Stockholm Calm | light | Овсяный фон `#F4F0EA`, фото в rounded card, «Issue» mono | `font-sans` + `font-light`, сканди-минимализм |
+| `kyoto-tea` | Kyoto Tea | light | Wabi-sabi: `#FAF9F6`, serif, grayscale фото, тонкая линия | `font-serif` + `font-mono` labels |
+| `parisian-atelier` | Parisian Atelier | light | Крем `#FFFDF9`, паспарту-border, «l'art de vivre» | `font-serif`, журнальный шик |
+| `event-digest` | Дайджест афиши | dark | Stories-стиль: чёрная плашка, фиолетовый бейдж даты `#8A63D2`, оранжевый pin | uppercase black, `@city` handle |
+
+Vue: `CarouselSlideRenderer` выбирает компонент по `slide.role` + `templateId`.
+
+**Не реализовано** (были в ранней спеке 03.06): `editorial-gloss`, `acid-brutal`, `split-media` — заменены расширенным набором выше.
 
 ---
 
@@ -139,14 +156,38 @@ GSAP timeline → html-to-image per frame → WebCodecs VideoEncoder → mp4-mux
 
 ---
 
+## Статус реализации (аудит кода, 10.06.2026)
+
+| Область | Статус | Где в репо |
+|---------|--------|------------|
+| 8 шаблонов × Cover/Body/Outro | ✅ | `components/editorial/carousel/templates/*` |
+| Vibe gradients (6 ключей) | ✅ | `utils/carouselVibeTheme.ts` |
+| Aspects 4:5 + 9:16 | ✅ | `types/editorialCarousel.ts`, `CAROUSEL_EXPORT_SIZES` |
+| PNG export (`html-to-image`) | ✅ | `utils/renderSlideToPng.ts` |
+| Live carousel на сайте | ✅ | `EditorialCarousel.vue` → `/guides/[slug]` |
+| Dashboard Carousel Studio | ✅ | `/dashboard/carousel-studio`, `CarouselStudio.vue` |
+| Сборка из событий / подборок | ✅ | `buildCarouselFromEvents.ts`, `CarouselEventPicker.vue` |
+| Парсер Groq `instagram_carousel` | ✅ | `parseInstagramCarousel.ts` |
+| Сохранение `metadata.carousel` | ✅ | migration `051`, API `carousel.put` |
+| QR на outro | ✅ | `carouselQrCode.ts`, `CarouselOutroQr.vue` |
+| Stories safe zone 9:16 | ✅ | `utils/carouselSafeZone.ts` |
+| Story Studio PNG (reuse templates) | ✅ | `/dashboard/story-studio` |
+| Watermark / brand chrome | ✅ | `CarouselSlideChrome`, `carouselBrandLogo.ts` |
+| Groq one-click raw text → JSON | ❌ | волна 4b |
+| Share link `generated_carousels` | ❌ | волна 4a |
+| Mobile IG editor UX | ❌ | волна 4a (сейчас desktop split) |
+| Стикеры / draggable text | ❌ | волна 4c |
+| TG send media group | ❌ | волна 4d |
+| Client MP4 (WebCodecs) | ❌ | backlog 3f |
+
 ## Критерии готовности (backlog)
 
-- [ ] 4 Vue-шаблона Cover/Body/Outro
-- [ ] Vibe → CSS vars mapping
-- [ ] Live carousel на `/guides/[slug]`
-- [ ] Client PNG export (admin Mini App)
+- [x] 8 Vue-шаблонов Cover/Body/Outro
+- [x] Vibe → gradient mapping
+- [x] Live carousel на `/guides/[slug]`
+- [x] Client PNG export (dashboard Carousel Studio)
 - [ ] Client MP4 1080×1920 (VideoStudio)
-- [ ] Watermark по template rules
+- [x] Brand chrome / watermark на слайдах
 
 ---
 

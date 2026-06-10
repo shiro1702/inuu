@@ -2,6 +2,7 @@ import { createError, defineEventHandler, readBody } from 'h3'
 import { resolveManagerCityScopeOrThrow } from '~/server/utils/managerCityAccess'
 import { saveEditorialPostCarouselMetadata } from '~/server/utils/editorialCarouselSave'
 import type { EditorialCarouselMetadata } from '~/types/editorialCarousel'
+import { normalizeCarouselTemplateId } from '~/utils/carouselTemplates'
 
 type Body = {
   carousel?: EditorialCarouselMetadata
@@ -25,7 +26,7 @@ export default defineEventHandler(async (event) => {
     cityId: scope.cityId,
     postId,
     carousel: {
-      template_id: 'minimal-ios',
+      template_id: normalizeCarouselTemplateId(carousel.template_id),
       aspect: carousel.aspect === '9:16' ? '9:16' : '4:5',
       slides: carousel.slides,
     },

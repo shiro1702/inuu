@@ -46,15 +46,15 @@
 
 **Волна 3d закрыта:** TASK-025–027 → архив. Runbook: [WAVE_3D_README.md](../runbooks/WAVE_3D_README.md).
 
-**Следующая волна:** [3e retention в боте](#волна-3e--retention-и-editorial-push) · [3f+ бэклог](#бэклог-после-3e-не-активно).
+**Следующая волна:** [3e retention в боте](#волна-3e--retention-и-editorial-push) · ~~4a–4d Carousel Editor~~ ✅ закрыта.
 
-Индексы брейнштормов: [01.06.2026](../../fix/brainstorm/01.06.2026.md), [02.05.2026](../../fix/brainstorm/02.05.2026.md), [03.06.2026](../../fix/brainstorm/03.06.2026.md).
+Индексы брейнштормов: [01.06.2026](../../fix/brainstorm/01.06.2026.md), [02.05.2026](../../fix/brainstorm/02.05.2026.md), [03.06.2026](../../fix/brainstorm/03.06.2026.md), [10.06.2026](../../fix/brainstorm/10.06.2026.md).
 
 ---
 
 ## Активные задачи
 
-> **0/3** — слоты свободны. Старт 3e: **TASK-028**.
+> **0/3** — слоты свободны. Волна **4a–4d** закрыта (TASK-031–041).
 
 ---
 
@@ -163,7 +163,180 @@
 
 ---
 
-## Бэклог после 3e (не активно)
+## Волна 4a–4d — Carousel Editor SaaS
+
+**Статус волны:** ✅ закрыта 10.06.2026 (TASK-031–041).
+
+**После 3e.** Интерактивный mobile-first редактор каруселей (Instagram UX) поверх PNG MVP волны 3d.
+
+**Runbook:** [WAVE_4A_CAROUSEL_EDITOR.md](../runbooks/WAVE_4A_CAROUSEL_EDITOR.md) · **Спеки:** [38](../features/content/38-carousel-editor-saas.md), [39](../features/content/39-carousel-canvas-architecture.md), [40](../features/content/40-carousel-assets-and-stickers.md) · **Брейншторм:** [10.06.2026](../../fix/brainstorm/10.06.2026.md).
+
+| Волна | Задачи | Фокус |
+|-------|--------|-------|
+| **4a** | TASK-031–033 | Share link, style packs, mobile shell |
+| **4b** | TASK-034–036 | Groq generate, подборки, preset images |
+| **4c** | TASK-037–039 | Flow/absolute canvas, templates, stickers |
+| **4d** | TASK-040–041 | Афиши 9:16, TG send + queue |
+
+**Порядок:** 031 → 032 → 033 → 034 → … → 041 (4a перед 4b; 4c можно частично параллелить с 4b после 033).
+
+---
+
+### TASK-031 · `generated_carousels` + share link + persist
+
+- **Статус:** `done` (архив)
+- **Размер:** M
+- **Матрица:** §6 · Carousel Editor: share link · persist черновика
+- **Цель:** сохранять проект карусели в БД и делиться ссылкой на редактирование; не терять черновик при перезагрузке.
+- **Спеки:** [38](../features/content/38-carousel-editor-saas.md)
+- **In scope:** migration `generated_carousels`; API CRUD; route `/dashboard/carousel/edit/[id]`; Pinia + persistedstate; кнопка «Поделиться».
+- **Out of scope:** Groq generate; стикеры; TG send.
+- **Критерии готовности:**
+  - [x] Save/load JSON слайдов по UUID
+  - [x] Share URL открывает тот же state
+  - [x] Reload страницы не сбрасывает локальный черновик
+
+---
+
+### TASK-032 · Style packs first / middle / last
+
+- **Статус:** `done` (закрыто в 3d — **8 шаблонов** в коде, не 3 из брейншторма 10.06)
+- **Размер:** M
+- **Матрица:** §6 · style packs first/middle/last
+- **Цель:** визуальные паки с разными шаблонами обложки, контента и CTA.
+- **Спеки:** [35](../features/content/35-html-carousel-video-studio.md) · [38](../features/content/38-carousel-editor-saas.md)
+- **Реализовано:** `minimal-ios`, `photo-card`, `editorial-bold`, `city-poster`, `stockholm-calm`, `kyoto-tea`, `parisian-atelier`, `event-digest` — `CarouselSlideRenderer.vue`
+- **Критерии готовности:**
+  - [x] Смена theme перерисовывает cover/body/outro
+  - [x] Export PNG для всех pack
+- **Заметки:** в 4a не переделывать — при необходимости только **+1** pack (`acid-brutal`) или vibe-тюнинг
+
+---
+
+### TASK-033 · Mobile preview shell (Instagram UX)
+
+- **Статус:** `done` (архив)
+- **Размер:** M
+- **Матрица:** §6 · mobile preview IG UX
+- **Цель:** mobile-first оболочка редактора: холст, свайп слайдов, bottom sheet «редактировать слайд».
+- **Спеки:** [38](../features/content/38-carousel-editor-saas.md)
+- **In scope:** layout header/canvas/thumb-zone/tab-bar; prev/next 50/50; edit slide sheet; `/dev/carousel-editor`.
+- **Out of scope:** pinch стикеров; Groq sheet; haptic.
+- **Критерии готовности:**
+  - [x] На 375px ширине всё управление в thumb-zone
+  - [x] Листание 3+ слайдов без перезагрузки
+
+---
+
+### TASK-034 · Groq: сырой текст → карусель
+
+- **Статус:** `done` (архив)
+- **Размер:** M
+- **Матрица:** §6 · Groq сырой текст → карусель
+- **Спеки:** [38](../features/content/38-carousel-editor-saas.md)
+- **In scope:** `POST /api/ai/carousel/generate`; промпт → slides JSON; UI в dashboard.
+- **Out of scope:** template fill; sticker intents.
+- **Критерии готовности:**
+  - [x] Текст анонса → 3–5 слайдов в редакторе за один запрос
+
+---
+
+### TASK-035 · Подборка событий / текста → карусель
+
+- **Статус:** `done` (архив)
+- **Размер:** M
+- **Матрица:** §6 · Groq подборка → карусель
+- **Спеки:** [38](../features/content/38-carousel-editor-saas.md)
+- **In scope:** чекбоксы events; режим «текст-каша»; Groq carousel JSON.
+- **Out of scope:** auto publish в curated_list.
+- **Критерии готовности:**
+  - [x] 3 события из БД → карусель с обложкой и CTA
+
+---
+
+### TASK-036 · Preset images + `image_tags` matcher
+
+- **Статус:** `done` (архив)
+- **Размер:** M
+- **Матрица:** §6 · медиатека пресетов
+- **Спеки:** [40](../features/content/40-carousel-assets-and-stickers.md)
+- **In scope:** Storage folders; `carousel_preset_images`; matcher по тегам Groq.
+- **Out of scope:** Unsplash API.
+- **Критерии готовности:**
+  - [x] У каждого слайда с `image_tags` подставляется фон из presets
+
+---
+
+### TASK-037 · Flow + absolute canvas (dual-pass)
+
+- **Статус:** `done` (архив)
+- **Размер:** L
+- **Матрица:** §6 · Flow + Absolute canvas
+- **Спеки:** [39](../features/content/39-carousel-canvas-architecture.md)
+- **In scope:** JSON v2; flow stack; satellites; virtual canvas; anchor flow/canvas.
+- **Out of scope:** full layers panel (Figma mode).
+- **Критерии готовности:**
+  - [x] Длинный заголовок не наезжает на description (flow)
+  - [x] Стикер с anchor=flow двигается с title
+
+---
+
+### TASK-038 · User templates + Groq fill
+
+- **Статус:** `done` (архив)
+- **Размер:** M
+- **Матрица:** §6 · user_templates · Groq + шаблон
+- **Спеки:** [38](../features/content/38-carousel-editor-saas.md)
+- **In scope:** `user_templates` CRUD; save/apply; Groq blind JSON copy.
+- **Out of scope:** marketplace шаблонов.
+- **Критерии готовности:**
+  - [x] Сохранить дизайн → apply к новому тексту → layout сохранён
+
+---
+
+### TASK-039 · Sticker library + canvas drag
+
+- **Статус:** `done` (архив)
+- **Размер:** M
+- **Матрица:** §6 · стикеры · Groq автоподбор стикеров
+- **Спеки:** [40](../features/content/40-carousel-assets-and-stickers.md)
+- **In scope:** `stickers` seed 18; bottom sheet; drag; Groq sticker_intents matcher.
+- **Out of scope:** SVG recolor UI.
+- **Критерии готовности:**
+  - [x] Добавить стикер с sheet → drag на холсте
+  - [x] Groq предлагает ≥1 стикер по контексту слайда
+
+---
+
+### TASK-040 · Афиши и посты (aspect ratios)
+
+- **Статус:** `done` (архив)
+- **Размер:** M
+- **Матрица:** §6 · генератор афиш/постов
+- **Спеки:** [38](../features/content/38-carousel-editor-saas.md)
+- **In scope:** `project_type` post/story/cover; aspects 1:1, 4:5, 9:16, 16:9; `telegram_post_text`.
+- **Out of scope:** отдельный продуктовый landing.
+- **Критерии готовности:**
+  - [x] Один слайд 9:16 экспортируется как афиша
+  - [x] Кнопка «Скопировать текст для TG»
+
+---
+
+### TASK-041 · Отправка карусели в Telegram
+
+- **Статус:** `done` (архив)
+- **Размер:** M
+- **Матрица:** §6 · отправка в TG
+- **Спеки:** [38](../features/content/38-carousel-editor-saas.md)
+- **In scope:** кнопка рядом с PNG export; dropdown ЛС/mod chat; `telegram_queue` worker; media group.
+- **Out of scope:** новый бот (reuse moderation bot).
+- **Критерии готовности:**
+  - [x] Manager: PNG album в moderation chat
+  - [x] Partner: только ЛС
+
+---
+
+## Бэклог после 4d (не активно)
 
 | ID / волна | Фокус | Матрица | Спека |
 |------------|--------|---------|-------|
@@ -171,6 +344,7 @@
 | 3f | Карусели в TG по вайбам (media group) | §7 | [36](../features/content/36-bot-vibes-editorial-delivery.md) |
 | TASK-017 | Venue announcements из ingest | §4 | [37](../features/content/37-ingest-editorial-routing.md) |
 | — | Cross-platform Share | §2 | [28](../features/content/28-omnichannel-share-and-tma-funnel.md) |
+| — | Unsplash fallback для `image_tags` | §6 | [38](../features/content/38-carousel-editor-saas.md) |
 
 ---
 
@@ -200,7 +374,8 @@
 | TASK-025 | HTML-шаблоны слайдов + PNG-рендер | 04.06.2026 | `components/editorial/carousel/`, `html-to-image`, `/dev/carousel-render` |
 | TASK-026 | Карусель metadata + сайт + export | 04.06.2026 | `051_editorial_posts_metadata.sql`, `EditorialCarousel.vue`, `parseInstagramCarousel.ts` |
 | TASK-027 | Сторис PNG → story_slides | 04.06.2026 | `/dashboard/story-studio`, `story-slide.upload`, `publish_story` |
+| TASK-031–041 | Carousel Editor SaaS (волны 4a–4d) | 10.06.2026 | `052–056` migrations, `/dashboard/carousel/edit/[id]`, `components/carousel-editor/` |
 
 ---
 
-**Последнее обновление:** 04.06.2026 · активных: **0** · текущая волна: **3e** (TASK-028–030)
+**Последнее обновление:** 10.06.2026 · активных: **0** · закрыта: **4a–4d** (TASK-031–041) · следующая: **3e** (TASK-028–030) или backlog 3f

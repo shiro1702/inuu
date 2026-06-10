@@ -1,10 +1,23 @@
 <template>
   <div class="space-y-6">
     <header class="space-y-2">
-      <h1 class="text-2xl font-bold text-gray-900">Карусель для соцсетей</h1>
-      <p class="text-sm text-gray-600">
-        Редактор слайдов Cover → Body → Outro, превью и экспорт PNG (4:5 или 9:16).
-      </p>
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900">Карусель для соцсетей</h1>
+          <p class="text-sm text-gray-600">
+            Редактор слайдов Cover → Body → Outro, превью и экспорт PNG (4:5 или 9:16).
+          </p>
+        </div>
+        <button
+          v-if="selectedCitySlug"
+          type="button"
+          class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white"
+          :disabled="creatingProject"
+          @click="createShareableProject"
+        >
+          {{ creatingProject ? '…' : 'Новый проект + share link' }}
+        </button>
+      </div>
     </header>
 
     <div v-if="loadingCities" class="text-sm text-gray-500">Загрузка городов…</div>
@@ -92,6 +105,8 @@ const eventsCoverTitle = ref('')
 const cityTimezone = ref('Asia/Irkutsk')
 const activeListSlug = ref('')
 const studioKey = ref('manual-0')
+const creatingProject = ref(false)
+const router = useRouter()
 
 const postId = computed(() => String(route.query.post || '').trim())
 const submissionId = computed(() => String(route.query.submission || '').trim())
@@ -367,6 +382,25 @@ watch(defaultEventsCoverTitle, (title) => {
     eventsCoverTitle.value = title
   }
 })
+
+async function createShareableProject() {
+  const city = selectedCitySlug.value
+  if (!city) return
+  creatingProject.value = true
+  try {
+    const res = await $fetch<{ ok: boolean; project: { id: string } }>('/api/dashboard/carousel', {
+      method: 'POST',
+      body: { city_slug: city, title: eventsCoverTitle.value || `Карусель ${selectedCityName.value}` },
+    })
+    if (res?.project?.id) {
+      await router.push(`/dashboard/carousel/edit/${res.project.id}`)
+    }
+  } catch (err: unknown) {
+    loadError.value = err instanceof Error ? err.message : 'Не удалось создать проект'
+  } finally {
+    creatingProject.value = false
+  }
+}
 
 onMounted(async () => {
   if (postId.value) sourceKind.value = 'article'

@@ -76,7 +76,15 @@ Seed: `supabase/migrations/019_inuu_seed_ulan_ude.sql`. Редакция как 
 | [35-html-carousel-video-studio.md](./35-html-carousel-video-studio.md) | HTML-карусели, шаблоны, client-side video |
 | [36-bot-vibes-editorial-delivery.md](./36-bot-vibes-editorial-delivery.md) | Карусели editorial по вайбам, онбординг, opt-out |
 
-Индекс сырого лога: [fix/brainstorm/30.05.2026.md](../../../fix/brainstorm/30.05.2026.md), [31.05.2026.md](../../../fix/brainstorm/31.05.2026.md), [01.06.2026.md](../../../fix/brainstorm/01.06.2026.md), [02.05.2026.md](../../../fix/brainstorm/02.05.2026.md), [03.06.2026.md](../../../fix/brainstorm/03.06.2026.md).
+### Из брейншторма 10.06.2026
+
+| Файл | Тема |
+|------|------|
+| [38-carousel-editor-saas.md](./38-carousel-editor-saas.md) | Carousel Editor SaaS: mobile UX, Groq, share, templates, TG |
+| [39-carousel-canvas-architecture.md](./39-carousel-canvas-architecture.md) | Flow/absolute холст, якоря, virtual canvas, dual-pass render |
+| [40-carousel-assets-and-stickers.md](./40-carousel-assets-and-stickers.md) | Шрифты, стикеры, пресеты фонов |
+
+Индекс сырого лога: [fix/brainstorm/30.05.2026.md](../../../fix/brainstorm/30.05.2026.md), [31.05.2026.md](../../../fix/brainstorm/31.05.2026.md), [01.06.2026.md](../../../fix/brainstorm/01.06.2026.md), [02.05.2026.md](../../../fix/brainstorm/02.05.2026.md), [03.06.2026.md](../../../fix/brainstorm/03.06.2026.md), [10.06.2026.md](../../../fix/brainstorm/10.06.2026.md).
 
 ## Связанные спеки
 

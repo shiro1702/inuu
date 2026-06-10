@@ -139,6 +139,20 @@
 | [x] | Cron авто-черновики дайджестов (праздники, ⭐4–5) | 3 | P2 | — | [14-digests-curated-admin-smm.md](../features/content/14-digests-curated-admin-smm.md) |
 | [x] | Stories города на главной (city stories API → UI) | 3 | P1 | выс | [04-features-priority.md](../04-features-priority.md) |
 | [x] | HTML carousel studio (шаблоны Cover/Body/CTA) | 4 | P2 | сред | [35-html-carousel-video-studio.md](../features/content/35-html-carousel-video-studio.md) |
+| [x] | Carousel Editor: share link (`generated_carousels`) | 3 | P1 | — | [38-carousel-editor-saas.md](../features/content/38-carousel-editor-saas.md), [10.06.2026](../../fix/brainstorm/10.06.2026.md) |
+| [x] | Carousel Editor: style packs first/middle/last (8 шаблонов) | 3 | P1 | — | [35-html-carousel-video-studio.md](../features/content/35-html-carousel-video-studio.md) |
+| [x] | Carousel Editor: mobile preview (IG UX, bottom sheets) | 4 | P1 | сред | [38-carousel-editor-saas.md](../features/content/38-carousel-editor-saas.md) |
+| [x] | Carousel Editor: persist черновика (Pinia + localStorage) | 2 | P1 | — | [38-carousel-editor-saas.md](../features/content/38-carousel-editor-saas.md) |
+| [x] | Groq: сырой текст → карусель за 1 клик | 3 | P1 | — | [38-carousel-editor-saas.md](../features/content/38-carousel-editor-saas.md) |
+| [x] | Groq: подборка событий/текста → карусель | 3 | P1 | — | [38-carousel-editor-saas.md](../features/content/38-carousel-editor-saas.md) |
+| [x] | Медиатека пресетов (cities / vibes / places) | 3 | P1 | — | [40-carousel-assets-and-stickers.md](../features/content/40-carousel-assets-and-stickers.md) |
+| [x] | Стикеры: библиотека + drag на холсте | 3 | P1 | — | [40-carousel-assets-and-stickers.md](../features/content/40-carousel-assets-and-stickers.md) |
+| [x] | Groq автоподбор стикеров по тегам | 3 | P2 | — | [40-carousel-assets-and-stickers.md](../features/content/40-carousel-assets-and-stickers.md) |
+| [x] | Пользовательские шаблоны каруселей (`user_templates`) | 4 | P2 | выс | [38-carousel-editor-saas.md](../features/content/38-carousel-editor-saas.md) |
+| [x] | Groq + шаблон: semantic roles / JSON fill | 3 | P1 | — | [38-carousel-editor-saas.md](../features/content/38-carousel-editor-saas.md) |
+| [x] | Flow + Absolute canvas (якоря, z-index) | 4 | P2 | — | [39-carousel-canvas-architecture.md](../features/content/39-carousel-canvas-architecture.md) |
+| [x] | Генератор афиш/постов (1 слайд, aspect ratios) | 3 | P2 | сред | [38-carousel-editor-saas.md](../features/content/38-carousel-editor-saas.md) |
+| [x] | Отправка карусели в TG (ЛС + mod chat, media group) | 3 | P1 | сред | [38-carousel-editor-saas.md](../features/content/38-carousel-editor-saas.md) |
 | [ ] | Client-side video render (WebCodecs + GSAP) | 5 | P3 | — | [35-html-carousel-video-studio.md](../features/content/35-html-carousel-video-studio.md) |
 | [x] | Обзоры/посты о местах через manager chat (AI, видео, org) | 4 | P1 | сред | [30-manager-chat-place-editorial.md](../features/content/30-manager-chat-place-editorial.md) |
 | [x] | Stories через manager chat (слайды, org) | 3 | P1 | выс | [30-manager-chat-place-editorial.md](../features/content/30-manager-chat-place-editorial.md) |
@@ -213,7 +227,7 @@
 | [ ] | Web ЛК: CRUD событий, волны цен | 4 | P2 | выс | [19-organizer-lk-monetization.md](../features/content/19-organizer-lk-monetization.md) |
 | [ ] | Login through Telegram для org | 2 | P2 | — | [19-organizer-lk-monetization.md](../features/content/19-organizer-lk-monetization.md) |
 | [ ] | Mini App: сканнер + live-счётчик входа | 4 | P2 | — | [19-organizer-lk-monetization.md](../features/content/19-organizer-lk-monetization.md) |
-| [ ] | Шаблонные афиши (слои, не gen-AI) | 4 | P2 | сред | [19-organizer-lk-monetization.md](../features/content/19-organizer-lk-monetization.md) |
+| [ ] | Шаблонные афиши (слои, не gen-AI) | 4 | P2 | сред | [19-organizer-lk-monetization.md](../features/content/19-organizer-lk-monetization.md), [38-carousel-editor-saas.md](../features/content/38-carousel-editor-saas.md) |
 | [ ] | Таргет-push для org (CPM) | 4 | P2 | выс | [19-organizer-lk-monetization.md](../features/content/19-organizer-lk-monetization.md) |
 | [ ] | Реферальные ссылки промоутеров + split | 5 | P2 | выс | [19-organizer-lk-monetization.md](../features/content/19-organizer-lk-monetization.md) |
 | [ ] | Pro-админка мастер-классов (waitlist, доп. поля) | 4 | P2 | выс | [19-organizer-lk-monetization.md](../features/content/19-organizer-lk-monetization.md) |
@@ -266,12 +280,12 @@
 
 ---
 
-## Сводка (на 04.06.2026)
+## Сводка (на 10.06.2026)
 
 | | Кол-во |
 |---|--------|
-| Всего строк | 169 |
-| `[x]` сделано | 80 |
+| Всего строк | 183 |
+| `[x]` сделано | 94 |
 | `[~]` в работе | 0 |
 | `[ ]` в плане | 89 |
 
@@ -286,4 +300,6 @@
 - [fix/brainstorm/01.06.2026.md](../../fix/brainstorm/01.06.2026.md) — индекс 01.06 (спеки 25–29, web pipeline)  
 - [fix/brainstorm/02.05.2026.md](../../fix/brainstorm/02.05.2026.md) — индекс 02.06: вайбы, рилсы Max, лайфстайл-лента  
 - [fix/brainstorm/03.06.2026.md](../../fix/brainstorm/03.06.2026.md) — индекс 03.06: статьи, read later, Groq multiplier, HTML studio  
+- [fix/brainstorm/10.06.2026.md](../../fix/brainstorm/10.06.2026.md) — индекс 10.06: Carousel Editor SaaS, волны 4a–4d  
+- [runbooks/WAVE_4A_CAROUSEL_EDITOR.md](../runbooks/WAVE_4A_CAROUSEL_EDITOR.md) — runbook carousel editor  
 - [tracker/TASK-008-web-parsing-pipeline.md](./TASK-008-web-parsing-pipeline.md) — runbook web crawl 008–010

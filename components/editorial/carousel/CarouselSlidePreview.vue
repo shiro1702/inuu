@@ -6,12 +6,13 @@
   >
     <div
       v-if="slide"
+      ref="scaledRef"
       class="absolute left-1/2 top-0"
       :style="innerStyle"
     >
       <CarouselSlideRenderer
         ref="rendererRef"
-        :slide="slide"
+        :slide="slideForRenderer"
         :aspect="aspect"
         :template-id="templateId"
         :brand-name="brandName"
@@ -22,14 +23,26 @@
         :slide-index="slideIndex"
         :total-slides="totalSlides"
       />
+      <CarouselStickerOverlay
+        v-if="stickerObjects.length"
+        :objects="stickerObjects"
+        :aspect="aspect"
+        :frame-el="frameEl"
+        :editable="editable"
+        @update="(id, patch) => $emit('sticker-update', id, patch)"
+      />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import type { CarouselAspect, CarouselSlide, CarouselTemplateId } from '~/types/editorialCarousel'
+import type { CarouselAspect, CarouselCanvasObject, CarouselSlide, CarouselTemplateId } from '~/types/editorialCarousel'
 import { CAROUSEL_EXPORT_SIZES } from '~/types/editorialCarousel'
 import CarouselSlideRenderer from '~/components/editorial/carousel/CarouselSlideRenderer.vue'
+import CarouselStickerOverlay from '~/components/carousel-editor/CarouselStickerOverlay.vue'
+import { getSlideStickerObjects } from '~/utils/carouselSlideObjects'
+import { slideV2ToV1 } from '~/utils/carouselSlideAdapter'
+import { isCarouselSlideV2 } from '~/types/editorialCarousel'
 
 const props = withDefaults(
   defineProps<{
@@ -45,20 +58,46 @@ const props = withDefaults(
     totalSlides?: number
     /** Макс. ширина превью в px */
     maxWidth?: number
+    /** Разрешить drag стикеров на холсте */
+    editable?: boolean
   }>(),
   {
     maxWidth: 0,
     brandName: 'INUU',
     slideIndex: 1,
     totalSlides: 1,
+    editable: false,
   },
 )
 
+defineEmits<{
+  'sticker-update': [objectId: string, patch: Partial<CarouselCanvasObject>]
+}>()
+
 const hostRef = ref<HTMLElement | null>(null)
+const scaledRef = ref<HTMLElement | null>(null)
 const rendererRef = ref<InstanceType<typeof CarouselSlideRenderer> | null>(null)
 const hostWidth = ref(280)
 
+const frameEl = ref<HTMLElement | null>(null)
+
+function syncFrameEl() {
+  frameEl.value = rendererRef.value?.getFrameElement?.() ?? null
+}
+
+watch(rendererRef, () => nextTick(syncFrameEl), { immediate: true })
+watch(() => props.slide, () => nextTick(syncFrameEl))
+
+const stickerObjects = computed(() => getSlideStickerObjects(props.slide))
+
+const slideForRenderer = computed(() => {
+  const s = props.slide
+  if (!s) return null
+  return isCarouselSlideV2(s) ? slideV2ToV1(s) : s
+})
+
 function getFrameElement(): HTMLElement | null {
+  if (stickerObjects.value.length && scaledRef.value) return scaledRef.value
   return rendererRef.value?.getFrameElement?.() ?? null
 }
 
@@ -79,7 +118,14 @@ const hostStyle = computed(() => {
       ? 240
       : 320
   return {
-    aspectRatio: props.aspect === '4:5' ? '4 / 5' : '9 / 16',
+    aspectRatio:
+      props.aspect === '1:1'
+        ? '1 / 1'
+        : props.aspect === '16:9'
+          ? '16 / 9'
+          : props.aspect === '9:16'
+            ? '9 / 16'
+            : '4 / 5',
     maxWidth: `${maxW}px`,
     width: '100%',
   }
