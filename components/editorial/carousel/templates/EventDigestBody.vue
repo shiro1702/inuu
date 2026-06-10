@@ -20,13 +20,37 @@
         {{ headline }}
       </h2>
 
-      <div v-if="metaBadges.length" class="mt-5 flex flex-wrap gap-3">
+      <div v-if="dateTimeBadges.length" class="mt-5 flex flex-wrap gap-3">
         <span
-          v-for="(badge, index) in metaBadges"
-          :key="`meta-${index}-${badge}`"
+          v-for="(badge, index) in dateTimeBadges"
+          :key="`dt-${index}-${badge}`"
           class="inline-flex w-fit rounded-full bg-[#8A63D2] px-5 py-2.5 text-2xl font-semibold text-white"
         >
           {{ badge }}
+        </span>
+      </div>
+
+      <div v-if="venueBadges.length" class="mt-4 flex flex-wrap items-center gap-2">
+        <span
+          class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#F97316] text-base text-white shadow-md"
+          aria-hidden="true"
+        >📍</span>
+        <span
+          v-for="(venue, index) in venueBadges"
+          :key="`venue-${index}-${venue}`"
+          class="inline-flex w-fit rounded-full border-2 border-white/35 bg-white/10 px-5 py-2 text-xl font-semibold text-white backdrop-blur-sm"
+        >
+          {{ venue }}
+        </span>
+      </div>
+
+      <div v-if="priceBadges.length" class="mt-3 flex flex-wrap gap-3">
+        <span
+          v-for="(price, index) in priceBadges"
+          :key="`price-${index}-${price}`"
+          class="inline-flex w-fit rounded-full bg-white px-5 py-2 text-xl font-bold text-black"
+        >
+          {{ price }}
         </span>
       </div>
 
@@ -51,12 +75,8 @@
 
 <script setup lang="ts">
 import type { CarouselSlide } from '~/types/editorialCarousel'
-import {
-  eventDigestCtaLabel,
-  eventDigestHeadline,
-  eventDigestMetaBadges,
-  eventDigestTheses,
-} from '~/utils/eventDigestSlide'
+import { eventDigestCtaLabelFromVenue, eventDigestHeadline } from '~/utils/eventDigestSlide'
+import { resolveSlideEventMeta } from '~/utils/carouselSlideEventMeta'
 import { resolveCarouselVibeTheme } from '~/utils/carouselVibeTheme'
 
 const props = defineProps<{
@@ -66,8 +86,11 @@ const props = defineProps<{
 }>()
 
 const theme = computed(() => resolveCarouselVibeTheme(props.slide, props.topicTags))
+const meta = computed(() => resolveSlideEventMeta(props.slide))
 const headline = computed(() => eventDigestHeadline(props.slide.title))
-const metaBadges = computed(() => eventDigestMetaBadges(props.slide.bullets))
-const theses = computed(() => eventDigestTheses(props.slide.bullets))
-const ctaLabel = computed(() => eventDigestCtaLabel(props.slide.bullets, props.linkHint))
+const dateTimeBadges = computed(() => (meta.value.datetime ? [meta.value.datetime] : []))
+const venueBadges = computed(() => (meta.value.venue ? [meta.value.venue] : []))
+const priceBadges = computed(() => (meta.value.price ? [meta.value.price] : []))
+const theses = computed(() => meta.value.theses)
+const ctaLabel = computed(() => eventDigestCtaLabelFromVenue(meta.value.venue, props.linkHint))
 </script>

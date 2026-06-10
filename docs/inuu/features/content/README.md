@@ -80,6 +80,7 @@ Seed: `supabase/migrations/019_inuu_seed_ulan_ude.sql`. Редакция как 
 
 | Файл | Тема |
 |------|------|
+| **[carousel/README.md](./carousel/README.md)** | **Карусели — индекс документации** (user guide, dev guide, ИИ, data model) |
 | [38-carousel-editor-saas.md](./38-carousel-editor-saas.md) | Carousel Editor SaaS: mobile UX, Groq, share, templates, TG |
 | [39-carousel-canvas-architecture.md](./39-carousel-canvas-architecture.md) | Flow/absolute холст, якоря, virtual canvas, dual-pass render |
 | [40-carousel-assets-and-stickers.md](./40-carousel-assets-and-stickers.md) | Шрифты, стикеры, пресеты фонов |

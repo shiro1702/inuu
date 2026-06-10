@@ -2,15 +2,16 @@ import Groq from 'groq-sdk'
 import { createError } from 'h3'
 import type { CarouselSlide, CarouselSlideRole } from '~/types/editorialCarousel'
 import { groqErrorHint } from '~/server/utils/ai/groqParseErrors'
+import {
+  groqCarouselEventFieldsPrompt,
+  groqCarouselSlideJsonShape,
+  mapGroqPayloadToCarouselSlide,
+  type GroqCarouselSlidePayload,
+} from '~/utils/groqCarouselSlideMap'
+import { resolveSlideEventMeta } from '~/utils/carouselSlideEventMeta'
 
-export type GroqCarouselSlide = {
+export type GroqCarouselSlide = GroqCarouselSlidePayload & {
   type: 'first' | 'middle' | 'last'
-  title?: string
-  subtitle?: string
-  text?: string
-  badge?: string
-  cta_text?: string
-  image_tags?: string[]
 }
 
 export type GroqCarouselResponse = {
@@ -54,36 +55,7 @@ export function roleToGroqType(role: CarouselSlideRole): 'first' | 'middle' | 'l
 export function mapGroqSlidesToCarousel(slides: GroqCarouselSlide[], vibe = 'party'): CarouselSlide[] {
   return slides.map((s) => {
     const role = groqTypeToRole(String(s.type || 'middle'))
-    if (role === 'cover') {
-      return {
-        role,
-        title: String(s.title || s.subtitle || '').trim() || 'Обложка',
-        media_url: null,
-        gradient: vibe,
-        image_tags: s.image_tags,
-      } as CarouselSlide & { image_tags?: string[] }
-    }
-    if (role === 'outro') {
-      return {
-        role,
-        title: String(s.title || '').trim() || undefined,
-        cta_text: String(s.cta_text || s.title || 'Открыть в INUU').trim(),
-        gradient: vibe,
-        image_tags: s.image_tags,
-      } as CarouselSlide & { image_tags?: string[] }
-    }
-    const bullets = [
-      s.text,
-      s.badge,
-      s.subtitle,
-    ].map((x) => String(x || '').trim()).filter(Boolean)
-    return {
-      role,
-      title: String(s.title || '').trim() || 'Слайд',
-      bullets: bullets.length ? bullets : ['Детали скоро'],
-      gradient: vibe,
-      image_tags: s.image_tags,
-    } as CarouselSlide & { image_tags?: string[] }
+    return mapGroqPayloadToCarouselSlide(s, role, vibe)
   })
 }
 
@@ -120,10 +92,21 @@ export function localFallbackSlideFromText(
       gradient: vibe,
     }
   }
-  return {
-    role,
+
+  const draft: CarouselSlide = {
+    role: 'body',
     title: first,
-    bullets: lines.slice(1).length ? lines.slice(1) : ['Детали скоро'],
+    bullets: lines.slice(1),
+    gradient: vibe,
+  }
+  const meta = resolveSlideEventMeta(draft)
+  return {
+    role: 'body',
+    title: first,
+    event_datetime: meta.datetime || null,
+    event_venue: meta.venue || null,
+    event_price: meta.price || null,
+    bullets: meta.theses.length ? meta.theses : lines.slice(1).length ? lines.slice(1) : ['Детали скоро'],
     gradient: vibe,
   }
 }
@@ -162,17 +145,7 @@ export async function generateCarouselWithGroq(args: {
     carousel_title: 'string',
     theme: 'cozy_aesthetic | urban_brutal | soft_minimal',
     telegram_post_text: 'string — markdown для TG поста',
-    slides: [
-      {
-        type: 'first | middle | last',
-        title: 'string',
-        subtitle: 'string',
-        text: 'string',
-        badge: 'string',
-        cta_text: 'string',
-        image_tags: ['english tags for stock photos'],
-      },
-    ],
+    slides: [groqCarouselSlideJsonShape()],
     sticker_intents: [
       { tag: 'fire', anchor: 'flow', anchor_target: 'title', position_hint: 'top-right' },
     ],
@@ -215,6 +188,7 @@ export async function generateCarouselWithGroq(args: {
       content: [
         'Ты — SMM-дизайнер INUU. Верни только JSON.',
         'Слайды: first (обложка), middle (контент), last (CTA).',
+        groqCarouselEventFieldsPrompt(),
         'image_tags — 1–3 английских тега для подбора фона.',
         'Без выдуманных фактов. Кратко, для мобильного чтения.',
       ].join('\n'),
@@ -297,7 +271,7 @@ export async function generateSlideWithGroq(args: {
       ? 'обложка карусели: яркий заголовок, короткий subtitle, image_tags для фона'
       : args.slideRole === 'outro'
         ? 'финальный CTA-слайд: cta_text, минимум текста, призыв открыть в приложении'
-        : 'контентный слайд: title, text/badge как тезисы, image_tags для иллюстрации'
+        : 'контентный слайд: title, event_datetime, event_venue, event_price, text (тезис), image_tags'
 
   const context = [
     args.carouselTitle ? `Название карусели: ${args.carouselTitle}` : '',
@@ -310,15 +284,7 @@ export async function generateSlideWithGroq(args: {
     .join('\n')
 
   const shape = {
-    slide: {
-      type: slideType,
-      title: 'string',
-      subtitle: 'string',
-      text: 'string',
-      badge: 'string',
-      cta_text: 'string',
-      image_tags: ['english tags for stock photos'],
-    },
+    slide: { ...groqCarouselSlideJsonShape(), type: slideType },
     sticker_intents: [
       { tag: 'fire', anchor: 'flow', anchor_target: 'title', position_hint: 'top-right' },
     ],
@@ -330,6 +296,7 @@ export async function generateSlideWithGroq(args: {
       content: [
         'Ты — SMM-дизайнер INUU. Верни только JSON с одним слайдом.',
         `Тип слайда: ${slideType}. ${roleHint}`,
+        groqCarouselEventFieldsPrompt(),
         'image_tags — 1–3 английских тега для подбора фона.',
         'sticker_intents — 0–2 стикера по контексту (можно пустой массив).',
         'Без выдуманных фактов. Кратко, для мобильного чтения.',

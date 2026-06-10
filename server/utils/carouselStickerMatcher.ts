@@ -31,7 +31,7 @@ export async function matchStickerIntents(
   if (!intents.length) return []
 
   const client = await serverSupabaseServiceRole(event)
-  const { data } = await client.from('stickers').select('id, name, tags, image_url').limit(100)
+  const { data } = await client.from('stickers').select('id, name, tags, image_url').limit(250)
   const rows = (data || []) as StickerRow[]
 
   const objects: CarouselCanvasObject[] = []
@@ -41,7 +41,10 @@ export async function matchStickerIntents(
     let bestScore = 0
     for (const row of rows) {
       const tags = [row.name, ...(row.tags || [])].map((t) => t.toLowerCase())
-      const score = tags.some((t) => t.includes(tag) || tag.includes(t)) ? 2 : 0
+      const matched = tags.some((t) => t.includes(tag) || tag.includes(t))
+      if (!matched) continue
+      const isEmoji = row.image_url.includes('/carousel-stickers/emoji/')
+      const score = 2 + (isEmoji ? 1 : 0)
       if (score > bestScore) {
         bestScore = score
         best = row

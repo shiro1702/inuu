@@ -2,6 +2,8 @@
 
 **Источник:** брейншторм [10.06.2026](../../fix/brainstorm/10.06.2026.md) · спеки [38](../features/content/38-carousel-editor-saas.md), [39](../features/content/39-carousel-canvas-architecture.md), [40](../features/content/40-carousel-assets-and-stickers.md).
 
+**Документация (актуальный индекс):** [carousel/README.md](../features/content/carousel/README.md) — user guide, developer guide, ИИ, data model.
+
 **Предусловие:** волна **3d** закрыта (TASK-025–027, PNG-рендер) · волна **3e** (TASK-028–030) — retention/push.
 
 ---

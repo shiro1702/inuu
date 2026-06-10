@@ -43,29 +43,42 @@ function formatEventPriceLine(price: number | null | undefined, currency: string
   return `${Math.round(price)} ${cur}`
 }
 
-function materialBullets(material: CarouselMaterialInput, timezone: string): string[] {
-  let lines: string[] = []
+function materialThesisBullets(material: CarouselMaterialInput): string[] {
+  const lines: string[] = []
 
   if (material.entityType === 'venue') {
-    if (material.address?.trim()) lines.push(material.address.trim())
     const blurb = (material.excerpt || '').trim()
     if (blurb) lines.push(blurb.length > 120 ? `${blurb.slice(0, 117)}…` : blurb)
   } else {
-    const dateLine = formatEventStartsAtRu(material.startsAt ?? null, timezone)
-    if (dateLine) lines.push(dateLine)
-    if (material.venueTitle?.trim()) lines.push(material.venueTitle.trim())
-    const priceLine = formatEventPriceLine(material.price ?? null, material.currency ?? null)
-    if (priceLine) lines.push(priceLine)
     const blurb = (material.tldr || material.excerpt || '').trim()
     if (blurb) lines.push(blurb.length > 120 ? `${blurb.slice(0, 117)}…` : blurb)
   }
 
   if (material.listNote?.trim()) {
     const note = material.listNote.trim()
-    lines = [note.length > 140 ? `${note.slice(0, 137)}…` : note, ...lines]
+    lines.unshift(note.length > 140 ? `${note.slice(0, 137)}…` : note)
   }
 
-  return lines.slice(0, 5)
+  return lines.slice(0, 3)
+}
+
+function materialEventFields(
+  material: CarouselMaterialInput,
+  timezone: string,
+): { event_datetime: string | null; event_venue: string | null; event_price: string | null } {
+  if (material.entityType === 'venue') {
+    return {
+      event_datetime: null,
+      event_venue: material.address?.trim() || material.title?.trim() || null,
+      event_price: null,
+    }
+  }
+
+  return {
+    event_datetime: formatEventStartsAtRu(material.startsAt ?? null, timezone) || null,
+    event_venue: material.venueTitle?.trim() || null,
+    event_price: formatEventPriceLine(material.price ?? null, material.currency ?? null),
+  }
 }
 
 export function buildCarouselFromEvents(options: {
@@ -101,10 +114,13 @@ export function buildCarouselFromEvents(options: {
   for (const material of materials) {
     const title = [material.vibeEmoji, material.title].filter(Boolean).join(' ').trim() || 'Событие'
     const cover = resolvedCover(material)
+    const eventFields = materialEventFields(material, timezone)
+    const bullets = materialThesisBullets(material)
     slides.push({
       role: 'body',
       title,
-      bullets: materialBullets(material, timezone),
+      ...eventFields,
+      bullets: bullets.length ? bullets : undefined,
       media_url: cover,
       gradient: vibe,
     })

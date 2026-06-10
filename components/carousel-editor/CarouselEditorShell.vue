@@ -68,9 +68,13 @@
       :open="editSheetOpen"
       :slide="activeSlide"
       :slide-index="store.currentSlideIndex"
+      :total-slides="store.slides.length"
+      :carousel-title="store.title"
+      :vibe-key="store.vibeKey"
       :city-slug="store.citySlug"
       @close="editSheetOpen = false"
       @patch="onSlidePatch"
+      @generated="onSlideAiGenerated"
     />
 
     <CarouselAllSlidesSheet
@@ -131,7 +135,8 @@
 </template>
 
 <script setup lang="ts">
-import type { CarouselAspect, CarouselCanvasObject, CarouselSlide } from '~/types/editorialCarousel'
+import type { CarouselAspect, CarouselCanvasObject, CarouselSlide, CarouselSlideV2 } from '~/types/editorialCarousel'
+import { normalizeSlideToV2 } from '~/utils/carouselSlideAdapter'
 import type { CarouselProjectType } from '~/server/utils/generatedCarouselWrite'
 import { useCarouselEditorStore } from '~/stores/carouselEditor'
 import CarouselEditorHeader from '~/components/carousel-editor/CarouselEditorHeader.vue'
@@ -202,6 +207,26 @@ function onAspect(value: string) {
 
 function onSlidePatch(patch: Partial<CarouselSlide>) {
   store.updateSlide(store.currentSlideIndex, patch)
+}
+
+function onSlideAiGenerated(generated: CarouselSlide) {
+  const idx = store.currentSlideIndex
+  const existing = store.slides[idx]
+  const role = existing?.role || generated.role
+  const existingV2 = existing ? normalizeSlideToV2(existing) : null
+  const generatedV2 = normalizeSlideToV2({ ...generated, role }) as CarouselSlideV2
+
+  const keepObjects = existingV2?.objects?.length ? existingV2.objects : generatedV2.objects
+
+  store.updateSlide(idx, {
+    ...generatedV2,
+    role,
+    objects: keepObjects,
+  })
+
+  editSheetOpen.value = false
+  statusOk.value = true
+  statusText.value = `Слайд ${idx + 1} сгенерирован ИИ`
 }
 
 async function loadStickers() {

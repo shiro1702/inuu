@@ -43,11 +43,8 @@
 
 <script setup lang="ts">
 import type { CarouselSlide } from '~/types/editorialCarousel'
-import {
-  eventDigestCityHandle,
-  eventDigestMetaBadges,
-  eventDigestTitleLines,
-} from '~/utils/eventDigestSlide'
+import { eventDigestCityHandle, eventDigestTitleLines } from '~/utils/eventDigestSlide'
+import { resolveSlideEventMeta } from '~/utils/carouselSlideEventMeta'
 import { resolveCarouselVibeTheme } from '~/utils/carouselVibeTheme'
 
 const props = defineProps<{
@@ -60,8 +57,8 @@ const props = defineProps<{
 const theme = computed(() => resolveCarouselVibeTheme(props.slide, props.topicTags))
 const titleLines = computed(() => eventDigestTitleLines(props.slide.title))
 const dateBadge = computed(() => {
-  const fromBullets = eventDigestMetaBadges(props.slide.bullets)[0]
-  if (fromBullets) return fromBullets
+  const fromMeta = resolveSlideEventMeta(props.slide).datetime
+  if (fromMeta) return fromMeta
   const cta = props.slide.cta_text?.trim() || ''
   return cta && !/[.!?…]$/.test(cta) ? cta : ''
 })

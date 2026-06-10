@@ -1,5 +1,6 @@
 import { createError, defineEventHandler, getQuery } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
+import { mergeStickerLibrary } from '~/server/utils/carouselStickerCatalog'
 import { requireDashboardAccess } from '~/server/utils/dashboard'
 
 export default defineEventHandler(async (event) => {
@@ -8,13 +9,20 @@ export default defineEventHandler(async (event) => {
   const category = typeof q.category === 'string' ? q.category.trim() : ''
 
   const client = await serverSupabaseServiceRole(event)
-  let query = client.from('stickers').select('*').order('sort_order', { ascending: true })
-  if (category) query = query.eq('category', category)
+  const { data, error } = await client
+    .from('stickers')
+    .select('*')
+    .order('sort_order', { ascending: true })
+    .limit(500)
 
-  const { data, error } = await query
   if (error) {
     throw createError({ statusCode: 500, statusMessage: error.message })
   }
 
-  return { ok: true as const, items: data || [] }
+  let items = mergeStickerLibrary(data || [])
+  if (category) {
+    items = items.filter((item) => item.category === category)
+  }
+
+  return { ok: true as const, items }
 })

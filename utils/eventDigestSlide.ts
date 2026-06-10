@@ -7,34 +7,79 @@ const TIME_RE = /\b\d{1,2}:\d{2}\b|\b(?:с|до)\s+\d{1,2}(?::\d{2})?\b/i
 const ADDRESS_RE =
   /\b(?:ул\.?|улица|пр\.?|проспект|пер\.?|переулок|бул\.?|бульвар|наб\.?|набережная|шоссе|пл\.?|площадь|д\.?|дом|строение|корп\.?|оф\.?|офис)\b/i
 
+export type EventDigestMetaKind = 'datetime' | 'venue' | 'price' | 'thesis'
+
 function isPriceLine(line: string): boolean {
   const t = line.trim()
   return PRICE_RE.test(t) || /^бесплатно$/i.test(t)
 }
 
-/** Дата, время или адрес — фиолетовый бейдж; остальное — тезисы. */
-export function isEventDigestMetaLine(line: string, index = 0, total = 1): boolean {
-  const t = line.trim()
-  if (!t || isPriceLine(t)) return false
-  if (MONTH_RE.test(t) || DATE_RE.test(t) || TIME_RE.test(t) || ADDRESS_RE.test(t)) return true
-  if (index === 0 && /\d/.test(t)) return true
-  if (index === 1 && total >= 3) {
-    if (t.length > 80 || /[.!?…]$/.test(t)) return false
-    return true
-  }
-  return false
+function classifySimple(t: string, index: number, total: number): EventDigestMetaKind {
+  if (isPriceLine(t)) return 'price'
+  if (MONTH_RE.test(t) || DATE_RE.test(t) || TIME_RE.test(t)) return 'datetime'
+  if (ADDRESS_RE.test(t)) return 'venue'
+  if (index === 0 && /\d/.test(t)) return 'datetime'
+  if (index === 1 && total >= 3 && t.length <= 80 && !/[.!?…]$/.test(t)) return 'venue'
+  return 'thesis'
 }
 
-export function eventDigestMetaBadges(bullets?: string[]): string[] {
+/** Разбирает bullets на типизированные части (в т.ч. «19:00, от 500₽»). */
+export function parseEventDigestBullets(bullets?: string[]): Array<{ kind: EventDigestMetaKind; text: string }> {
   const lines = (bullets || []).map((x) => x.trim()).filter(Boolean)
-  return lines.filter((line, index) => isEventDigestMetaLine(line, index, lines.length))
+  const out: Array<{ kind: EventDigestMetaKind; text: string }> = []
+
+  for (const [index, line] of lines.entries()) {
+    const hasTime = TIME_RE.test(line)
+    const hasPrice = isPriceLine(line)
+    const parts =
+      line.includes(',') && hasTime && hasPrice
+        ? line.split(',').map((p) => p.trim()).filter(Boolean)
+        : [line]
+
+    for (const part of parts) {
+      out.push({ kind: classifySimple(part, index, lines.length), text: part })
+    }
+  }
+
+  return out
+}
+
+/** @deprecated Используйте parseEventDigestBullets / eventDigestDateTimeBadges */
+export function isEventDigestMetaLine(line: string, index = 0, total = 1): boolean {
+  return classifySimple(line.trim(), index, total) !== 'thesis'
+}
+
+export function eventDigestDateTimeBadges(bullets?: string[]): string[] {
+  return parseEventDigestBullets(bullets)
+    .filter((p) => p.kind === 'datetime')
+    .map((p) => p.text)
+}
+
+export function eventDigestVenueBadges(bullets?: string[]): string[] {
+  return parseEventDigestBullets(bullets)
+    .filter((p) => p.kind === 'venue')
+    .map((p) => p.text)
+}
+
+export function eventDigestPriceBadges(bullets?: string[]): string[] {
+  return parseEventDigestBullets(bullets)
+    .filter((p) => p.kind === 'price')
+    .map((p) => p.text)
+}
+
+/** Все meta-бейджи подряд (дата → место → цена) — для обратной совместимости. */
+export function eventDigestMetaBadges(bullets?: string[]): string[] {
+  return [
+    ...eventDigestDateTimeBadges(bullets),
+    ...eventDigestVenueBadges(bullets),
+    ...eventDigestPriceBadges(bullets),
+  ]
 }
 
 export function eventDigestTheses(bullets?: string[]): string[] {
-  const lines = (bullets || []).map((x) => x.trim()).filter(Boolean)
-  return lines.filter(
-    (line, index) => !isEventDigestMetaLine(line, index, lines.length) && !isPriceLine(line),
-  )
+  return parseEventDigestBullets(bullets)
+    .filter((p) => p.kind === 'thesis')
+    .map((p) => p.text)
 }
 
 export function eventDigestCityHandle(linkHint?: string | null, cityName?: string | null): string {
@@ -80,7 +125,7 @@ export function eventDigestHeadline(title: string | undefined): string {
 }
 
 export function eventDigestDateBadge(bullets?: string[]): string {
-  return eventDigestMetaBadges(bullets)[0] || ''
+  return eventDigestDateTimeBadges(bullets)[0] || ''
 }
 
 export function eventDigestDescription(bullets?: string[]): string {
@@ -88,17 +133,17 @@ export function eventDigestDescription(bullets?: string[]): string {
 }
 
 export function eventDigestVenueLine(bullets?: string[]): string {
-  const lines = (bullets || []).map((x) => x.trim()).filter(Boolean)
-  const venue = lines[1]
-  if (venue && isEventDigestMetaLine(venue, 1, lines.length) && !isPriceLine(venue)) {
-    return venue
-  }
-  return ''
+  return eventDigestVenueBadges(bullets)[0] || ''
 }
 
-export function eventDigestCtaLabel(bullets?: string[], linkHint?: string | null): string {
-  const venue = eventDigestVenueLine(bullets)
-  if (venue) return `Подробнее у ${venue}`
+export function eventDigestCtaLabelFromVenue(venue: string, linkHint?: string | null): string {
+  const v = venue.trim()
+  if (v) return `Подробнее у ${v}`
   if (linkHint?.trim()) return 'Подробнее на сайте'
   return 'Подробнее'
+}
+
+/** @deprecated Используйте eventDigestCtaLabelFromVenue + resolveSlideEventMeta */
+export function eventDigestCtaLabel(bullets?: string[], linkHint?: string | null): string {
+  return eventDigestCtaLabelFromVenue(eventDigestVenueLine(bullets), linkHint)
 }

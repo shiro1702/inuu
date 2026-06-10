@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
   eventDigestCityHandle,
+  eventDigestDateTimeBadges,
   eventDigestDescription,
   eventDigestHeadline,
   eventDigestMetaBadges,
+  eventDigestPriceBadges,
   eventDigestTheses,
   eventDigestTitleLines,
+  eventDigestVenueBadges,
   isEventDigestMetaLine,
 } from '~/utils/eventDigestSlide'
 
@@ -28,19 +31,35 @@ describe('eventDigestSlide', () => {
   it('treats thesis lines as text, not meta badges', () => {
     const thesis = 'Четыре остановки для тёплого вечера в Улан-Удэ.'
     expect(isEventDigestMetaLine(thesis)).toBe(false)
-    expect(eventDigestMetaBadges([thesis])).toEqual([])
     expect(eventDigestTheses([thesis])).toEqual([thesis])
+    expect(eventDigestDateTimeBadges([thesis])).toEqual([])
+    expect(eventDigestVenueBadges([thesis])).toEqual([])
   })
 
-  it('maps event bullets to meta badges and description', () => {
+  it('maps event bullets to datetime, venue, price and thesis', () => {
     const bullets = [
       '7 июня с 11:00',
       'Кафе Эфир',
       '500 ₽',
       'Бранч с музыкой и десертами.',
     ]
-    expect(eventDigestMetaBadges(bullets)).toEqual(['7 июня с 11:00', 'Кафе Эфир'])
+    expect(eventDigestDateTimeBadges(bullets)).toEqual(['7 июня с 11:00'])
+    expect(eventDigestVenueBadges(bullets)).toEqual(['Кафе Эфир'])
+    expect(eventDigestPriceBadges(bullets)).toEqual(['500 ₽'])
     expect(eventDigestTheses(bullets)).toEqual(['Бранч с музыкой и десертами.'])
+    expect(eventDigestMetaBadges(bullets)).toEqual([
+      '7 июня с 11:00',
+      'Кафе Эфир',
+      '500 ₽',
+    ])
     expect(eventDigestDescription(bullets)).toBe('Бранч с музыкой и десертами.')
+  })
+
+  it('splits combined time+price line into separate groups', () => {
+    const line = '19:00, от 500₽'
+    expect(eventDigestDateTimeBadges([line])).toEqual(['19:00'])
+    expect(eventDigestPriceBadges([line])).toEqual(['от 500₽'])
+    expect(eventDigestVenueBadges([line])).toEqual([])
+    expect(eventDigestTheses([line])).toEqual([])
   })
 })

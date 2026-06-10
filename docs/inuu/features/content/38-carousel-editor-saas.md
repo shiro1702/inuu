@@ -6,6 +6,8 @@
 
 **Статус:** спека · волны **4a–4d** (после 3e). **База 3d уже в коде** — см. [35](./35-html-carousel-video-studio.md#статус-реализации-аудит-кода-10062026).
 
+**Практическая документация:** [carousel/README.md](./carousel/README.md) (user guide, dev guide, ИИ, data model).
+
 ---
 
 ## Уже в коде (волна 3d + studio)

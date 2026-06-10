@@ -38,7 +38,14 @@ export type CarouselCanvasObject = {
   zIndex?: number
 }
 
-export type CarouselSlideV1 = {
+/** Дата/место/цена для event-digest (отдельно от тезисов в bullets). */
+export type CarouselSlideEventFields = {
+  event_datetime?: string | null
+  event_venue?: string | null
+  event_price?: string | null
+}
+
+export type CarouselSlideV1 = CarouselSlideEventFields & {
   schema_version?: 1
   role: CarouselSlideRole
   title?: string
@@ -49,7 +56,7 @@ export type CarouselSlideV1 = {
   image_tags?: string[]
 }
 
-export type CarouselSlideV2 = {
+export type CarouselSlideV2 = CarouselSlideEventFields & {
   schema_version: 2
   role: CarouselSlideRole
   type?: 'first' | 'middle' | 'last'
