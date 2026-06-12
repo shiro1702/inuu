@@ -1,7 +1,6 @@
 <template>
-  <Teleport to="body">
+  <CarouselSheetTeleport :open="open">
     <div
-      v-if="open"
       class="fixed inset-0 z-50 flex flex-col justify-end bg-black/40"
       @click.self="$emit('close')"
     >
@@ -124,7 +123,7 @@
         </div>
       </div>
     </div>
-  </Teleport>
+  </CarouselSheetTeleport>
 </template>
 
 <script setup lang="ts">

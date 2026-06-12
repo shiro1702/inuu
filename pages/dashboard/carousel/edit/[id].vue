@@ -4,24 +4,26 @@
     <div v-else-if="store.loading" class="flex min-h-dvh items-center justify-center text-gray-500">
       Загрузка проекта…
     </div>
-    <CarouselEditorShell
-      v-else
-      ref="shellRef"
-      show-telegram-send
-      show-project-type
-      show-all-aspects
-      :sending-tg="sendingTg"
-      @back="goBack"
-      @send-telegram="onSendTelegram"
-    />
+    <ClientOnly v-else>
+      <CarouselEditorShell
+        ref="shellRef"
+        show-telegram-send
+        show-project-type
+        show-all-aspects
+        :sending-tg="sendingTg"
+        @back="goBack"
+        @send-telegram="onSendTelegram"
+      />
 
-    <CarouselTelegramSendSheet
-      :open="tgSheetOpen"
-      :city-slug="store.citySlug"
-      :prepare-slide="prepareSlideForTg"
-      @close="tgSheetOpen = false"
-      @sent="onTgSent"
-    />
+      <CarouselTelegramSendSheet
+        v-if="tgSheetOpen"
+        :open="true"
+        :city-slug="store.citySlug"
+        :prepare-slide="prepareSlideForTg"
+        @close="tgSheetOpen = false"
+        @sent="onTgSent"
+      />
+    </ClientOnly>
   </div>
 </template>
 

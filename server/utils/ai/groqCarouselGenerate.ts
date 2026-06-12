@@ -100,9 +100,15 @@ export function localFallbackSlideFromText(
     event_datetime: parsed.event_datetime || null,
     event_venue: parsed.event_venue || null,
     event_price: parsed.event_price || null,
+    cta_text: parsed.cta_text || undefined,
     bullets: parsed.theses.length
       ? parsed.theses
-      : parsed.isStructured
+      : parsed.isStructured ||
+          parsed.title ||
+          parsed.event_datetime ||
+          parsed.cta_text ||
+          parsed.event_venue ||
+          parsed.event_price
         ? undefined
         : lines.slice(1).length
           ? lines.slice(1)

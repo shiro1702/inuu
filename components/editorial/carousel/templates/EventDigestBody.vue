@@ -1,6 +1,7 @@
 <template>
   <component
     :is="variantComponent"
+    :key="layoutVariant"
     :slide="slide"
     :topic-tags="topicTags"
     :link-hint="linkHint"
@@ -31,8 +32,7 @@ const BODY_COMPONENTS: Record<string, Component> = {
   'digest-body-compact': BodyCompactCard,
 }
 
-const variantComponent = computed(() => {
-  const id = resolveEventDigestLayoutVariant(props.slide, 'body')
-  return BODY_COMPONENTS[id] || BodySplit
-})
+const layoutVariant = computed(() => resolveEventDigestLayoutVariant(props.slide, 'body'))
+
+const variantComponent = computed(() => BODY_COMPONENTS[layoutVariant.value] || BodySplit)
 </script>

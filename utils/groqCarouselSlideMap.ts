@@ -6,6 +6,7 @@ export type GroqCarouselSlidePayload = {
   subtitle?: string
   text?: string
   badge?: string
+  /** CTA на body-слайде или финальный призыв на outro. */
   cta_text?: string
   image_tags?: string[]
   event_datetime?: string
@@ -15,13 +16,16 @@ export type GroqCarouselSlidePayload = {
 
 const GROQ_EVENT_FIELDS_HINT = [
   'Для middle-слайдов события обязательно заполни отдельные поля:',
-  'event_datetime — дата и время («7 июня, 19:00»), только в это поле;',
-  'event_venue — место или источник для кнопки «Подробнее у …»;',
+  'title — название («Дегустационный сет из 5 блюд»); первая строка без меток — заголовок.',
+  'event_datetime — дата, время или дни («7 июня, 19:00», «Пятница–воскресенье»);',
+  'event_venue — только место (кафе, клуб, адрес), не бронь и не призыв;',
+  'cta_text — текст кнопки «Подробнее» («Бронь по телефону», «Записаться»);',
   'event_price — цена («от 500₽», «Бесплатно», «Вход свободный»);',
-  'text — только описание/тезис, без даты, цены и адреса.',
-  'title — название события; если в тексте только детали (время/адрес/цена), title оставь пустым.',
+  'text — только описание/тезис, без даты, цены, адреса и призыва.',
   'Пример: «Начало в 19:00\\nАдрес: ул. Ленина, 12\\nВход свободный» →',
   'event_datetime=«19:00», event_venue=«ул. Ленина, 12», event_price=«Вход свободный», text=null.',
+  'Пример: «Дегустационный сет\\nБронь по телефону\\nПятница–воскресенье» →',
+  'title=«Дегустационный сет», cta_text=«Бронь по телефону», event_datetime=«Пятница–воскресенье».',
   'Не выдумывай место и цену, если их нет в исходном тексте.',
 ].join('\n')
 
@@ -34,12 +38,12 @@ export function groqCarouselSlideJsonShape(): Record<string, unknown> {
     type: 'first | middle | last',
     title: 'string',
     event_datetime: 'string | null — дата и время события',
-    event_venue: 'string | null — место/источник для CTA',
+    event_venue: 'string | null — место (кафе, адрес)',
+    cta_text: 'string | null — текст кнопки «Подробнее»',
     event_price: 'string | null — цена',
     text: 'string | null — описание (только тезис)',
     subtitle: 'string | null — legacy, не дублировать event_*',
     badge: 'string | null — legacy',
-    cta_text: 'string — для last-слайда',
     image_tags: ['english tags for stock photos'],
   }
 }
@@ -98,6 +102,7 @@ export function mapGroqPayloadToCarouselSlide(
     event_datetime: event_datetime || null,
     event_venue: event_venue || null,
     event_price: event_price || null,
+    cta_text: pickStr(s.cta_text) || undefined,
     bullets: bullets.length ? bullets : undefined,
     gradient: vibe,
     image_tags: s.image_tags,

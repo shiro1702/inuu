@@ -9,6 +9,7 @@ export type ParsedSlideEventText = {
   event_datetime: string
   event_venue: string
   event_price: string
+  cta_text?: string
   theses: string[]
   /** В тексте есть явные метки «Начало», «Адрес:», «Вход» и т.п. */
   isStructured: boolean
@@ -76,19 +77,23 @@ export function parseSlideEventText(text: string): ParsedSlideEventText {
     isStructured: false,
   }
 
+  const labeledLines = new Set<string>()
   for (const line of lines) {
     const labeled = parseLabeledLine(line)
     if (labeled) {
       parsed.isStructured = true
+      labeledLines.add(line)
       assignMeta(parsed, labeled.kind, labeled.text, line)
     }
   }
 
   if (parsed.isStructured) {
-    for (const part of parseEventDigestBullets(lines)) {
+    const remaining = lines.filter((line) => !labeledLines.has(line))
+    for (const part of parseEventDigestBullets(remaining)) {
       if (part.kind === 'datetime' && !parsed.event_datetime) parsed.event_datetime = part.text
       else if (part.kind === 'venue' && !parsed.event_venue) parsed.event_venue = part.text
       else if (part.kind === 'price' && !parsed.event_price) parsed.event_price = part.text
+      else if (part.kind === 'cta' && !parsed.cta_text) parsed.cta_text = part.text
       else if (part.kind === 'thesis') parsed.theses.push(part.text)
     }
     return parsed
@@ -98,12 +103,14 @@ export function parseSlideEventText(text: string): ParsedSlideEventText {
   const datetimes: string[] = []
   const venues: string[] = []
   const prices: string[] = []
+  const ctas: string[] = []
   const theses: string[] = []
 
   for (const part of parts) {
     if (part.kind === 'datetime') datetimes.push(part.text)
     else if (part.kind === 'venue') venues.push(part.text)
     else if (part.kind === 'price') prices.push(part.text)
+    else if (part.kind === 'cta') ctas.push(part.text)
     else theses.push(part.text)
   }
 
@@ -120,6 +127,7 @@ export function parseSlideEventText(text: string): ParsedSlideEventText {
     event_datetime: datetimes[0] || '',
     event_venue: venues[0] || '',
     event_price: prices[0] || '',
+    cta_text: ctas[0] || undefined,
     theses,
     isStructured: false,
   }
@@ -156,13 +164,18 @@ export function reconcileSlideWithSourceText(
   if (role !== 'body') return slide
 
   const parsed = parseSlideEventText(sourceText)
-  if (!parsed.isStructured) return slide
+  const lines = sourceText
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+  if (!lines.length) return slide
 
   const merged: CarouselSlide = {
     ...slide,
     event_datetime: parsed.event_datetime || null,
     event_venue: parsed.event_venue || null,
     event_price: parsed.event_price || null,
+    cta_text: parsed.cta_text || undefined,
     bullets: parsed.theses.length ? parsed.theses : undefined,
   }
 

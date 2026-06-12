@@ -75,7 +75,11 @@
 
 <script setup lang="ts">
 import type { CarouselSlide } from '~/types/editorialCarousel'
-import { eventDigestCtaLabelFromVenue, eventDigestHeadline } from '~/utils/eventDigestSlide'
+import {
+  eventDigestBodyCtaLabel,
+  eventDigestHeadline,
+  isEventDigestPlaceLine,
+} from '~/utils/eventDigestSlide'
 import { resolveSlideEventMeta } from '~/utils/carouselSlideEventMeta'
 import { resolveCarouselVibeTheme } from '~/utils/carouselVibeTheme'
 
@@ -89,8 +93,10 @@ const theme = computed(() => resolveCarouselVibeTheme(props.slide, props.topicTa
 const meta = computed(() => resolveSlideEventMeta(props.slide))
 const headline = computed(() => eventDigestHeadline(props.slide.title))
 const dateTimeBadges = computed(() => (meta.value.datetime ? [meta.value.datetime] : []))
-const venueBadges = computed(() => (meta.value.venue ? [meta.value.venue] : []))
+const venueBadges = computed(() =>
+  isEventDigestPlaceLine(meta.value.venue) ? [meta.value.venue] : [],
+)
 const priceBadges = computed(() => (meta.value.price ? [meta.value.price] : []))
 const theses = computed(() => meta.value.theses)
-const ctaLabel = computed(() => eventDigestCtaLabelFromVenue(meta.value.venue, props.linkHint))
+const ctaLabel = computed(() => eventDigestBodyCtaLabel(props.slide, props.linkHint))
 </script>

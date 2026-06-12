@@ -45,7 +45,11 @@
 <script setup lang="ts">
 import type { CarouselSlide } from '~/types/editorialCarousel'
 import EventDigestBg from '~/components/editorial/carousel/templates/event-digest/EventDigestBg.vue'
-import { eventDigestCtaLabelFromVenue, eventDigestHeadline } from '~/utils/eventDigestSlide'
+import {
+  eventDigestBodyCtaLabel,
+  eventDigestHeadline,
+  isEventDigestPlaceLine,
+} from '~/utils/eventDigestSlide'
 import { resolveSlideEventMeta } from '~/utils/carouselSlideEventMeta'
 import { resolveCarouselVibeTheme } from '~/utils/carouselVibeTheme'
 
@@ -59,12 +63,12 @@ const theme = computed(() => resolveCarouselVibeTheme(props.slide, props.topicTa
 const meta = computed(() => resolveSlideEventMeta(props.slide))
 const headline = computed(() => eventDigestHeadline(props.slide.title))
 const theses = computed(() => meta.value.theses)
-const ctaLabel = computed(() => eventDigestCtaLabelFromVenue(meta.value.venue, props.linkHint))
+const ctaLabel = computed(() => eventDigestBodyCtaLabel(props.slide, props.linkHint))
 
 const metaBadges = computed(() => {
   const items: string[] = []
   if (meta.value.datetime) items.push(meta.value.datetime)
-  if (meta.value.venue) items.push(meta.value.venue)
+  if (isEventDigestPlaceLine(meta.value.venue)) items.push(meta.value.venue)
   if (meta.value.price) items.push(meta.value.price)
   return items
 })

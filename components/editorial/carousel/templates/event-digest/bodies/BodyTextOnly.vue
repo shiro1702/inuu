@@ -18,7 +18,7 @@
           {{ meta.datetime }}
         </span>
         <span
-          v-if="meta.venue"
+          v-if="showVenue"
           class="inline-flex items-center gap-2 rounded-full border-2 border-white/35 bg-white/10 px-6 py-2 text-xl font-semibold text-white"
         >
           <span class="text-base">📍</span>
@@ -54,7 +54,11 @@
 <script setup lang="ts">
 import type { CarouselSlide } from '~/types/editorialCarousel'
 import EventDigestBg from '~/components/editorial/carousel/templates/event-digest/EventDigestBg.vue'
-import { eventDigestCtaLabelFromVenue, eventDigestHeadline } from '~/utils/eventDigestSlide'
+import {
+  eventDigestBodyCtaLabel,
+  eventDigestHeadline,
+  isEventDigestPlaceLine,
+} from '~/utils/eventDigestSlide'
 import { resolveSlideEventMeta } from '~/utils/carouselSlideEventMeta'
 import { resolveCarouselVibeTheme } from '~/utils/carouselVibeTheme'
 
@@ -68,5 +72,6 @@ const theme = computed(() => resolveCarouselVibeTheme(props.slide, props.topicTa
 const meta = computed(() => resolveSlideEventMeta(props.slide))
 const headline = computed(() => eventDigestHeadline(props.slide.title))
 const theses = computed(() => meta.value.theses)
-const ctaLabel = computed(() => eventDigestCtaLabelFromVenue(meta.value.venue, props.linkHint))
+const showVenue = computed(() => isEventDigestPlaceLine(meta.value.venue))
+const ctaLabel = computed(() => eventDigestBodyCtaLabel(props.slide, props.linkHint))
 </script>

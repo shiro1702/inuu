@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  eventDigestBodyCtaLabel,
   eventDigestCityHandle,
+  eventDigestCtaLabelFromVenue,
   eventDigestDateTimeBadges,
   eventDigestDescription,
   eventDigestHeadline,
@@ -66,5 +68,23 @@ describe('eventDigestSlide', () => {
     expect(eventDigestPriceBadges([line])).toEqual(['от 500₽'])
     expect(eventDigestVenueBadges([line])).toEqual([])
     expect(eventDigestTheses([line])).toEqual([])
+  })
+
+  it('classifies weekday range and booking line', () => {
+    const bullets = ['Дегустационный сет из 5 блюд', 'Бронь по телефону', 'Пятница–воскресенье']
+    expect(eventDigestDateTimeBadges(bullets)).toEqual(['Пятница–воскресенье'])
+    expect(eventDigestVenueBadges(bullets)).toEqual([])
+    expect(eventDigestTheses(bullets)).toEqual(['Дегустационный сет из 5 блюд'])
+  })
+
+  it('uses explicit cta on body slide', () => {
+    expect(
+      eventDigestBodyCtaLabel({
+        role: 'body',
+        cta_text: 'Бронь по телефону',
+      }),
+    ).toBe('Бронь по телефону')
+    expect(eventDigestCtaLabelFromVenue('Кафе Эфир')).toBe('Подробнее')
+    expect(eventDigestCtaLabelFromVenue('Бронь по телефону')).toBe('Бронь по телефону')
   })
 })

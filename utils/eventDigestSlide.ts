@@ -8,8 +8,43 @@ const DATE_RE =
 const TIME_RE = /\b\d{1,2}:\d{2}\b|\b(?:с|до)\s+\d{1,2}(?::\d{2})?\b/i
 const ADDRESS_RE =
   /\b(?:ул\.?|улица|пр\.?|проспект|пер\.?|переулок|бул\.?|бульвар|наб\.?|набережная|шоссе|пл\.?|площадь|д\.?|дом|строение|корп\.?|оф\.?|офис)\b/i
+const WEEKDAY_RE =
+  /(?:понедельник|вторник|сред[ау]|четверг|пятниц|суббот|воскресен)/i
+const VENUE_HINT_RE =
+  /(?:клуб|кафе|бар|ресторан|галере|театр|парк|центр|музей|«|»)/i
+const ACTION_RE =
+  /(?:бронь|звонит|запис|регистрац|по\s+телефон|на\s+сайт|в\s+директ|пишите|напишите|whatsapp|telegram)/i
 
-export type EventDigestMetaKind = 'datetime' | 'venue' | 'price' | 'thesis'
+export type EventDigestMetaKind = 'datetime' | 'venue' | 'price' | 'thesis' | 'cta'
+
+export function isEventDigestActionLine(line: string): boolean {
+  return ACTION_RE.test(line.trim())
+}
+
+export function isEventDigestVenueLine(line: string): boolean {
+  const t = line.trim()
+  if (ADDRESS_RE.test(t)) return true
+  return (
+    /^(?:клуб|кафе|бар|ресторан|галере|театр|парк|центр|музей)/i.test(t) &&
+    t.length <= 60 &&
+    !/[.!?…]$/.test(t)
+  )
+}
+
+export function isEventDigestWeekdayLine(line: string): boolean {
+  const t = line.trim()
+  return (
+    WEEKDAY_RE.test(t) ||
+    /\b(?:ежедневно|круглосуточно|выходные?|будни)\b/i.test(t)
+  )
+}
+
+/** Место для бейджа 📍 (не призыв к действию). */
+export function isEventDigestPlaceLine(line: string): boolean {
+  const t = line.trim()
+  if (!t || isEventDigestActionLine(t)) return false
+  return isEventDigestVenueLine(t)
+}
 
 function isPriceLine(line: string): boolean {
   const t = line.trim()
@@ -23,10 +58,21 @@ function isPriceLine(line: string): boolean {
 
 function classifySimple(t: string, index: number, total: number): EventDigestMetaKind {
   if (isPriceLine(t)) return 'price'
+  if (isEventDigestWeekdayLine(t)) return 'datetime'
   if (MONTH_RE.test(t) || DATE_RE.test(t) || TIME_RE.test(t)) return 'datetime'
-  if (ADDRESS_RE.test(t)) return 'venue'
-  if (index === 0 && /\d/.test(t)) return 'datetime'
-  if (index === 1 && total >= 3 && t.length <= 80 && !/[.!?…]$/.test(t)) return 'venue'
+  if (isEventDigestActionLine(t)) return 'cta'
+  if (isEventDigestVenueLine(t)) return 'venue'
+  if (index === 1 && total >= 3 && isEventDigestVenueLine(t)) return 'venue'
+  if (
+    index === 1 &&
+    total >= 3 &&
+    t.length <= 80 &&
+    !/[.!?…]$/.test(t) &&
+    !isEventDigestActionLine(t) &&
+    !isEventDigestWeekdayLine(t)
+  ) {
+    return 'venue'
+  }
   return 'thesis'
 }
 
@@ -190,9 +236,19 @@ export function eventDigestVenueLine(bullets?: string[]): string {
 
 export function eventDigestCtaLabelFromVenue(venue: string, linkHint?: string | null): string {
   const v = venue.trim()
-  if (v) return `Подробнее у ${v}`
+  if (v && isEventDigestActionLine(v)) return v
   if (linkHint?.trim()) return 'Подробнее на сайте'
   return 'Подробнее'
+}
+
+/** Текст кнопки на контентном слайде event-digest. */
+export function eventDigestBodyCtaLabel(
+  slide: CarouselSlide,
+  linkHint?: string | null,
+): string {
+  const explicit = slide.cta_text?.trim()
+  if (explicit) return explicit
+  return eventDigestCtaLabelFromVenue(String(slide.event_venue || ''), linkHint)
 }
 
 /** @deprecated Используйте eventDigestCtaLabelFromVenue + resolveSlideEventMeta */

@@ -79,7 +79,8 @@
     </div>
 
     <CarouselEditSlideSheet
-      :open="editSheetOpen"
+      v-if="editSheetOpen"
+      :open="true"
       :slide="activeSlide"
       :slide-index="store.currentSlideIndex"
       :total-slides="store.slides.length"
@@ -93,7 +94,8 @@
     />
 
     <CarouselAllSlidesSheet
-      :open="allSlidesOpen"
+      v-if="allSlidesOpen"
+      :open="true"
       :slides="store.slides"
       :current-index="store.currentSlideIndex"
       :template-id="store.templateId"
@@ -109,14 +111,16 @@
     />
 
     <CarouselImportTextSheet
-      :open="importTextOpen"
+      v-if="importTextOpen"
+      :open="true"
       :city-slug="store.citySlug"
       @close="importTextOpen = false"
       @generated="onTextGenerated"
     />
 
     <CarouselStickerSheet
-      :open="stickerSheetOpen"
+      v-if="stickerSheetOpen"
+      :open="true"
       :items="stickers"
       :loading="stickersLoading"
       @close="stickerSheetOpen = false"
@@ -124,7 +128,8 @@
     />
 
     <CarouselTemplateSheet
-      :open="templateSheetOpen"
+      v-if="templateSheetOpen"
+      :open="true"
       :items="templates"
       :loading="templatesLoading"
       @close="templateSheetOpen = false"
@@ -133,7 +138,8 @@
     />
 
     <CarouselStyleSheet
-      :open="styleSheetOpen"
+      v-if="styleSheetOpen"
+      :open="true"
       :template-id="store.templateId"
       :vibe-key="store.vibeKey"
       :aspect="store.aspect"

@@ -1,11 +1,10 @@
 <template>
-  <Teleport to="body">
+  <CarouselSheetTeleport :open="open">
     <div
-      v-if="open"
       class="fixed inset-0 z-50 flex flex-col justify-end bg-black/40"
       @click.self="$emit('close')"
     >
-      <div class="flex max-h-[90dvh] flex-col rounded-t-2xl bg-white shadow-xl">
+      <div class="flex max-h-[90dvh] flex-col rounded-t-2xl bg-white text-gray-900 shadow-xl">
         <div class="flex items-center justify-between border-b border-gray-200 px-4 py-3">
           <h3 class="text-base font-semibold text-gray-900">Все слайды</h3>
           <button type="button" class="p-2 text-gray-500" @click="$emit('close')">✕</button>
@@ -39,7 +38,7 @@
                 <div class="flex shrink-0 flex-col gap-1">
                   <button
                     type="button"
-                    class="rounded border border-gray-300 px-2 py-0.5 text-xs disabled:opacity-30"
+                    class="rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-800 disabled:opacity-30"
                     :disabled="index === 0"
                     aria-label="Выше"
                     @click="$emit('move-up', index)"
@@ -48,7 +47,7 @@
                   </button>
                   <button
                     type="button"
-                    class="rounded border border-gray-300 px-2 py-0.5 text-xs disabled:opacity-30"
+                    class="rounded border border-gray-300 px-2 py-0.5 text-xs text-gray-800 disabled:opacity-30"
                     :disabled="index === slides.length - 1"
                     aria-label="Ниже"
                     @click="$emit('move-down', index)"
@@ -92,21 +91,21 @@
           <div class="flex flex-wrap gap-2">
             <button
               type="button"
-              class="rounded-lg border border-gray-300 px-3 py-2 text-xs font-medium"
+              class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-900"
               @click="$emit('add', 'body')"
             >
               + Контент
             </button>
             <button
               type="button"
-              class="rounded-lg border border-gray-300 px-3 py-2 text-xs font-medium"
+              class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-900"
               @click="$emit('add', 'cover')"
             >
               + Обложка
             </button>
             <button
               type="button"
-              class="rounded-lg border border-gray-300 px-3 py-2 text-xs font-medium"
+              class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-900"
               @click="$emit('add', 'outro')"
             >
               + CTA
@@ -122,7 +121,7 @@
         </div>
       </div>
     </div>
-  </Teleport>
+  </CarouselSheetTeleport>
 </template>
 
 <script setup lang="ts">

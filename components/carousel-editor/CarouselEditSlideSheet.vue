@@ -1,21 +1,24 @@
 <template>
-  <Teleport to="body">
+  <CarouselSheetTeleport :open="open">
     <div
-      v-if="open"
       class="fixed inset-0 z-50 flex flex-col justify-end bg-black/40"
       @click.self="$emit('close')"
     >
-      <div
-        class="max-h-[85dvh] overflow-y-auto rounded-t-2xl bg-white px-4 pb-safe pt-3 shadow-xl"
-        role="dialog"
-        aria-modal="true"
-      >
-        <div class="mb-3 flex items-center justify-between">
-          <h3 class="text-base font-semibold text-gray-900">{{ slideLabel }}</h3>
-          <button type="button" class="rounded-lg p-2 text-gray-500" @click="$emit('close')">✕</button>
-        </div>
+        <div
+          class="max-h-[85dvh] overflow-y-auto rounded-t-2xl bg-white px-4 pb-safe pt-3 shadow-xl"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div class="mb-3 flex items-center justify-between">
+            <h3 class="text-base font-semibold text-gray-900">{{ slideLabel }}</h3>
+            <button type="button" class="rounded-lg p-2 text-gray-500" @click="$emit('close')">✕</button>
+          </div>
 
-        <div v-if="slide" class="space-y-4 pb-4">
+          <div
+            v-if="slide"
+            :key="`${slideIndex}-${slide.role}`"
+            class="space-y-4 pb-4"
+          >
           <section class="rounded-xl border border-violet-200 bg-violet-50/60 p-3">
             <div class="mb-2 flex items-center justify-between gap-2">
               <p class="text-sm font-semibold text-violet-900">ИИ (Groq)</p>
@@ -115,7 +118,7 @@
             <p v-if="uploadError" class="text-xs text-red-600">{{ uploadError }}</p>
           </label>
 
-          <template v-if="slide.role === 'body'">
+          <div v-if="slide.role === 'body'" class="space-y-4">
             <label class="block space-y-1 text-sm">
               <span class="font-medium text-gray-700">Дата и время</span>
               <input
@@ -127,13 +130,23 @@
               >
             </label>
             <label class="block space-y-1 text-sm">
-              <span class="font-medium text-gray-700">Место / источник (для «Подробнее у…»)</span>
+              <span class="font-medium text-gray-700">Место</span>
               <input
                 :value="slide.event_venue || ''"
                 type="text"
                 class="w-full rounded-lg border border-gray-300 px-3 py-2"
-                placeholder="Кафе Эфир"
+                placeholder="Кафе Эфир, клуб «Город»"
                 @input="patch({ event_venue: ($event.target as HTMLInputElement).value || null })"
+              >
+            </label>
+            <label class="block space-y-1 text-sm">
+              <span class="font-medium text-gray-700">Подробнее</span>
+              <input
+                :value="slide.cta_text || ''"
+                type="text"
+                class="w-full rounded-lg border border-gray-300 px-3 py-2"
+                placeholder="Бронь по телефону"
+                @input="patch({ cta_text: ($event.target as HTMLInputElement).value || '' })"
               >
             </label>
             <label class="block space-y-1 text-sm">
@@ -156,7 +169,7 @@
                 @input="patchBullets(($event.target as HTMLTextAreaElement).value)"
               />
             </label>
-          </template>
+          </div>
 
           <label v-if="slide.role === 'outro'" class="block space-y-1 text-sm">
             <span class="font-medium text-gray-700">CTA</span>
@@ -167,15 +180,16 @@
               @input="patch({ cta_text: ($event.target as HTMLInputElement).value })"
             >
           </label>
+          </div>
         </div>
       </div>
-    </div>
-  </Teleport>
+  </CarouselSheetTeleport>
 </template>
 
 <script setup lang="ts">
 import type { CarouselSlide, CarouselSlideRole, CarouselTemplateId } from '~/types/editorialCarousel'
 import CarouselEventDigestLayoutPicker from '~/components/carousel-editor/CarouselEventDigestLayoutPicker.vue'
+import CarouselSheetTeleport from '~/components/carousel-editor/CarouselSheetTeleport.vue'
 
 const props = defineProps<{
   open: boolean

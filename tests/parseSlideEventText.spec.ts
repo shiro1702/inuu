@@ -53,4 +53,36 @@ describe('parseSlideEventText', () => {
     expect(fixed.event_price).toBe('Вход свободный')
     expect(fixed.bullets).toBeUndefined()
   })
+
+  it('parses menu quick prompt into title, cta and schedule', () => {
+    const text = 'Дегустационный сет из 5 блюд\nБронь по телефону\nПятница–воскресенье'
+    const parsed = parseSlideEventText(text)
+
+    expect(parsed.title).toBe('Дегустационный сет из 5 блюд')
+    expect(parsed.cta_text).toBe('Бронь по телефону')
+    expect(parsed.event_datetime).toBe('Пятница–воскресенье')
+    expect(parsed.event_venue).toBe('')
+    expect(parsed.theses).toEqual([])
+  })
+
+  it('reconciles groq field shift for menu prompt', () => {
+    const source = 'Дегустационный сет из 5 блюд\nБронь по телефону\nПятница–воскресенье'
+    const groqSlide = {
+      role: 'body' as const,
+      title: 'Новый слайд',
+      event_datetime: 'Дегустационный сет из 5 блюд',
+      event_venue: 'Бронь по телефону',
+      event_price: null,
+      bullets: ['Пятница–воскресенье'],
+      gradient: 'party',
+    }
+
+    const fixed = reconcileSlideWithSourceText(groqSlide, source, 'body')
+
+    expect(fixed.title).toBe('Дегустационный сет из 5 блюд')
+    expect(fixed.cta_text).toBe('Бронь по телефону')
+    expect(fixed.event_datetime).toBe('Пятница–воскресенье')
+    expect(fixed.event_venue).toBeNull()
+    expect(fixed.bullets).toBeUndefined()
+  })
 })
