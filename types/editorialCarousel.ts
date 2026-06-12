@@ -54,6 +54,8 @@ export type CarouselSlideV1 = CarouselSlideEventFields & {
   cta_text?: string
   gradient?: string
   image_tags?: string[]
+  /** Подшаблон внутри темы (напр. event-digest cover/body variants). */
+  layout_variant?: string | null
 }
 
 export type CarouselSlideV2 = CarouselSlideEventFields & {

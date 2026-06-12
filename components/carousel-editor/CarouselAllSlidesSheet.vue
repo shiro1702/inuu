@@ -29,6 +29,12 @@
                     {{ index + 1 }}. {{ roleLabel(slide, index, slides) }}
                   </span>
                   <p class="truncate text-sm font-medium text-gray-900">{{ previewText(slide) }}</p>
+                  <p
+                    v-if="isEventDigest && layoutLabel(slide)"
+                    class="mt-0.5 truncate text-xs text-violet-700"
+                  >
+                    {{ layoutLabel(slide) }}
+                  </p>
                 </button>
                 <div class="flex shrink-0 flex-col gap-1">
                   <button
@@ -51,6 +57,16 @@
                   </button>
                 </div>
               </div>
+              <CarouselEventDigestLayoutPicker
+                v-if="isEventDigest"
+                :slide="slide"
+                :layout-variant="slide.layout_variant"
+                :show-label="false"
+                dense
+                class="mb-2"
+                @select="$emit('layout', index, $event)"
+              />
+
               <div class="flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -110,13 +126,17 @@
 </template>
 
 <script setup lang="ts">
-import type { CarouselSlide, CarouselSlideRole } from '~/types/editorialCarousel'
+import type { CarouselSlide, CarouselSlideRole, CarouselTemplateId } from '~/types/editorialCarousel'
+import CarouselEventDigestLayoutPicker from '~/components/carousel-editor/CarouselEventDigestLayoutPicker.vue'
+import { eventDigestLayoutLabel } from '~/utils/eventDigestLayoutLabels'
+import { resolveEventDigestLayoutVariant } from '~/utils/eventDigestLayouts'
 import { carouselSlidePreviewText, carouselSlideRoleLabel } from '~/utils/carouselSlideLabels'
 
-defineProps<{
+const props = defineProps<{
   open: boolean
   slides: CarouselSlide[]
   currentIndex: number
+  templateId?: CarouselTemplateId | string
 }>()
 
 defineEmits<{
@@ -128,7 +148,10 @@ defineEmits<{
   remove: [index: number]
   add: [role: CarouselSlideRole]
   'import-text': []
+  layout: [index: number, layoutId: string]
 }>()
+
+const isEventDigest = computed(() => props.templateId === 'event-digest')
 
 function roleLabel(slide: CarouselSlide, index: number, slides: CarouselSlide[]) {
   return carouselSlideRoleLabel(slide, index, slides)
@@ -136,5 +159,9 @@ function roleLabel(slide: CarouselSlide, index: number, slides: CarouselSlide[])
 
 function previewText(slide: CarouselSlide) {
   return carouselSlidePreviewText(slide)
+}
+
+function layoutLabel(slide: CarouselSlide) {
+  return eventDigestLayoutLabel(resolveEventDigestLayoutVariant(slide))
 }
 </script>

@@ -33,6 +33,7 @@ export function normalizeSlideToV2(slide: CarouselSlide): CarouselSlideV2 {
     media_url: slide.media_url,
     cta_text: slide.cta_text,
     gradient: slide.gradient,
+    layout_variant: slide.layout_variant,
     background: slide.media_url
       ? { type: 'image', url: slide.media_url, overlay: 'rgba(0,0,0,0.35)' }
       : { type: 'gradient' },
@@ -77,6 +78,7 @@ export function slideV2ToV1(slide: CarouselSlideV2): CarouselSlideV1 {
     media_url: slide.media_url ?? mediaBlock?.url ?? slide.background?.url ?? null,
     cta_text: slide.cta_text || slide.flow?.find((b) => b.role === 'cta')?.content,
     gradient: slide.gradient,
+    layout_variant: slide.layout_variant,
   }
 }
 

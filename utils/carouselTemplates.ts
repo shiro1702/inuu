@@ -45,7 +45,7 @@ export const CAROUSEL_TEMPLATE_OPTIONS: CarouselTemplateOption[] = [
   {
     id: 'event-digest',
     label: 'Дайджест афиши',
-    description: 'Stories-стиль: фото сверху, чёрная плашка, фиолетовый бейдж даты',
+    description: 'Дайджест афиши: по 5 подшаблонов для обложки, контента и финала',
   },
 ]
 

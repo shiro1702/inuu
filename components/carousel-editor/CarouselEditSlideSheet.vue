@@ -65,6 +65,13 @@
             </div>
           </section>
 
+          <CarouselEventDigestLayoutPicker
+            v-if="isEventDigest && slide"
+            :slide="slide"
+            :layout-variant="slide.layout_variant"
+            @select="patch({ layout_variant: $event })"
+          />
+
           <label v-if="slide.role !== 'outro'" class="block space-y-1 text-sm">
             <span class="font-medium text-gray-700">Заголовок</span>
             <input
@@ -72,6 +79,20 @@
               type="text"
               class="w-full rounded-lg border border-gray-300 px-3 py-2"
               @input="patch({ title: ($event.target as HTMLInputElement).value })"
+            >
+          </label>
+
+          <label
+            v-if="isEventDigest && slide.role === 'cover'"
+            class="block space-y-1 text-sm"
+          >
+            <span class="font-medium text-gray-700">Подзаголовок / дата</span>
+            <input
+              :value="slide.cta_text || ''"
+              type="text"
+              class="w-full rounded-lg border border-gray-300 px-3 py-2"
+              placeholder="1 июня · 14 февраля"
+              @input="patch({ cta_text: ($event.target as HTMLInputElement).value })"
             >
           </label>
 
@@ -153,7 +174,8 @@
 </template>
 
 <script setup lang="ts">
-import type { CarouselSlide, CarouselSlideRole } from '~/types/editorialCarousel'
+import type { CarouselSlide, CarouselSlideRole, CarouselTemplateId } from '~/types/editorialCarousel'
+import CarouselEventDigestLayoutPicker from '~/components/carousel-editor/CarouselEventDigestLayoutPicker.vue'
 
 const props = defineProps<{
   open: boolean
@@ -163,6 +185,7 @@ const props = defineProps<{
   carouselTitle?: string
   totalSlides?: number
   vibeKey?: string
+  templateId?: CarouselTemplateId | string
 }>()
 
 const uploadError = ref('')
@@ -176,6 +199,8 @@ const emit = defineEmits<{
   patch: [patch: Partial<CarouselSlide>]
   generated: [slide: CarouselSlide]
 }>()
+
+const isEventDigest = computed(() => props.templateId === 'event-digest')
 
 const slideLabel = computed(() => {
   if (!props.slide) return 'Слайд'

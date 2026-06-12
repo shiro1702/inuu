@@ -1,4 +1,5 @@
 import type { CarouselAspect, CarouselSlide, CarouselTemplateId, EditorialCarouselMetadata } from '~/types/editorialCarousel'
+import { assignEventDigestLayoutVariants } from '~/utils/eventDigestLayouts'
 import { DEFAULT_CAROUSEL_TEMPLATE_ID } from '~/utils/carouselTemplates'
 import { formatEventStartsAtRu } from '~/utils/formatEventStartsAtRu'
 import { resolveMaterialCoverUrl } from '~/utils/resolveMaterialCoverUrl'
@@ -132,10 +133,13 @@ export function buildCarouselFromEvents(options: {
     gradient: vibe,
   })
 
+  const templateId = options.templateId || DEFAULT_CAROUSEL_TEMPLATE_ID
+  const finalSlides = templateId === 'event-digest' ? assignEventDigestLayoutVariants(slides) : slides
+
   return {
-    template_id: options.templateId || DEFAULT_CAROUSEL_TEMPLATE_ID,
+    template_id: templateId,
     aspect: options.aspect || '4:5',
-    slides,
+    slides: finalSlides,
   }
 }
 

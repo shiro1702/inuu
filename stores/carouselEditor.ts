@@ -12,6 +12,7 @@ import { isCarouselSlideV2 } from '~/types/editorialCarousel'
 import { normalizeSlideToV2 } from '~/utils/carouselSlideAdapter'
 import { defaultSlideForRole } from '~/utils/carouselSlideLabels'
 import { DEFAULT_CAROUSEL_TEMPLATE_ID, normalizeCarouselTemplateId, type CarouselTemplateId } from '~/utils/carouselTemplates'
+import { assignEventDigestLayoutVariants } from '~/utils/eventDigestLayouts'
 import type { GeneratedCarouselSettings } from '~/server/utils/generatedCarouselWrite'
 
 export type CarouselEditorProject = {
@@ -101,7 +102,9 @@ export const useCarouselEditorStore = defineStore('carouselEditor', {
     },
 
     setSlides(slides: CarouselSlide[]) {
-      this.slides = slides.map((s) => ({ ...s, gradient: this.vibeKey }))
+      const next =
+        this.templateId === 'event-digest' ? assignEventDigestLayoutVariants(slides) : slides
+      this.slides = next.map((s) => ({ ...s, gradient: this.vibeKey }))
       this.markDirty()
     },
 
@@ -133,7 +136,17 @@ export const useCarouselEditorStore = defineStore('carouselEditor', {
     },
 
     setTemplateId(id: CarouselTemplateId | string) {
-      this.templateId = normalizeCarouselTemplateId(id)
+      const next = normalizeCarouselTemplateId(id)
+      this.templateId = next
+      if (next === 'event-digest') {
+        this.slides = assignEventDigestLayoutVariants(this.slides)
+      }
+      this.markDirty()
+    },
+
+    applyEventDigestLayouts() {
+      if (this.templateId !== 'event-digest') return
+      this.slides = assignEventDigestLayoutVariants(this.slides)
       this.markDirty()
     },
 

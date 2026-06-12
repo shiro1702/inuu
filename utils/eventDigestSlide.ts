@@ -1,3 +1,5 @@
+import type { CarouselSlide } from '~/types/editorialCarousel'
+
 const PRICE_RE = /₽|\bруб\.?\b/i
 const MONTH_RE =
   /\b(?:январ|феврал|март|апрел|ма[йя]|июн|июл|август|сентябр|октябр|ноябр|декабр)/i
@@ -107,6 +109,22 @@ function transliterateCityHandle(input: string): string {
     .map((ch) => CYRILLIC_TO_LATIN[ch] ?? ch)
     .join('')
     .replace(/[^a-z0-9]+/g, '')
+}
+
+/** «в Улан-Удэ» для подзаголовков обложки. */
+export function eventDigestCityInLabel(cityName?: string | null): string {
+  const city = String(cityName || '').trim()
+  if (!city) return ''
+  const lower = city.charAt(0).toLowerCase() + city.slice(1)
+  return `в ${lower}`
+}
+
+export function eventDigestCoverSubtitle(slide: CarouselSlide, weekFallback?: string): string {
+  const cta = slide.cta_text?.trim()
+  if (cta) return cta
+  const dt = slide.event_datetime?.trim()
+  if (dt) return dt
+  return weekFallback || ''
 }
 
 export function eventDigestCityHandle(

@@ -31,6 +31,19 @@
       @next="store.nextSlide()"
     />
 
+    <div
+      v-if="store.templateId === 'event-digest' && activeSlide"
+      class="border-t border-gray-700 bg-gray-900 px-3 py-2"
+    >
+      <CarouselEventDigestLayoutPicker
+        :slide="activeSlide"
+        variant="dark"
+        :show-description="false"
+        dense
+        @select="onLayoutPick"
+      />
+    </div>
+
     <CarouselEditorThumbBar
       :slide-count="store.slides.length"
       :current-index="store.currentSlideIndex"
@@ -73,6 +86,7 @@
       :carousel-title="store.title"
       :vibe-key="store.vibeKey"
       :city-slug="store.citySlug"
+      :template-id="store.templateId"
       @close="editSheetOpen = false"
       @patch="onSlidePatch"
       @generated="onSlideAiGenerated"
@@ -82,6 +96,7 @@
       :open="allSlidesOpen"
       :slides="store.slides"
       :current-index="store.currentSlideIndex"
+      :template-id="store.templateId"
       @close="allSlidesOpen = false"
       @select="onSelectSlide"
       @edit="onEditSlideAt"
@@ -90,6 +105,7 @@
       @remove="store.removeSlide"
       @add="store.addSlide"
       @import-text="openImportFromAllSlides"
+      @layout="onLayoutPickAt"
     />
 
     <CarouselImportTextSheet
@@ -146,6 +162,7 @@ import CarouselEditorCanvas from '~/components/carousel-editor/CarouselEditorCan
 import CarouselEditorNav from '~/components/carousel-editor/CarouselEditorNav.vue'
 import CarouselEditorThumbBar from '~/components/carousel-editor/CarouselEditorThumbBar.vue'
 import CarouselEditSlideSheet from '~/components/carousel-editor/CarouselEditSlideSheet.vue'
+import CarouselEventDigestLayoutPicker from '~/components/carousel-editor/CarouselEventDigestLayoutPicker.vue'
 import CarouselAllSlidesSheet from '~/components/carousel-editor/CarouselAllSlidesSheet.vue'
 import CarouselImportTextSheet from '~/components/carousel-editor/CarouselImportTextSheet.vue'
 import CarouselStyleSheet from '~/components/carousel-editor/CarouselStyleSheet.vue'
@@ -209,6 +226,14 @@ function onAspect(value: string) {
 
 function onSlidePatch(patch: Partial<CarouselSlide>) {
   store.updateSlide(store.currentSlideIndex, patch)
+}
+
+function onLayoutPick(layoutId: string) {
+  store.updateSlide(store.currentSlideIndex, { layout_variant: layoutId })
+}
+
+function onLayoutPickAt(index: number, layoutId: string) {
+  store.updateSlide(index, { layout_variant: layoutId })
 }
 
 function onSlideAiGenerated(generated: CarouselSlide) {
