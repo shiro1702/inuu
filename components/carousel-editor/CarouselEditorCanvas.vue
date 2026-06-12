@@ -7,6 +7,7 @@
       :template-id="templateId"
       :brand-name="brandName"
       :city-name="cityName"
+      :city-slug="citySlug"
       :logo-url="logoUrl"
       :topic-tags="topicTags"
       :link-hint="linkHint"
@@ -34,6 +35,7 @@ const props = defineProps<{
   aspect: CarouselAspect
   templateId: CarouselTemplateId
   cityName?: string
+  citySlug?: string
   topicTags?: string[]
   linkHint?: string
   slideIndex: number

@@ -11,7 +11,12 @@ export type EventDigestMetaKind = 'datetime' | 'venue' | 'price' | 'thesis'
 
 function isPriceLine(line: string): boolean {
   const t = line.trim()
-  return PRICE_RE.test(t) || /^бесплатно$/i.test(t)
+  return (
+    PRICE_RE.test(t) ||
+    /^бесплатно$/i.test(t) ||
+    /^вход\s+свободн/i.test(t) ||
+    /^вход\s*:/i.test(t)
+  )
 }
 
 function classifySimple(t: string, index: number, total: number): EventDigestMetaKind {
@@ -82,18 +87,47 @@ export function eventDigestTheses(bullets?: string[]): string[] {
     .map((p) => p.text)
 }
 
-export function eventDigestCityHandle(linkHint?: string | null, cityName?: string | null): string {
+const CYRILLIC_TO_LATIN: Record<string, string> = {
+  а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'e', ж: 'zh', з: 'z', и: 'i',
+  й: 'y', к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p', р: 'r', с: 's', т: 't',
+  у: 'u', ф: 'f', х: 'h', ц: 'c', ч: 'ch', ш: 'sh', щ: 'sch', ъ: '', ы: 'y', ь: '',
+  э: 'e', ю: 'yu', я: 'ya',
+}
+
+function cityHandleFromSlug(slug: string): string {
+  const normalized = slug.trim().toLowerCase().replace(/-/g, '')
+  return normalized ? `in.${normalized}` : ''
+}
+
+function transliterateCityHandle(input: string): string {
+  return input
+    .trim()
+    .toLowerCase()
+    .split('')
+    .map((ch) => CYRILLIC_TO_LATIN[ch] ?? ch)
+    .join('')
+    .replace(/[^a-z0-9]+/g, '')
+}
+
+export function eventDigestCityHandle(
+  linkHint?: string | null,
+  cityName?: string | null,
+  citySlug?: string | null,
+): string {
   const hint = String(linkHint || '').trim()
   const slugMatch = hint.match(/\/([a-z0-9-]+)(?:\/|$)/i)
   if (slugMatch?.[1]) {
-    return `in.${slugMatch[1].replace(/-/g, '')}`
+    return cityHandleFromSlug(slugMatch[1])
   }
+
+  const slug = String(citySlug || '').trim()
+  if (slug) {
+    return cityHandleFromSlug(slug)
+  }
+
   const city = String(cityName || '').trim()
   if (city) {
-    const latin = city
-      .toLowerCase()
-      .replace(/\s+/g, '')
-      .replace(/[^a-z0-9а-яё]/gi, '')
+    const latin = transliterateCityHandle(city)
     if (latin) return `in.${latin}`
   }
   return 'inuu'

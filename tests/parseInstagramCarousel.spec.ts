@@ -33,6 +33,18 @@ describe('parseInstagramCarouselToSlides', () => {
     expect(slides.at(-1)?.role).toBe('outro')
   })
 
+  it('ignores leading delimiter and parses digest example', () => {
+    const raw = `---\nПятничный дайджест\n---\nКонцерт в «Городе»\n19:00, от 500₽\n---\nВыставка в музее\nдо воскресенья\n---\nЧитать в INUU`
+    const slides = parseInstagramCarouselToSlides(raw)
+
+    expect(slides).toHaveLength(4)
+    expect(slides[0]?.role).toBe('cover')
+    expect(slides[0]?.title).toBe('Пятничный дайджест')
+    expect(slides[1]?.title).toContain('Концерт')
+    expect(slides.at(-1)?.role).toBe('outro')
+    expect(slides.at(-1)?.cta_text).toContain('INUU')
+  })
+
   it('falls back from title and short description', () => {
     const slides = parseInstagramCarouselToSlides('', {
       title: 'Обзор бара',

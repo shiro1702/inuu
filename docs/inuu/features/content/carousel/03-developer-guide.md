@@ -172,6 +172,12 @@ API `GET /api/dashboard/carousel/stickers` мержит БД + оба катал
 
 См. [WAVE_4A_CAROUSEL_EDITOR.md](../../../runbooks/WAVE_4A_CAROUSEL_EDITOR.md).
 
+| Среда | Studio | Editor |
+|-------|--------|--------|
+| Тест | https://inuu-topaz.vercel.app/dashboard/carousel-studio | `…/dashboard/carousel/edit/{id}` |
+| Локально | http://localhost:3000/dashboard/carousel-studio | http://localhost:3000/dashboard/carousel/edit/{id} |
+| Прод | https://inuu.ru/dashboard/carousel-studio | https://inuu.ru/dashboard/carousel/edit/{id} |
+
 Минимум после изменений:
 
 1. Создать проект → 3 слайда preview → save → reload по share link.

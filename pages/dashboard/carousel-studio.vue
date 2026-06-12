@@ -9,7 +9,7 @@
           </p>
         </div>
         <button
-          v-if="selectedCitySlug"
+          v-if="canOpenCarouselEditor"
           type="button"
           class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white"
           :disabled="creatingProject"
@@ -24,11 +24,23 @@
     <div v-else class="flex flex-wrap items-end gap-4">
       <label class="space-y-1 text-sm">
         <span class="font-medium text-gray-700">Город</span>
-        <select v-model="selectedCitySlug" class="rounded-lg border border-gray-300 px-3 py-2" @change="onCityChange">
+        <select
+          v-if="managerCities.length"
+          v-model="selectedCitySlug"
+          class="rounded-lg border border-gray-300 px-3 py-2"
+          @change="onCityChange"
+        >
           <option v-for="c in managerCities" :key="c.citySlug" :value="c.citySlug">
             {{ c.cityName }}
           </option>
         </select>
+        <input
+          v-else
+          :value="effectiveCityName"
+          type="text"
+          class="rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-gray-700"
+          readonly
+        >
       </label>
       <label class="space-y-1 text-sm">
         <span class="font-medium text-gray-700">Источник</span>
@@ -50,8 +62,8 @@
     </div>
 
     <CarouselEventPicker
-      v-if="selectedCitySlug && (sourceKind === 'events' || sourceKind === 'curated_list')"
-      :city-slug="selectedCitySlug"
+      v-if="effectiveCitySlug && (sourceKind === 'events' || sourceKind === 'curated_list')"
+      :city-slug="effectiveCitySlug"
       :mode="sourceKind === 'curated_list' ? 'curated_list' : 'events'"
       :cover-title="eventsCoverTitle"
       :timezone="cityTimezone"
@@ -61,10 +73,10 @@
 
     <div v-if="loadError" class="text-sm text-red-600">{{ loadError }}</div>
     <CarouselStudio
-      v-else-if="selectedCitySlug"
+      v-else-if="effectiveCitySlug"
       :key="studioKey"
-      :city-slug="selectedCitySlug"
-      :brand-name="selectedCityName"
+      :city-slug="effectiveCitySlug"
+      :brand-name="effectiveCityName"
       :post-id="postId"
       :submission-id="submissionId"
       :initial-carousel="initialCarousel"
@@ -94,6 +106,7 @@ type ManagerCityItem = { citySlug: string; cityName: string }
 type SourceKind = 'manual' | 'events' | 'curated_list' | 'article' | 'submission'
 
 const route = useRoute()
+const config = useRuntimeConfig()
 const managerCities = ref<ManagerCityItem[]>([])
 const selectedCitySlug = ref('')
 const loadingCities = ref(true)
@@ -111,16 +124,34 @@ const router = useRouter()
 const postId = computed(() => String(route.query.post || '').trim())
 const submissionId = computed(() => String(route.query.submission || '').trim())
 
-const selectedCityName = computed(
-  () => managerCities.value.find((c) => c.citySlug === selectedCitySlug.value)?.cityName || 'INUU',
-)
+const defaultCitySlug = computed(() => String(config.public.defaultCitySlug || 'ulan-ude').trim())
+
+const effectiveCitySlug = computed(() => {
+  const selected = selectedCitySlug.value.trim()
+  if (selected) return selected
+  const fromQuery = String(route.query.city || '').trim()
+  if (fromQuery) return fromQuery
+  return defaultCitySlug.value
+})
+
+const effectiveCityName = computed(() => {
+  const slug = effectiveCitySlug.value
+  const found = managerCities.value.find((c) => c.citySlug === slug)
+  if (found?.cityName) return found.cityName
+  if (slug === defaultCitySlug.value) return 'INUU'
+  return slug
+})
+
+const canOpenCarouselEditor = computed(() => !loadingCities.value && Boolean(effectiveCitySlug.value))
+
+const selectedCityName = computed(() => effectiveCityName.value)
 
 const defaultEventsCoverTitle = computed(
   () => `Афиша ${selectedCityName.value}`,
 )
 
 const defaultLinkHint = computed(() => {
-  const city = selectedCitySlug.value
+  const city = effectiveCitySlug.value
   if (!city) return null
   if (sourceKind.value === 'curated_list' && activeListSlug.value) {
     return carouselLinkHintForCity(city, 'list', activeListSlug.value)
@@ -180,7 +211,7 @@ function onPickerBuild(payload: {
   listTitle?: string
 }) {
   loadError.value = ''
-  const city = selectedCitySlug.value
+  const city = effectiveCitySlug.value
   if (!city) return
 
   const events = pickerEventsToInput(payload.events)
@@ -218,6 +249,8 @@ async function loadManagerCities() {
       selectedCitySlug.value = fromQuery
     } else if (managerCities.value[0]) {
       selectedCitySlug.value = managerCities.value[0].citySlug
+    } else {
+      selectedCitySlug.value = fromQuery || defaultCitySlug.value
     }
     if (!eventsCoverTitle.value) {
       eventsCoverTitle.value = defaultEventsCoverTitle.value
@@ -230,7 +263,7 @@ async function loadManagerCities() {
 }
 
 async function loadCityTimezone() {
-  const city = selectedCitySlug.value
+  const city = effectiveCitySlug.value
   if (!city) return
   try {
     const res = await $fetch<{ ok: boolean; timezone?: string }>(
@@ -258,7 +291,7 @@ async function loadContext() {
   initialCarousel.value = null
   contextHint.value = ''
   activeListSlug.value = ''
-  const city = selectedCitySlug.value
+  const city = effectiveCitySlug.value
   if (!city) return
 
   try {
@@ -370,8 +403,8 @@ function onSourceChange() {
   void loadContext()
 }
 
-watch([selectedCitySlug, postId, submissionId], () => {
-  if (!selectedCitySlug.value) return
+watch([effectiveCitySlug, postId, submissionId], () => {
+  if (!effectiveCitySlug.value) return
   void loadCityTimezone()
   if (sourceKind.value === 'events' || sourceKind.value === 'curated_list') return
   if (sourceKind.value !== 'manual') void loadContext()
@@ -384,13 +417,13 @@ watch(defaultEventsCoverTitle, (title) => {
 })
 
 async function createShareableProject() {
-  const city = selectedCitySlug.value
+  const city = effectiveCitySlug.value
   if (!city) return
   creatingProject.value = true
   try {
     const res = await $fetch<{ ok: boolean; project: { id: string } }>('/api/dashboard/carousel', {
       method: 'POST',
-      body: { city_slug: city, title: eventsCoverTitle.value || `Карусель ${selectedCityName.value}` },
+      body: { city_slug: city, title: eventsCoverTitle.value || `Карусель ${effectiveCityName.value}` },
     })
     if (res?.project?.id) {
       await router.push(`/dashboard/carousel/edit/${res.project.id}`)

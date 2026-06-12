@@ -8,7 +8,7 @@ import {
   mapGroqPayloadToCarouselSlide,
   type GroqCarouselSlidePayload,
 } from '~/utils/groqCarouselSlideMap'
-import { resolveSlideEventMeta } from '~/utils/carouselSlideEventMeta'
+import { parseSlideEventText } from '~/utils/parseSlideEventText'
 
 export type GroqCarouselSlide = GroqCarouselSlidePayload & {
   type: 'first' | 'middle' | 'last'
@@ -93,20 +93,20 @@ export function localFallbackSlideFromText(
     }
   }
 
-  const draft: CarouselSlide = {
-    role: 'body',
-    title: first,
-    bullets: lines.slice(1),
-    gradient: vibe,
-  }
-  const meta = resolveSlideEventMeta(draft)
+  const parsed = parseSlideEventText(text)
   return {
     role: 'body',
-    title: first,
-    event_datetime: meta.datetime || null,
-    event_venue: meta.venue || null,
-    event_price: meta.price || null,
-    bullets: meta.theses.length ? meta.theses : lines.slice(1).length ? lines.slice(1) : ['Детали скоро'],
+    title: parsed.title || (parsed.isStructured ? undefined : first),
+    event_datetime: parsed.event_datetime || null,
+    event_venue: parsed.event_venue || null,
+    event_price: parsed.event_price || null,
+    bullets: parsed.theses.length
+      ? parsed.theses
+      : parsed.isStructured
+        ? undefined
+        : lines.slice(1).length
+          ? lines.slice(1)
+          : ['Детали скоро'],
     gradient: vibe,
   }
 }
@@ -191,6 +191,7 @@ export async function generateCarouselWithGroq(args: {
         groqCarouselEventFieldsPrompt(),
         'image_tags — 1–3 английских тега для подбора фона.',
         'Без выдуманных фактов. Кратко, для мобильного чтения.',
+        'Если в тексте блоки разделены строкой ---, это границы слайдов: первый блок — обложка, пустой слайд не добавляй.',
       ].join('\n'),
     },
     {

@@ -3,13 +3,31 @@ import { buildCarouselFromEvents } from '~/utils/buildCarouselFromEvents'
 import { resolveCarouselGradientFromTags } from '~/utils/carouselVibeTheme'
 import { listMaterialCoverUrls } from '~/utils/resolveMaterialCoverUrl'
 
+/** Убирает ведущий/замыкающий --- и нормализует переносы (импорт в карусель / Groq). */
+export function normalizeCarouselImportText(raw: string): string {
+  return raw
+    .replace(/\r\n/g, '\n')
+    .replace(/^-{3,}\s*\n+/, '')
+    .replace(/\n+-{3,}\s*$/, '')
+    .trim()
+}
+
+function stripDelimiterLines(block: string): string {
+  return block
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line && !/^-{3,}$/.test(line) && !/^—{3,}$/.test(line))
+    .join('\n')
+    .trim()
+}
+
 function splitCarouselBlocks(raw: string): string[] {
-  const normalized = raw.replace(/\r\n/g, '\n').trim()
+  const normalized = normalizeCarouselImportText(raw)
   if (!normalized) return []
 
   const byDelimiter = normalized
     .split(/\n-{3,}\n|\n—{3,}\n/)
-    .map((b) => b.trim())
+    .map((block) => stripDelimiterLines(block))
     .filter(Boolean)
   if (byDelimiter.length > 1) return byDelimiter
 

@@ -17,6 +17,7 @@
         :template-id="templateId"
         :brand-name="brandName"
         :city-name="cityName"
+        :city-slug="citySlug"
         :logo-url="logoUrl"
         :topic-tags="topicTags"
         :link-hint="linkHint"
@@ -51,6 +52,7 @@ const props = withDefaults(
     templateId?: CarouselTemplateId
     brandName?: string
     cityName?: string
+    citySlug?: string
     logoUrl?: string
     topicTags?: string[]
     linkHint?: string | null

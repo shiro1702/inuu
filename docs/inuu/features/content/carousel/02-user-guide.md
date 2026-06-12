@@ -1,5 +1,7 @@
 # Карусели — руководство для редакции
 
+**Тест:** [inuu-topaz.vercel.app/dashboard/carousel-studio](https://inuu-topaz.vercel.app/dashboard/carousel-studio) (нужен вход в кабинет). **Прод:** [inuu.ru/dashboard/carousel-studio](https://inuu.ru/dashboard/carousel-studio).
+
 ## С чего начать
 
 ### Вариант A: Carousel Studio (классика)

@@ -8,6 +8,18 @@
 
 ---
 
+## URL для smoke-тестов
+
+| Среда | Carousel Studio | Carousel Editor |
+|-------|-----------------|-----------------|
+| **Тест (Vercel)** | [inuu-topaz.vercel.app/dashboard/carousel-studio](https://inuu-topaz.vercel.app/dashboard/carousel-studio) | `…/dashboard/carousel/edit/{id}` |
+| **Локально** | http://localhost:3000/dashboard/carousel-studio | http://localhost:3000/dashboard/carousel/edit/{id} |
+| **Прод** | https://inuu.ru/dashboard/carousel-studio | https://inuu.ru/dashboard/carousel/edit/{id} |
+
+Вход в dashboard обязателен. На тестовом стенде: логин → **«Новый проект + share link»** → новый редактор.
+
+---
+
 ## Зачем
 
 3d дала **статический PNG-экспорт** из multiplier. 4a–4d — **интерактивный mobile-first редактор** (Instagram UX): Groq из текста, правка на холсте, шаринг, шаблоны, TG.

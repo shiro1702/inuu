@@ -10,6 +10,7 @@ import { matchStickerIntents } from '~/server/utils/carouselStickerMatcher'
 import { normalizeSlideToV2 } from '~/utils/carouselSlideAdapter'
 import type { CarouselSlide, CarouselSlideRole, CarouselSlideV2 } from '~/types/editorialCarousel'
 import { groqErrorHint } from '~/server/utils/ai/groqParseErrors'
+import { reconcileSlideWithSourceText } from '~/utils/parseSlideEventText'
 
 type Body = {
   text?: string
@@ -66,7 +67,11 @@ export default defineEventHandler(async (event) => {
       totalSlides: typeof body?.total_slides === 'number' ? body.total_slides : undefined,
     })
 
-    let slide = mapGroqSlideToCarousel(groqSlide, slideRole, vibeKey)
+    let slide = reconcileSlideWithSourceText(
+      mapGroqSlideToCarousel(groqSlide, slideRole, vibeKey),
+      rawText,
+      slideRole,
+    )
     const [withImage] = await applyPresetUrlsToSlides(event, [slide], {
       cityId,
       vibeKey,

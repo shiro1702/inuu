@@ -16,6 +16,7 @@
       :aspect="store.aspect"
       :template-id="store.templateId"
       :city-name="store.cityName"
+      :city-slug="store.citySlug"
       :topic-tags="[store.vibeKey]"
       :link-hint="store.linkHint"
       :slide-index="store.currentSlideIndex + 1"
@@ -138,6 +139,7 @@
 import type { CarouselAspect, CarouselCanvasObject, CarouselSlide, CarouselSlideV2 } from '~/types/editorialCarousel'
 import { normalizeSlideToV2 } from '~/utils/carouselSlideAdapter'
 import type { CarouselProjectType } from '~/server/utils/generatedCarouselWrite'
+import { isMetaLikeSlideTitle } from '~/utils/parseSlideEventText'
 import { useCarouselEditorStore } from '~/stores/carouselEditor'
 import CarouselEditorHeader from '~/components/carousel-editor/CarouselEditorHeader.vue'
 import CarouselEditorCanvas from '~/components/carousel-editor/CarouselEditorCanvas.vue'
@@ -217,10 +219,16 @@ function onSlideAiGenerated(generated: CarouselSlide) {
   const generatedV2 = normalizeSlideToV2({ ...generated, role }) as CarouselSlideV2
 
   const keepObjects = existingV2?.objects?.length ? existingV2.objects : generatedV2.objects
+  const existingTitle = existing?.title?.trim()
+  const generatedTitle = generatedV2.title?.trim()
+  const keepTitle =
+    Boolean(existingTitle) &&
+    (!generatedTitle || isMetaLikeSlideTitle(generatedTitle))
 
   store.updateSlide(idx, {
     ...generatedV2,
     role,
+    title: keepTitle ? existingTitle : generatedV2.title,
     objects: keepObjects,
   })
 

@@ -9,6 +9,8 @@
 | **Carousel Studio** | `/dashboard/carousel-studio` | Быстрая сборка из событий / статей / ручного ввода, экспорт PNG |
 | **Carousel Editor** | `/dashboard/carousel/edit/[id]` | Полноценный mobile-first редактор: share link, ИИ, стикеры, шаблоны, TG |
 
+**Тестовый стенд:** [inuu-topaz.vercel.app/dashboard/carousel-studio](https://inuu-topaz.vercel.app/dashboard/carousel-studio) · **прод:** [inuu.ru/dashboard/carousel-studio](https://inuu.ru/dashboard/carousel-studio)
+
 Оба используют одни и те же **шаблоны** (`CarouselSlideRenderer`) и **экспорт PNG** (`html-to-image`).
 
 ## Документы

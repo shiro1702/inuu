@@ -52,6 +52,7 @@ const props = defineProps<{
   topicTags?: string[]
   linkHint?: string | null
   cityName?: string | null
+  citySlug?: string | null
 }>()
 
 const theme = computed(() => resolveCarouselVibeTheme(props.slide, props.topicTags))
@@ -62,5 +63,7 @@ const dateBadge = computed(() => {
   const cta = props.slide.cta_text?.trim() || ''
   return cta && !/[.!?…]$/.test(cta) ? cta : ''
 })
-const cityHandle = computed(() => eventDigestCityHandle(props.linkHint, props.cityName))
+const cityHandle = computed(() =>
+  eventDigestCityHandle(props.linkHint, props.cityName, props.citySlug),
+)
 </script>

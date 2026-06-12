@@ -72,18 +72,19 @@ npm test -- tests/parseInstagramCarousel.spec.ts tests/buildStorySlidesFromEdito
 
 ---
 
-## Ключевые URL (dev, город `ulan-ude`)
+## Ключевые URL (город `ulan-ude`)
 
-| Что | URL |
-|-----|-----|
-| **Карусель Studio (менеджеры)** | http://localhost:3000/dashboard/carousel-studio |
-| Smoke / legacy URL | `/dev/carousel-render` → редирект в Studio |
-| Журнал / статья | http://localhost:3000/ulan-ude/guides/{slug} |
-| Главная + сторис | http://localhost:3000/ulan-ude |
-| Dashboard контент | http://localhost:3000/dashboard/content-ai |
-| Story Studio (TASK-027) | http://localhost:3000/dashboard/story-studio?city=ulan-ude&campaign={uuid} |
+| Что | Тест (Vercel) | Локально | Прод |
+|-----|---------------|----------|------|
+| **Карусель Studio** | [inuu-topaz…/carousel-studio](https://inuu-topaz.vercel.app/dashboard/carousel-studio) | http://localhost:3000/dashboard/carousel-studio | [inuu.ru…/carousel-studio](https://inuu.ru/dashboard/carousel-studio) |
+| **Carousel Editor** | […/carousel/edit/{id}](https://inuu-topaz.vercel.app/dashboard/carousel/edit) | http://localhost:3000/dashboard/carousel/edit/{id} | […/carousel/edit/{id}](https://inuu.ru/dashboard/carousel/edit) |
+| Smoke / legacy | — | `/dev/carousel-render` → Studio | — |
+| Журнал / статья | …/ulan-ude/guides/{slug} | http://localhost:3000/ulan-ude/guides/{slug} | https://inuu.ru/ulan-ude/guides/{slug} |
+| Главная + сторис | …/ulan-ude | http://localhost:3000/ulan-ude | https://inuu.ru/ulan-ude |
+| Dashboard контент | …/dashboard/content-ai | http://localhost:3000/dashboard/content-ai | https://inuu.ru/dashboard/content-ai |
+| Story Studio | …/dashboard/story-studio?city=ulan-ude&campaign={uuid} | http://localhost:3000/dashboard/story-studio?city=ulan-ude&campaign={uuid} | https://inuu.ru/dashboard/story-studio?city=ulan-ude&campaign={uuid} |
 
-Прод: `https://inuu.ru/ulan-ude/…` (или ваш домен) — те же пути.
+**Тестовый стенд:** `https://inuu-topaz.vercel.app` (`NUXT_APP_URL` в Vercel preview/staging). Миграции 052–058 — на прод-Supabase.
 
 ---
 

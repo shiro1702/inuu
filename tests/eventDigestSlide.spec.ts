@@ -17,6 +17,11 @@ describe('eventDigestSlide', () => {
     expect(eventDigestCityHandle('/ulan-ude/events')).toBe('in.ulanude')
   })
 
+  it('builds city handle from slug or transliterated name', () => {
+    expect(eventDigestCityHandle(undefined, undefined, 'ulan-ude')).toBe('in.ulanude')
+    expect(eventDigestCityHandle(undefined, 'Улан-Удэ')).toBe('in.ulanude')
+  })
+
   it('prefixes headline with «На»', () => {
     expect(eventDigestHeadline('🍳 Летний бранч в кафе Эфир')).toBe(
       'На летний бранч в кафе Эфир',

@@ -16,6 +16,7 @@
         :topic-tags="topicTags"
         :link-hint="linkHint"
         :city-name="cityName"
+        :city-slug="citySlug"
         :brand-name="brandName"
       />
     </CarouselSlideChrome>
@@ -118,6 +119,7 @@ const props = withDefaults(
     templateId?: CarouselTemplateId
     brandName?: string
     cityName?: string
+    citySlug?: string
     logoUrl?: string
     topicTags?: string[]
     linkHint?: string | null

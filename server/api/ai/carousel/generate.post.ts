@@ -11,7 +11,10 @@ import { resolveCarouselGradientFromTags } from '~/utils/carouselVibeTheme'
 import { matchStickerIntents } from '~/server/utils/carouselStickerMatcher'
 import { normalizeSlideToV2 } from '~/utils/carouselSlideAdapter'
 import type { CarouselSlideV2 } from '~/types/editorialCarousel'
-import { parseInstagramCarouselToSlides } from '~/utils/parseInstagramCarousel'
+import {
+  normalizeCarouselImportText,
+  parseInstagramCarouselToSlides,
+} from '~/utils/parseInstagramCarousel'
 import { groqErrorHint } from '~/server/utils/ai/groqParseErrors'
 
 type Body = {
@@ -38,7 +41,8 @@ export default defineEventHandler(async (event) => {
   }
 
   const vibeKey = body?.vibe_key || 'party'
-  const rawText = typeof body?.text === 'string' ? body.text.trim() : ''
+  const rawText =
+    typeof body?.text === 'string' ? normalizeCarouselImportText(body.text) : ''
 
   function localSplitFallback(reason?: string) {
     if (!rawText) return null
