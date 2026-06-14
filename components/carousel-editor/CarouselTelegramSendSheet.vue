@@ -143,8 +143,7 @@ async function send(destination: 'moderation' | 'dm') {
       },
     })
 
-    await $fetch('/api/cron/telegram-queue-dispatch', { method: 'POST' }).catch(() => undefined)
-    emit('sent', 'Карусель поставлена в очередь Telegram')
+    emit('sent', 'Карусель отправлена в Telegram')
   } catch (err: unknown) {
     error.value = err instanceof Error ? err.message : 'Ошибка отправки'
   } finally {

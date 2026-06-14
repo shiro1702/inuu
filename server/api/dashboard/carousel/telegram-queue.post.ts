@@ -2,6 +2,7 @@ import { createError, defineEventHandler, readBody } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import { requireDashboardAccess } from '~/server/utils/dashboard'
 import { resolveManagerCityScopeOrThrow } from '~/server/utils/managerCityAccess'
+import { dispatchTelegramQueue } from '~/server/utils/telegramQueueWorker'
 
 type Body = {
   city_slug?: string
@@ -63,5 +64,14 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, statusMessage: error?.message || 'Failed to enqueue' })
   }
 
-  return { ok: true as const, queue_id: (data as { id: string }).id }
+  const queueId = (data as { id: string }).id
+  const dispatch = await dispatchTelegramQueue(event, 10)
+  if (dispatch.processed === 0 && dispatch.errors.length) {
+    throw createError({
+      statusCode: 502,
+      statusMessage: dispatch.errors[0] || 'Telegram send failed',
+    })
+  }
+
+  return { ok: true as const, queue_id: queueId, dispatch }
 })

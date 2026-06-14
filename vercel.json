@@ -11,10 +11,6 @@
     {
       "path": "/api/cron/source-weekend-check",
       "schedule": "0 6 * * 4"
-    },
-    {
-      "path": "/api/cron/telegram-queue-dispatch",
-      "schedule": "* * * * *"
     }
   ]
 }

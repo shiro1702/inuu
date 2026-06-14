@@ -29,3 +29,5 @@ coverage/
 # Supabase local
 .branches/
 .temp/
+.vercel
+.env*
