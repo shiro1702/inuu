@@ -26,6 +26,38 @@
         <span v-if="ingestSettingsMessage" class="text-xs text-gray-600">{{ ingestSettingsMessage }}</span>
       </div>
 
+      <div class="space-y-3 rounded border border-primary/20 bg-primary/5 p-3">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+          <div class="space-y-1">
+            <p class="text-sm font-medium text-gray-900">Массовый парсинг источников</p>
+            <p class="text-xs text-gray-600">
+              Последовательный обход всех активных web- и Telegram-источников ({{ batchTargets.length }}).
+              Запросы идут по одному — страницу можно не закрывать.
+            </p>
+          </div>
+          <button
+            type="button"
+            class="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+            :disabled="batchRunning || !batchTargets.length"
+            @click="runAllCrawls"
+          >
+            {{ batchRunning ? 'Парсим…' : 'Запустить все' }}
+          </button>
+        </div>
+
+        <div v-if="batchRunning || batchFinished" class="space-y-2">
+          <div class="h-2 overflow-hidden rounded-full bg-white/80">
+            <div
+              class="h-2 rounded-full bg-primary transition-all duration-300"
+              :style="{ width: `${batchProgressPercent}%` }"
+            />
+          </div>
+          <p class="text-sm text-gray-800">{{ batchStatusText }}</p>
+          <p v-if="batchCurrentLabel" class="font-mono text-xs text-gray-500">{{ batchCurrentLabel }}</p>
+          <p v-if="batchFinished && batchSummaryText" class="text-xs text-gray-700">{{ batchSummaryText }}</p>
+        </div>
+      </div>
+
       <section class="space-y-3">
         <div class="flex items-center justify-between gap-2">
           <h3 class="text-sm font-semibold text-gray-800">Web-источники (cron)</h3>
@@ -77,7 +109,7 @@
                     <button
                       type="button"
                       class="rounded border border-primary/30 bg-primary/5 px-1.5 py-0.5 text-primary hover:bg-primary/10 disabled:opacity-50"
-                      :disabled="crawlRunningId === item.id"
+                      :disabled="crawlRunningId === item.id || batchRunning"
                       @click="runCrawl(item)"
                     >{{ crawlRunningId === item.id ? 'Парсим…' : 'Запустить' }}</button>
                     <button
@@ -286,7 +318,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 const props = defineProps<{ citySlug: string }>()
 const { dashboardFetch } = useDashboardFetch()
@@ -342,6 +374,54 @@ const telegramSources = ref<TgSource[]>([])
 const shops = ref<ShopItem[]>([])
 const testResultText = ref('')
 const crawlRunningId = ref('')
+
+type BatchTargetKind = 'web' | 'telegram'
+type BatchTarget = {
+  kind: BatchTargetKind
+  id: string
+  label: string
+}
+
+type BatchItemResult = {
+  target: BatchTarget
+  ok: boolean
+  skipped: boolean
+  message: string
+}
+
+const batchRunning = ref(false)
+const batchFinished = ref(false)
+const batchCurrentIndex = ref(0)
+const batchStatusText = ref('')
+const batchCurrentLabel = ref('')
+const batchSummaryText = ref('')
+const batchResults = ref<BatchItemResult[]>([])
+
+const batchTargets = computed<BatchTarget[]>(() => {
+  const web = webSources.value
+    .filter((item) => item.isActive)
+    .map((item) => ({
+      kind: 'web' as const,
+      id: item.id,
+      label: item.displayName || item.url,
+    }))
+  const telegram = telegramSources.value
+    .filter((item) => item.isActive)
+    .map((item) => ({
+      kind: 'telegram' as const,
+      id: item.id,
+      label: `@${item.sourceKey}`,
+    }))
+  return [...web, ...telegram]
+})
+
+const batchProgressPercent = computed(() => {
+  const total = batchTargets.value.length
+  if (!total) return 0
+  if (batchFinished.value) return 100
+  if (!batchRunning.value) return 0
+  return Math.round((batchCurrentIndex.value / total) * 100)
+})
 type ScrapingAlert = {
   id: string
   webSourceId: string | null
@@ -532,6 +612,98 @@ async function testCrawl(item: WebSource) {
   await loadSources({ force: true })
 }
 
+function describeCrawlPayload(payload: Record<string, unknown>): string {
+  if (payload.ok) {
+    if (payload.ingestProcessed) return 'Добавлено в очередь модерации'
+    if (payload.skipped) {
+      const reason = String(payload.skipReason || payload.hint || 'пропущено')
+      return `Пропущено: ${reason}`
+    }
+    return String(payload.hint || 'Готово')
+  }
+  return String(payload.hint || payload.error || payload.statusMessage || 'Ошибка парсинга')
+}
+
+function resetBatchState() {
+  batchFinished.value = false
+  batchCurrentIndex.value = 0
+  batchStatusText.value = ''
+  batchCurrentLabel.value = ''
+  batchSummaryText.value = ''
+  batchResults.value = []
+}
+
+async function runAllCrawls() {
+  const targets = batchTargets.value
+  if (!targets.length || batchRunning.value) return
+
+  const webCount = targets.filter((item) => item.kind === 'web').length
+  const tgCount = targets.filter((item) => item.kind === 'telegram').length
+  const parts = [
+    webCount ? `${webCount} web` : '',
+    tgCount ? `${tgCount} Telegram` : '',
+  ].filter(Boolean)
+  const msg = `Запустить парсинг всех активных источников (${parts.join(' + ')})?\n\nИсточники обрабатываются по очереди. Это может занять несколько минут.`
+  if (!confirm(msg)) return
+
+  resetBatchState()
+  batchRunning.value = true
+  errorMessage.value = ''
+  testResultText.value = ''
+
+  const results: BatchItemResult[] = []
+
+  for (let index = 0; index < targets.length; index += 1) {
+    const target = targets[index]
+    batchCurrentIndex.value = index + 1
+    batchCurrentLabel.value = `${target.kind === 'web' ? 'Web' : 'Telegram'} · ${target.label}`
+    batchStatusText.value = `Источник ${index + 1} из ${targets.length} — отправляем запрос…`
+
+    const endpoint = target.kind === 'web'
+      ? `/api/dashboard/manager/cities/${props.citySlug}/ingest-sources/web/${target.id}/run-crawl`
+      : `/api/dashboard/manager/cities/${props.citySlug}/ingest-sources/telegram/${target.id}/run-crawl`
+
+    try {
+      const res = await dashboardFetch(endpoint, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(target.kind === 'web' ? { createShadowOrg: true } : {}),
+      })
+      const payload = await res.json().catch(() => ({})) as Record<string, unknown>
+      const message = describeCrawlPayload(payload)
+      const ok = res.ok && payload.ok !== false
+      results.push({ target, ok, skipped: payload.skipped === true, message })
+      batchStatusText.value = `Источник ${index + 1} из ${targets.length} — ${message}`
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Сетевая ошибка'
+      results.push({ target, ok: false, skipped: false, message })
+      batchStatusText.value = `Источник ${index + 1} из ${targets.length} — ${message}`
+    }
+  }
+
+  batchCurrentIndex.value = targets.length
+  batchResults.value = results
+  batchRunning.value = false
+  batchFinished.value = true
+  batchCurrentLabel.value = ''
+
+  const processed = results.filter((item) => item.ok && !item.skipped).length
+  const skipped = results.filter((item) => item.skipped).length
+  const failed = results.filter((item) => !item.ok).length
+  batchSummaryText.value = `Готово: ${processed} с новыми submission, ${skipped} пропущено, ${failed} с ошибкой.`
+  batchStatusText.value = 'Обход всех источников завершён'
+  testResultText.value = pretty(results.map((item) => ({
+    source: item.target.label,
+    kind: item.target.kind,
+    ok: item.ok,
+    skipped: item.skipped,
+    message: item.message,
+  })))
+
+  invalidate(props.citySlug)
+  await loadSources({ force: true })
+}
+
 async function runCrawl(item: WebSource) {
   const msg = item.organizationId
     ? `Запустить парсер для ${item.url}?\n\nСоздастся submission в очередь модерации (как ночной cron).`
@@ -677,6 +849,7 @@ async function deleteTg(item: TgSource) {
 }
 
 watch(() => props.citySlug, () => {
+  resetBatchState()
   if (props.citySlug) void loadSources()
 }, { immediate: true })
 </script>
