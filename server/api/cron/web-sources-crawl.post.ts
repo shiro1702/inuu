@@ -1,5 +1,7 @@
-import { createError, defineEventHandler, getHeader } from 'h3'
+/** @deprecated Vercel cron uses POST /api/cron/ingest-dispatch (fan-out). Kept for manual curl / backward compat. */
+import { createError, defineEventHandler } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
+import { assertCronWebSourcesSecret } from '~/server/utils/cronWebSourcesAuth'
 import {
   queryWebSourcesWith,
   WEB_SOURCE_CRON_SELECT,
@@ -12,15 +14,7 @@ type WebSourceRow = WebCrawlSourceRow & {
 }
 
 export default defineEventHandler(async (event) => {
-  const config = useRuntimeConfig(event)
-  const secret = String((config as { cronWebSourcesSecret?: string }).cronWebSourcesSecret || '').trim()
-  if (!secret) {
-    throw createError({ statusCode: 503, statusMessage: 'Cron secret not configured' })
-  }
-  const header = String(getHeader(event, 'x-cron-secret') || '').trim()
-  if (header !== secret) {
-    throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
-  }
+  assertCronWebSourcesSecret(event)
 
   const client = await serverSupabaseServiceRole(event)
   const { data: sources, error } = await queryWebSourcesWith(

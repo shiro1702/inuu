@@ -7,6 +7,10 @@ export default defineNuxtConfig({
       external: ['sharp', /^@img\/sharp-/],
     },
   },
+  routeRules: {
+    '/api/cron/ingest-dispatch': { maxDuration: 15 },
+    '/api/internal/ingest-crawl/**': { maxDuration: 60 },
+  },
   devtools: { enabled: true },
   // Workaround for intermittent source-map wasm crashes in Nuxt dev error parser.
   sourcemap: {

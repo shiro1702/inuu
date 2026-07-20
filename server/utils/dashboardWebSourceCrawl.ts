@@ -9,7 +9,7 @@ import {
   queryWebSources,
 } from '~/server/utils/ingestSourcesDashboard'
 import { resolveOrCreateShadowOrg } from '~/server/utils/ingestShadowOrg'
-import type { ManagerCityScope } from '~/server/utils/managerCityAccess'
+import type { IngestCityScope } from '~/server/utils/ingestCityScope'
 import { executeWebSourceCrawl, type WebCrawlSourceRow } from '~/server/utils/webCrawlRouter'
 
 export type DashboardWebCrawlOptions = {
@@ -19,7 +19,7 @@ export type DashboardWebCrawlOptions = {
 
 export async function runDashboardWebSourceCrawl(args: {
   event: H3Event
-  scope: ManagerCityScope
+  scope: IngestCityScope
   sourceId: string
   options: DashboardWebCrawlOptions
 }) {

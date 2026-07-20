@@ -1,7 +1,7 @@
 import type { H3Event } from 'h3'
 import { serverSupabaseServiceRole } from '#supabase/server'
 import { getTelegramSourceById } from '~/server/utils/ingestSourcesDashboard'
-import type { ManagerCityScope } from '~/server/utils/managerCityAccess'
+import type { IngestCityScope } from '~/server/utils/ingestCityScope'
 import { executeWebSourceCrawl, type WebCrawlSourceRow } from '~/server/utils/webCrawlRouter'
 
 export type DashboardTelegramCrawlOptions = {
@@ -10,7 +10,7 @@ export type DashboardTelegramCrawlOptions = {
 
 export async function runDashboardTelegramSourceCrawl(args: {
   event: H3Event
-  scope: ManagerCityScope
+  scope: IngestCityScope
   sourceId: string
   options: DashboardTelegramCrawlOptions
 }) {

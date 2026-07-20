@@ -1,7 +1,7 @@
 {
   "crons": [
     {
-      "path": "/api/cron/web-sources-crawl",
+      "path": "/api/cron/ingest-dispatch",
       "schedule": "0 19 * * *"
     },
     {
